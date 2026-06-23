@@ -1,0 +1,249 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Media Meter — MediaWatch (Study 8)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="css/colors_and_type.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ── SIDEBAR (full-height, left column) ── -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Logo -->
+    <div class="sb-logo">
+      <img class="sb-logo-full" src="mmi-logo-purple.svg" alt="media meter">
+      <img class="sb-logo-mini" src="mmi-logo-purple  minimize.svg" alt="media meter">
+    </div>
+
+    <!-- Workspace selector -->
+    <div class="sb-selector" onclick="if(document.getElementById('sidebar').classList.contains('collapsed'))toggleSidebar()">
+      <i data-lucide="layout-grid" style="width:15px;height:15px;flex-shrink:0"></i>
+      <span class="sb-selector-label">MediaWatch</span>
+      <i data-lucide="chevron-down" class="sb-selector-chev"></i>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="nav-section">
+      <div class="nav-i" id="nav-mentions" data-label="Mentions" onclick="goPage('mentions')"><i data-lucide="message-circle" class="icon-lg"></i><span class="nav-label">Mentions</span></div>
+      <div class="nav-i" id="nav-tracker" data-label="Activity Tracker" onclick="goPage('tracker')"><i data-lucide="megaphone" class="icon-lg"></i><span class="nav-label">Activity Tracker</span><span class="nav-badge-at" id="nb-tracker">2</span></div>
+      <div class="nav-i act" id="nav-dashboard" data-label="Dashboard" onclick="goPage('dashboard')"><i data-lucide="layout-dashboard" class="icon-lg"></i><span class="nav-label">Dashboard</span></div>
+      <div class="nav-i" id="nav-publishers" data-label="Publishers" onclick="goPage('publishers')"><i data-lucide="building-2" class="icon-lg"></i><span class="nav-label">Publishers</span></div>
+      <div class="nav-i" data-label="Authors"><i data-lucide="user" class="icon-lg"></i><span class="nav-label">Authors</span></div>
+      <div class="nav-i" data-label="Categories"><i data-lucide="folder" class="icon-lg"></i><span class="nav-label">Categories</span></div>
+    </nav>
+
+    <!-- User profile -->
+    <div class="sb-profile">
+      <div class="sb-profile-avatar">C</div>
+      <div class="sb-profile-info">
+        <div class="sb-profile-name">Rogie Laguerta</div>
+        <div class="sb-profile-role">rogie.laguerta@seven-gen.com</div>
+      </div>
+    </div>
+
+    <!-- Subscription footer -->
+    <div class="sb-footer">
+      <div class="sb-sub-label">Subscription — Custom Plan</div>
+      <div class="sb-progress-row">
+        <div class="sb-progress"><div class="sb-progress-fill"></div></div>
+        <div class="sb-progress-label">18%</div>
+      </div>
+      <div class="sb-dates">Apr 1, 2026 – Mar 31, 2027</div>
+    </div>
+
+    <!-- Collapse / expand toggle -->
+    <div class="sb-collapse-btn" onclick="toggleSidebar()" title="Toggle navigation" aria-label="Toggle navigation">
+      <i data-lucide="chevrons-left" class="icon-expanded"></i>
+      <i data-lucide="chevrons-right" class="icon-collapsed"></i>
+    </div>
+
+  </aside>
+
+  <!-- ── RIGHT COLUMN (header + content) ── -->
+  <div class="app-right">
+
+  <!-- reader controls (hidden until reader mode) -->
+  <div id="ah-reader-ctrls" style="display:none;background:#fff;padding:8px;z-index:10;position:relative;justify-content:flex-end;align-items:center;gap:6px;width:100%"></div>
+
+  <div class="app-body">
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <!-- PAGE: DASHBOARD -->
+    <div class="page db-page" id="page-dashboard">
+      <!-- Top bar -->
+      <div class="db-topbar">
+        <div class="db-topbar-left">
+          <div class="db-topbar-brand">MediaWatch <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></div>
+          <button class="db-compare-btn">Compare Categories/Buckets</button>
+        </div>
+        <button class="db-export-pdf-btn"><i data-lucide="file-text" class="icon-sm"></i> Export to PDF</button>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="db-filterbar">
+        <div class="db-fb-pill db-fb-dropdown">
+          <span>Competitor News</span><i data-lucide="chevron-down" class="icon-sm"></i>
+        </div>
+        <div class="db-fb-date">
+          <span>June 7, 2026</span>
+          <i data-lucide="arrow-right" class="icon-sm" style="color:var(--muted)"></i>
+          <span>June 14, 2026</span>
+          <i data-lucide="calendar" class="icon-sm" style="color:var(--muted)"></i>
+        </div>
+        <div class="db-fb-pill db-fb-dropdown">
+          <span>Online News, Bl...</span>
+        </div>
+        <div class="db-fb-pill db-fb-tag">
+          <span>PHILIPPINES</span><i data-lucide="x" class="icon-sm" style="cursor:pointer"></i>
+        </div>
+        <div class="db-fb-pill db-fb-dropdown">
+          <span>Article Count</span><i data-lucide="chevron-down" class="icon-sm"></i>
+        </div>
+        <div class="db-fb-pill db-fb-all-filters">
+          <i data-lucide="filter" class="icon-sm"></i> All Filters
+        </div>
+        <div class="db-fb-icon-btn" title="Saved views"><i data-lucide="bookmark" class="icon-sm"></i></div>
+        <div class="db-fb-icon-btn" title="Advanced filter"><i data-lucide="filter" class="icon-sm"></i></div>
+        <div class="db-fb-search">
+          <i data-lucide="search" class="icon-sm" style="color:var(--muted)"></i>
+          <input type="text" placeholder="Search Articles" />
+        </div>
+      </div>
+
+      <div class="db-content">
+      <!-- KPI Cards — 2 rows × 4 columns -->
+      <div class="db-kpi-grid">
+        <!-- Row 1 -->
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Total Results</div>
+          <div class="db-kpi-val">248</div>
+          <div class="db-kpi-detail">Online: 168 · Print: 52 · Broadcast: 28</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-up">9% <span class="db-kpi-arrow">▲</span></div>
+        </div>
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Top Exposure by Medium</div>
+          <div class="db-kpi-val">Online News</div>
+          <div class="db-kpi-detail">168 articles count</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-up">14% <span class="db-kpi-arrow">▲</span></div>
+        </div>
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Top Publisher</div>
+          <div class="db-kpi-val db-kpi-val--md">Philippine Daily Inquirer</div>
+          <div class="db-kpi-detail">38 article/s published</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-up">60% <span class="db-kpi-arrow">▲</span></div>
+        </div>
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Top Author</div>
+          <div class="db-kpi-val">Daxim L. Lucas</div>
+          <div class="db-kpi-detail">14 article/s published</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-up">50% <span class="db-kpi-arrow">▲</span></div>
+        </div>
+        <!-- Row 2 -->
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Most Articles in a Day</div>
+          <div class="db-kpi-val">42 Article/s</div>
+          <div class="db-kpi-detail">May 23, 2026</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-up">12% <span class="db-kpi-arrow">▲</span></div>
+        </div>
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Top Tonality</div>
+          <div class="db-kpi-val db-kpi-green">Positive</div>
+          <div class="db-kpi-detail">184 article/s published</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-up">15% <span class="db-kpi-arrow">▲</span></div>
+        </div>
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Top Entities</div>
+          <div class="db-kpi-val">DITO Telecommunity</div>
+          <div class="db-kpi-detail">38 article/s published</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-down">-25% <span class="db-kpi-arrow">▼</span></div>
+        </div>
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Most Dominant Section</div>
+          <div class="db-kpi-val">News</div>
+          <div class="db-kpi-detail">156 article/s published</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-up">9% <span class="db-kpi-arrow">▲</span></div>
+        </div>
+      </div>
+
+      <!-- Row 1: Trend + Sentiment Donut -->
+      <div class="db-row db-row-7-3">
+        <div class="db-card">
+          <div class="db-card-hd"><span class="db-card-title">Coverage Trend</span><span class="db-card-sub">Daily mention volume · May 18–25</span></div>
+          <div class="db-chart-wrap" id="db-trend" style="height:240px"></div>
+        </div>
+        <div class="db-card">
+          <div class="db-card-hd"><span class="db-card-title">Sentiment Split</span><span class="db-card-sub">By article count</span></div>
+          <div class="db-chart-wrap" id="db-sentiment" style="height:240px"></div>
+        </div>
+      </div>
+
+      <!-- Row 2: Media Breakdown Bar + Topic Breakdown -->
+      <div class="db-row db-row-5-5">
+        <div class="db-card">
+          <div class="db-card-hd"><span class="db-card-title">Media Breakdown</span><span class="db-card-sub">Mentions by channel</span></div>
+          <div class="db-chart-wrap" id="db-media" style="height:260px"></div>
+        </div>
+        <div class="db-card">
+          <div class="db-card-hd"><span class="db-card-title">Top Topics</span><span class="db-card-sub">Mention frequency by topic</span></div>
+          <div class="db-chart-wrap" id="db-topics" style="height:260px"></div>
+        </div>
+      </div>
+
+      <!-- Row 3: Frequency Heatmap + Top Authors -->
+      <div class="db-row db-row-6-4">
+        <div class="db-card">
+          <div class="db-card-hd"><span class="db-card-title">Publication Frequency</span><span class="db-card-sub">Mentions by day of week</span></div>
+          <div class="db-chart-wrap" id="db-freq" style="height:220px"></div>
+        </div>
+        <div class="db-card">
+          <div class="db-card-hd"><span class="db-card-title">Top Authors</span><span class="db-card-sub">By mention count</span></div>
+          <div class="db-chart-wrap" id="db-authors" style="height:220px"></div>
+        </div>
+      </div>
+
+      <!-- Row 4: AVE by Publisher Treemap -->
+      <div class="db-row">
+        <div class="db-card">
+          <div class="db-card-hd"><span class="db-card-title">AVE by Publisher</span><span class="db-card-sub">Proportional share of earned media value</span></div>
+          <div class="db-chart-wrap" id="db-treemap" style="height:280px"></div>
+        </div>
+      </div>
+
+      <!-- Row 5: Bubble — Publisher × Sentiment × AVE -->
+      <div class="db-row">
+        <div class="db-card">
+          <div class="db-card-hd"><span class="db-card-title">Publisher Sentiment Distribution</span><span class="db-card-sub">Bubble size = AVE · Position = sentiment score</span></div>
+          <div class="db-chart-wrap" id="db-bubble" style="height:360px"></div>
+        </div>
+      </div>
+
+      </div><!-- /db-content -->
+    </div><!-- /page-dashboard -->
+  </div><!-- /main -->
+  </div><!-- /app-body -->
+  </div><!-- /app-right -->
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

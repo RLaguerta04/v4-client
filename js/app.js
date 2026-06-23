@@ -1,0 +1,3546 @@
+// ── BRIEF state ──
+let activeTrend=null,spotTracked=false;
+const MC={'TV':'media-tv','Online':'media-online','Print':'media-print','Radio':'media-radio','Social':'media-social'};
+
+const trendStories=[
+  {id:0,rank:1,tier:'T1',hl:'Jimenez/PLDT executive rivalry — telco competitive landscape narrative',why:"Triggered by 'DITO Telecommunity' — Jimenez's pointed remarks on PLDT competitors picked up across Tier 1 business outlets, broadcast, and radio within 24 hours.",chips:[{cls:'c-neu',t:'Neutral'},{cls:'c-vel',t:'12 articles / 1 day'},{cls:'c-ch',t:'Online'},{cls:'c-ch',t:'Print'},{cls:'c-ch',t:'TV'},{cls:'c-ch',t:'Radio'}],tracked:false,ave:'PHP 4.41M',articles:[
+    {media:'Print',source:'Philippine Daily Inquirer',hl:"BIZ BUZZ: Jimenez twits PLDT's foes",date:'14 hours ago',ave:'PHP 397K',score:96,dateRank:14},
+    {media:'Online',source:'INQUIRER PLUS',hl:'BIZ BUZZ: Jimenez twits PLDTs foes Inquirer Plus',date:'14 hours ago',ave:'PHP 206K',score:91,dateRank:14},
+    {media:'Online',source:'Philstar Online',hl:"PLDTs 'butcher COO publicly slices telco rivals",date:'15 hours ago',ave:'PHP 631K',score:84,dateRank:15},
+    {media:'TV',source:'ABS-CBN News',hl:'Telco war escalates: Jimenez vs. Reyes feud explained',date:'16 hours ago',ave:'PHP 890K',score:82,dateRank:16},
+    {media:'TV',source:'CNN Philippines',hl:"What Jimenez's PLDT remarks mean for DITO",date:'17 hours ago',ave:'PHP 710K',score:79,dateRank:17},
+    {media:'Online',source:'Rappler',hl:"Why Jimenez's PLDT comments matter — analyst reaction",date:'18 hours ago',ave:'PHP 245K',score:76,dateRank:18},
+    {media:'Online',source:'BusinessWorld',hl:'Telco competition heats up as Jimenez fires back',date:'19 hours ago',ave:'PHP 410K',score:73,dateRank:19},
+    {media:'Online',source:'Manila Bulletin',hl:"DITO's Jimenez addresses PLDT criticism head-on",date:'20 hours ago',ave:'PHP 280K',score:71,dateRank:20},
+    {media:'Radio',source:'DZRH News',hl:'Telco rivalry: Jimenez sa PLDT, sumagot',date:'21 hours ago',ave:'PHP 75K',score:68,dateRank:21},
+    {media:'Online',source:'GMA News Online',hl:'PLDT COO responds to DITO Jimenez statements',date:'22 hours ago',ave:'PHP 340K',score:67,dateRank:22},
+    {media:'Social',source:'X / Twitter',hl:'#Jimenez trends as PLDT-DITO feud goes public',date:'1 day ago',ave:'PHP 45K',score:64,dateRank:24},
+    {media:'Online',source:'Tech in Asia',hl:'Philippines telco war: a tale of two execs',date:'1 day ago',ave:'PHP 180K',score:61,dateRank:24},
+  ]},
+  {id:1,rank:2,tier:'T1',hl:"DITO crowned Philippines' fastest mobile network — Opensignal recognition",why:"Triggered by 'DITO Telecommunity' — independent Opensignal benchmark recognition. Reinforces network performance positioning.",chips:[{cls:'c-pos',t:'Positive'},{cls:'c-vel',t:'2 articles / 1 day'},{cls:'c-ch',t:'Online'}],tracked:false,ave:'PHP 281K',articles:[
+    {media:'Online',source:'Inquirer Online',hl:'DITO reigns supreme as the Philippines fastest mobile network by Opens...',date:'1 day ago',ave:'PHP 190K',score:94},
+    {media:'Online',source:'Manila Shaker Philippines',hl:'DITO StreamZone199 Now Available',date:'23 hours ago',ave:'PHP 91K',score:78},
+  ]},
+  {id:2,rank:3,tier:'T1',hl:'DITO 5G expansion to Visayas — coverage push intensifies',why:"Triggered by 'DITO Telecommunity' — geographic expansion narrative tied to telco competition. Positive sentiment across regional and national outlets.",chips:[{cls:'c-pos',t:'Positive'},{cls:'c-ch',t:'Online'},{cls:'c-ch',t:'Business'}],tracked:false,ave:'PHP 334K',articles:[
+    {media:'Online',source:'BusinessWorld',hl:'Telco war heats up as DITO expands 5G coverage to Visayas',date:'3 days ago',ave:'PHP 256K',score:92},
+    {media:'Online',source:'SunStar Cebu',hl:'DITO Telecommunity opens new flagship store in Cebu City',date:'4 days ago',ave:'PHP 78K',score:81},
+  ]},
+  {id:3,rank:4,tier:'T2',hl:'DITO enterprise partnerships — Visayan Electric & LGU digital push',why:"Triggered by 'DITO Telecommunity' — B2B and government partnerships frame the brand as a digital transformation enabler.",chips:[{cls:'c-pos',t:'Positive'},{cls:'c-ch',t:'Online'}],tracked:false,ave:'PHP 326K',articles:[
+    {media:'Online',source:'Insider Ph',hl:'Visayan Electric eyes smarter energy services with DITO',date:'2 days ago',ave:'PHP 184K',score:88},
+    {media:'Online',source:'Manila Bulletin',hl:'DITO partners with local government for digital transformation push',date:'3 days ago',ave:'PHP 142K',score:85},
+  ]},
+];
+
+
+function openBrief(){
+  // open the brief if collapsed (used by the Tier 1 stat deep-link)
+  if(!document.getElementById('b-body').classList.contains('open')) toggleBrief();
+}
+function toggleBrief(){
+  const body=document.getElementById('b-body'),chev=document.getElementById('b-chev'),top=document.getElementById('b-top'),label=document.getElementById('b-chev-label');
+  const open=body.classList.toggle('open');
+  chev.classList.toggle('open',open);top.classList.toggle('open',open);
+  label.textContent=open?'Hide brief':'View full brief';
+  if(open){
+    body.querySelectorAll('.mm-pane').forEach(p=>p.classList.remove('act'));
+    body.querySelectorAll('.mm-tab').forEach(t=>t.classList.remove('act'));
+    document.getElementById('pane-spot').classList.add('act');
+    body.querySelector('.mm-tab').classList.add('act');
+    activeTrend=null;
+    renderTrendRows();
+    rerenderList('spot');
+  }
+}
+
+function switchBriefTab(name,el){
+  const body=document.getElementById('b-body');
+  body.querySelectorAll('.mm-pane').forEach(p=>p.classList.remove('act'));
+  body.querySelectorAll('.mm-tab').forEach(t=>t.classList.remove('act'));
+  document.getElementById('pane-'+name).classList.add('act');
+  el.classList.add('act');
+  if(name!=='trend'){
+    activeTrend=null;
+    renderTrendRows();
+  }
+}
+
+function renderTrendRows(){
+  const c=document.getElementById('trend-rows');if(!c)return;
+  const anyOpen=activeTrend!==null;
+  c.innerHTML=trendStories.map(s=>{
+    const sc=s.chips[0].cls==='c-neg'?'#991b1b':s.chips[0].cls==='c-pos'?'#15803d':'#1d4ed8';
+    const isOpen=activeTrend===s.id;
+    const dimmed=anyOpen&&!isOpen;
+    return `
+    <div class="tr-card${isOpen?' active-tr':''}${dimmed?' dimmed':''}">
+      <div class="tr-row" onclick="selectTrend(${s.id})">
+        <div class="tr-num">#${s.rank}</div>
+        <div class="tr-body">
+          <div class="tr-hl">${s.hl}</div>
+          <div class="tr-meta"><span style="font-weight:600;color:#181d26">${s.tier}</span><span style="color:${sc};font-weight:500">${s.chips[0].t}</span><span style="color:#e4e6ea">·</span><span>${s.articles.length} articles</span><span style="color:#e4e6ea">·</span><span class="tot-ave">${s.ave}</span></div>
+        </div>
+        <i data-lucide="chevron-down" class="tr-arrow"></i>
+      </div>
+      <div class="tr-detail${isOpen?' open':''}" id="tr-detail-${s.id}">
+        <div class="tr-detail-inner">
+          <div class="chips" style="margin-bottom:16px">${s.chips.map(ch=>`<span class="chip ${ch.cls}">${ch.t}</span>`).join('')}</div>
+          <div class="detail-actions">
+            <button class="btn-nl" onclick="event.stopPropagation();showNewsletter(trendStories.find(x=>x.id===${s.id}))"><i data-lucide="mail"></i> Send as newsletter</button>
+            <button class="btn-primary" onclick="event.stopPropagation();showAIReport(trendStories.find(x=>x.id===${s.id}))"><i data-lucide="file-text"></i> Generate AI report</button>
+            <button class="${s.tracked?'btn-track tracked':'btn-track'}" id="td-track-${s.id}" onclick="event.stopPropagation();trackTrend(${s.id})">
+              <i data-lucide="${s.tracked?'check':'megaphone'}"></i> ${s.tracked?'Tracked':'Track this story'}
+            </button>
+          </div>
+          <div class="why-strip">
+            <span class="why-strip-lbl"><i data-lucide="zap"></i> Why this was picked</span>
+            <span class="why-strip-txt">${s.why}</span>
+          </div>
+          <div id="al-trend-${s.id}"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  initIcons();
+  if(activeTrend!==null) rerenderList('trend-'+activeTrend);
+}
+
+// per-list state: sort key, active filter, expanded toggle
+const alState={};
+const aveNum=s=>parseFloat(String(s).replace(/[^0-9.]/g,''))||0;
+
+function articlesForList(listId){
+  if(listId==='spot') return trendStories[0].articles;
+  if(listId.startsWith('trend-')) return (trendStories.find(s=>s.id===parseInt(listId.split('-')[1]))||{}).articles||[];
+  return [];
+}
+
+function renderArticleList(articles,listId){
+  const state=alState[listId]||(alState[listId]={sort:'sim',filters:[],page:1});
+  const sel=state.filters||(state.filters=[]);
+  const mediaTypes=[...new Set(articles.map(a=>a.media))].filter(m=>m!=='Social');
+  let filtered=sel.length===0?articles.slice():articles.filter(a=>sel.includes(a.media));
+  if(state.sort==='sim')filtered.sort((a,b)=>b.score-a.score);
+  else if(state.sort==='date')filtered.sort((a,b)=>(a.dateRank||0)-(b.dateRank||0));
+  else if(state.sort==='ave')filtered.sort((a,b)=>aveNum(b.ave)-aveNum(a.ave));
+
+  const showControls=articles.length>=10;
+  const PER_PAGE=10;
+  const totalPages=Math.max(1,Math.ceil(filtered.length/PER_PAGE));
+  let page=state.page||1;if(page>totalPages)page=totalPages;if(page<1)page=1;state.page=page;
+  const start=(page-1)*PER_PAGE;
+  const visible=filtered.slice(start,start+PER_PAGE);
+
+  const controls=showControls?`
+    <div class="al-controls">
+      <div class="al-sort"><select onchange="setSort('${listId}',this.value)">
+        <option value="sim"${state.sort==='sim'?' selected':''}>Sort: Similarity</option>
+        <option value="date"${state.sort==='date'?' selected':''}>Sort: Most recent</option>
+        <option value="ave"${state.sort==='ave'?' selected':''}>Sort: Highest AVE</option>
+      </select></div>
+      <span class="article-list-label">All coverage — ${articles.length} article${articles.length!==1?'s':''}</span>
+      <div class="al-filters">
+        <span class="al-f${sel.length===0?' on':''}" onclick="clearFilters('${listId}')">All</span>
+        ${mediaTypes.map(m=>`<span class="al-f${sel.includes(m)?' on':''}" onclick="toggleFilter('${listId}','${m}')">${sel.includes(m)?'<i data-lucide="check"></i> ':''}${m}</span>`).join('')}
+      </div>
+    </div>`:`
+    <div class="al-controls">
+      <span class="article-list-label">All coverage — ${articles.length} article${articles.length!==1?'s':''}</span>
+    </div>`;
+
+  let pager='';
+  if(totalPages>1){
+    let ws=Math.max(1,page-2),we=Math.min(totalPages,ws+4);ws=Math.max(1,we-4);
+    const win=[];for(let i=ws;i<=we;i++)win.push(i);
+    pager=`<div class="al-pager">
+      <span class="al-pg-info">${start+1}-${Math.min(start+PER_PAGE,filtered.length)} of ${filtered.length} articles</span>
+      <div class="pg-btns">
+        <button class="pgb arrow"${page===1?' disabled':''} onclick="setArtPage('${listId}',${page-1})"><i data-lucide="chevron-left"></i></button>
+        ${win.map(n=>`<button class="pgb${n===page?' on':''}" onclick="setArtPage('${listId}',${n})">${n}</button>`).join('')}
+        <button class="pgb arrow"${page===totalPages?' disabled':''} onclick="setArtPage('${listId}',${page+1})"><i data-lucide="chevron-right"></i></button>
+      </div>
+    </div>`;
+  }
+
+  const empty=filtered.length===0?`<div class="al-empty">No articles match this filter.</div>`:'';
+
+  return `<div class="article-list">
+    ${controls}
+    ${empty}
+    ${visible.map((a,i)=>`<div class="art-row" style="animation-delay:${i*0.03}s">
+      <span class="media-badge ${MC[a.media]||'media-online'}">${a.media}</span>
+      <div class="art-body">
+        <div class="art-hl">${a.hl}</div>
+        <div class="art-meta"><span class="art-source">${a.source}</span><span class="art-meta-sep">·</span><span class="art-date">${a.date}</span><span class="art-meta-sep">·</span><span class="art-ave">${a.ave}</span></div>
+        <div class="art-score"><div class="art-score-track"><div class="art-score-track-fill ${a.score>=85?'sc-hi':a.score>=70?'sc-mid':'sc-lo'}" style="width:${a.score}%"></div></div><span class="art-score-val ${a.score>=85?'sc-hi':a.score>=70?'sc-mid':'sc-lo'}">${a.score}% match</span></div>
+      </div>
+    </div>`).join('')}
+    ${pager}
+  </div>`;
+}
+
+function rerenderList(listId){
+  const host=document.getElementById('al-'+listId);
+  if(host){host.innerHTML=renderArticleList(articlesForList(listId),listId);initIcons();}
+}
+function alStateFor(listId){return alState[listId]||(alState[listId]={sort:'sim',filters:[],page:1});}
+function setSort(listId,val){const s=alStateFor(listId);s.sort=val;s.page=1;rerenderList(listId);}
+function clearFilters(listId){const s=alStateFor(listId);s.filters=[];s.page=1;rerenderList(listId);}
+function toggleFilter(listId,val){const s=alStateFor(listId);s.filters=s.filters||[];const i=s.filters.indexOf(val);if(i>=0)s.filters.splice(i,1);else s.filters.push(val);s.page=1;rerenderList(listId);}
+function setArtPage(listId,page){const s=alStateFor(listId);s.page=page;rerenderList(listId);}
+
+function selectTrend(id){
+  activeTrend=(activeTrend===id)?null:id;
+  renderTrendRows();
+}
+
+function toggleWhy(el){el.classList.toggle('open');}
+
+function extractKeywords(text){
+  const stop=new Set(['and','the','for','was','are','with','from','that','this','have','been','were','their','they','also','into','over','its','has','had','but','not','all','can','her','his','about','will','one','said','more','which','when','than','what','then','some','him','would','your','our','out','how','did','get','may','new','any']);
+  return[...new Set(text.replace(/[^a-zA-Z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>3&&!stop.has(w.toLowerCase())).map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()))].slice(0,6);
+}
+
+function addToTracker(title,type,content){
+  const today=new Date().toISOString().split('T')[0];
+  const na={id:atNid++,title,type,date:today,content,matches:[]};
+  acts.unshift(na);
+  trackerSel=na.id;
+  freshTrack[na.id]=true;
+  scanKwOff[na.id]=new Set();
+  showTrackerToast(title,na.id);
+  const nb=document.getElementById('nb-tracker');
+  if(nb)nb.textContent=acts.length;
+}
+
+function showSimpleToast(msg,icon){
+  let t=document.getElementById('simple-toast');
+  if(t)t.remove();
+  t=document.createElement('div');t.id='simple-toast';
+  t.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#181d26;color:#fff;font-size:12.5px;font-family:Inter,sans-serif;padding:11px 18px;border-radius:8px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,0.18);z-index:9999;max-width:420px;animation:toastLife 3.8s ease-out forwards';
+  t.innerHTML=`<i data-lucide="${icon||'circle-check'}" style="color:#86efac;width:14px;height:14px"></i><span>${msg}</span><button onclick="this.closest('div').remove()" style="background:transparent;border:none;color:rgba(255,255,255,0.5);cursor:pointer;padding:0 4px;font-size:14px;line-height:1;margin-left:6px">×</button>`;
+  document.body.appendChild(t);
+  initIcons();
+  t._t=setTimeout(()=>{if(t.parentNode)t.remove();},3800);
+}
+
+function showTrackerToast(title,id,toastType){
+  if(toastType==='nl'){showSimpleToast('Newsletter sent successfully','send');return;}
+  if(toastType==='rpt'){showSimpleToast('AI report sent successfully','send');return;}
+  if(toastType==='dl'){showSimpleToast('Report downloaded as PDF','download');return;}
+  let toast=document.getElementById('global-track-toast');
+  if(!toast){
+    toast=document.createElement('div');
+    toast.id='global-track-toast';
+    toast.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#181d26;color:#fff;font-size:12.5px;font-family:Inter,sans-serif;padding:11px 18px;border-radius:8px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,0.18);z-index:9999;animation:fadeIn 0.2s ease;max-width:420px';
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML=`<i data-lucide="circle-check" style="color:#86efac;width:14px;height:14px"></i><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Added to Activity Tracker</span><button onclick="goPage('tracker');this.closest('#global-track-toast').remove()" style="font-size:11px;padding:3px 10px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:4px;cursor:pointer;font-family:inherit;flex-shrink:0">View</button><button onclick="this.closest('#global-track-toast').remove()" style="background:transparent;border:none;color:rgba(255,255,255,0.5);cursor:pointer;padding:0 2px;font-size:14px;line-height:1">×</button>`;
+  toast.style.display='flex';
+  initIcons();
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>{if(toast.parentNode)toast.remove();},4000);
+}
+
+function trackSpot(){
+  if(spotTracked)return;spotTracked=true;
+  const btn=document.getElementById('spot-track-btn');
+  btn.className='btn-track tracked';
+  btn.innerHTML='<i data-lucide="check"></i> Tracked';
+  initIcons();
+  document.getElementById('spot-toast').classList.add('show');
+  const story=trendStories[0];
+  addToTracker(story.hl,'Trending',story.why);
+}
+
+function trackTrend(id){
+  const s=trendStories.find(x=>x.id===id);if(!s||s.tracked)return;
+  s.tracked=true;
+  const btn=document.getElementById('td-track-'+id);
+  if(btn){btn.className='btn-track tracked';btn.innerHTML='<i data-lucide="check"></i> Tracked';initIcons();}
+  addToTracker(s.hl,'Trending',s.why);
+}
+
+let _nlStory=null,_rptStory=null;
+
+function _storyForContext(){
+  // find which trend story is open, fallback to spotlight (id 0)
+  if(activeTrend!==null){const s=trendStories.find(x=>x.id===activeTrend);if(s)return s;}
+  return trendStories[0];
+}
+
+function showNewsletter(story){
+  _nlStory=story||_storyForContext();
+  const s=_nlStory;
+  document.getElementById('nl-subject').value=`MediaWatch Digest: ${s.hl}`;
+  document.getElementById('nl-to').value='';
+  // build preview
+  const MC={'TV':'#c2410c','Online':'#6b4de8','Print':'#1d4ed8','Radio':'#b45309','Social':'#15803d'};
+  const topArts=s.articles.slice(0,5);
+  const restArts=s.articles.slice(5);
+  const totalAVE=s.ave;
+  const sentChip=s.chips[0];
+  const sentColor=sentChip.cls==='c-pos'?'#15803d':sentChip.cls==='c-neg'?'#b91c1c':'#1b61c9';
+
+  // media breakdown counts
+  const mediaCounts={};
+  s.articles.forEach(a=>{ mediaCounts[a.media]=(mediaCounts[a.media]||0)+1; });
+
+  // scorecard rows — label ···· value newspaper style
+  const topPub=topArts[0]?topArts[0].source:'—';
+  const scoreRows=[
+    ['Total Articles', s.articles.length],
+    ['Combined AVE',   totalAVE],
+    ['Top Publisher',  topPub],
+    ['Sentiment',      `<span style="color:${sentColor};font-weight:600">${sentChip.t}</span>`],
+    ['Coverage',       Object.entries(mediaCounts).map(([m,n])=>`<span style="color:${MC[m]||'#41454d'};font-weight:600">${m}</span> ${n}`).join(' &nbsp;·&nbsp; ')],
+  ].map(([lbl,val])=>`
+    <tr>
+      <td style="padding:7px 0;border-bottom:1px solid #e4e6ea;font-size:12px;color:#6b7280;width:44%">${lbl}</td>
+      <td style="padding:7px 0;border-bottom:1px solid #e4e6ea;font-size:12px;color:#181d26;font-weight:500;text-align:right">${val}</td>
+    </tr>`).join('');
+
+  // top 5 story cards — newspaper editorial style
+  const storyCards=topArts.map((a,i)=>`
+    <div style="padding:14px 0;border-bottom:1px solid #e4e6ea">
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:5px">
+        <span style="font-size:11px;font-weight:700;color:#6b7280;flex-shrink:0;min-width:16px">${i+1}.</span>
+        <div style="flex:1">
+          <div style="font-size:13.5px;font-weight:600;color:#1b61c9;line-height:1.4;margin-bottom:4px;text-decoration:underline;text-decoration-color:rgba(27,97,201,0.3)">${a.hl}</div>
+          <div style="font-size:11px;color:#6b7280;margin-bottom:${i===0?'8px':'0'}">${a.source} &nbsp;·&nbsp; ${a.media} &nbsp;·&nbsp; ${a.date} &nbsp;·&nbsp; <span style="font-weight:600;color:#181d26">${a.ave}</span></div>
+          ${i===0?`<div style="font-size:12.5px;color:#41454d;line-height:1.7">${s.why}</div>`:''}
+        </div>
+      </div>
+    </div>`).join('');
+
+  // key observations — derived from media counts + sentiment + tier
+  const mediaList=Object.entries(mediaCounts).map(([m,n])=>`${n} ${m}`).join(', ');
+  const observations=[
+    `Story reached <strong>${s.articles.length} outlets</strong> within 24 hours, spanning ${mediaList} — indicating strong cross-channel resonance.`,
+    `Overall sentiment is <strong style="color:${sentColor}">${sentChip.t}</strong>, with Tier 1 outlets including ${topArts.slice(0,2).map(a=>a.source).join(' and ')} leading coverage.`,
+    `AVE of <strong>${totalAVE}</strong> signals significant earned media value. Top-performing article from ${topPub} (${topArts[0]?topArts[0].ave:'—'}).`,
+  ].map(o=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="color:#181d26;font-size:13px;flex-shrink:0;margin-top:1px">→</span><div style="font-size:12.5px;color:#41454d;line-height:1.6">${o}</div></div>`).join('');
+
+  // secondary list
+  const restList=restArts.length?restArts.map(a=>`
+    <div style="padding:6px 0;border-bottom:1px solid #f0f1f3;display:flex;align-items:baseline;gap:8px">
+      <span style="font-size:10.5px;font-weight:600;color:${MC[a.media]||'#41454d'};flex-shrink:0;min-width:36px">${a.media}</span>
+      <span style="font-size:12px;color:#41454d;line-height:1.4;flex:1">${a.hl}</span>
+      <span style="font-size:11px;color:#6b7280;white-space:nowrap;flex-shrink:0">${a.source}</span>
+    </div>`).join(''):'';
+
+  const dateStr=new Date().toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  document.getElementById('nl-preview').innerHTML=`
+    <div style="background:#f5f4f0;padding:16px;font-family:'Inter',sans-serif">
+      <div style="background:#fff;border:1px solid #e4e6ea;border-radius:8px;overflow:hidden">
+
+        <!-- Top bar: brand + date -->
+        <div style="background:#f5f4f0;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e4e6ea">
+          <img src="mmi-logo-purple.svg" alt="MediaWatch" style="height:18px;width:auto;display:block">
+          <div style="font-size:10.5px;color:#6b7280">${dateStr}</div>
+        </div>
+
+        <!-- Hero: headline + subhead + body -->
+        <div style="padding:24px 24px 20px;border-bottom:2px solid #181d26">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#6b7280;margin-bottom:8px">Daily Digest &nbsp;·&nbsp; ${s.tier} Story</div>
+          <div style="font-size:22px;font-weight:700;color:#181d26;line-height:1.25;font-family:'Inter Tight',sans-serif;margin-bottom:10px;letter-spacing:-0.3px">${s.hl}</div>
+          <div style="font-size:12.5px;color:#6b7280;margin-bottom:12px">${sentChip.t} sentiment &nbsp;·&nbsp; ${s.articles.length} articles &nbsp;·&nbsp; ${totalAVE} combined AVE</div>
+          <div style="font-size:13px;color:#41454d;line-height:1.75">DITO Telecommunity's media presence surged this period, driven by executive commentary that cut across all major channels. The story gained rapid ${s.tier} traction within 24 hours, recorded across ${Object.keys(mediaCounts).join(', ')}. ${s.why}</div>
+        </div>
+
+        <!-- Dark CTA strip -->
+        <div style="background:#181d26;padding:14px 24px;text-align:center;border-bottom:1px solid #e4e6ea">
+          <span style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#fff">View Full Coverage &nbsp;→</span>
+        </div>
+
+        <!-- Stats scorecard -->
+        <div style="padding:16px 24px;border-bottom:1px solid #e4e6ea;background:#f5f4f0">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#6b7280;text-transform:uppercase;margin-bottom:10px">This Period at a Glance</div>
+          <table style="width:100%;border-collapse:collapse">${scoreRows}</table>
+        </div>
+
+        <!-- Stories section -->
+        <div style="padding:20px 24px;border-bottom:1px solid #e4e6ea">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#6b7280;text-transform:uppercase">Stories Shaping the Week</div>
+            <div style="flex:1;height:1px;background:#e4e6ea"></div>
+          </div>
+          ${storyCards}
+        </div>
+
+        <!-- Key observations -->
+        <div style="padding:18px 24px;border-bottom:1px solid #e4e6ea;background:#f5f4f0">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#6b7280;text-transform:uppercase;margin-bottom:12px">Key Strategic Observations</div>
+          ${observations}
+        </div>
+
+        <!-- Also worth monitoring -->
+        ${restArts.length?`
+        <div style="padding:16px 24px;border-bottom:1px solid #e4e6ea">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#6b7280;text-transform:uppercase">Worth Monitoring</div>
+            <div style="flex:1;height:1px;background:#e4e6ea"></div>
+          </div>
+          ${restList}
+        </div>`:''}
+
+        <!-- Footer -->
+        <div style="background:#181d26;padding:16px 24px;text-align:center">
+          <div style="margin-bottom:8px;display:flex;justify-content:center"><img src="mmi-logo-purple.svg" alt="MediaWatch" style="height:18px;width:auto;display:block;filter:brightness(0) invert(1);opacity:0.7"></div>
+          <div style="font-size:10.5px;color:rgba(255,255,255,0.45)">Sent to your team &nbsp;·&nbsp; DITO Telecommunity Communications &nbsp;·&nbsp; <span style="text-decoration:underline;cursor:pointer;color:rgba(255,255,255,0.45)">Unsubscribe</span></div>
+        </div>
+
+      </div>
+    </div>`;
+  const ov=document.getElementById('nl-overlay');
+  ov.style.display='block';
+  const sb=document.getElementById('sidebar');
+  _nlSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
+  if(sb)sb.classList.add('collapsed');
+  requestAnimationFrame(()=>{ ov.classList.add('open'); document.body.classList.add('nl-open'); });
+}
+
+function closeNewsletter(){
+  const ov=document.getElementById('nl-overlay');
+  ov.classList.remove('open');
+  document.body.classList.remove('nl-open');
+  const sb=document.getElementById('sidebar');
+  if(sb&&!_nlSidebarWasCollapsed)sb.classList.remove('collapsed');
+  setTimeout(()=>{ov.style.display='none';},280);
+}
+
+function sendNewsletter(){
+  const to=document.getElementById('nl-to').value.trim();
+  if(!to){document.getElementById('nl-to').focus();document.getElementById('nl-to').style.borderColor='#d44';return;}
+  document.getElementById('nl-to').style.borderColor='#ddd';
+  closeNewsletter();
+  showTrackerToast('Newsletter sent to '+to,null,'nl');
+}
+
+function showAIReport(story){
+  _rptStory=story||_storyForContext();
+  const s=_rptStory;
+  document.getElementById('rpt-title').textContent='AI Report — '+s.hl.substring(0,55)+(s.hl.length>55?'…':'');
+  document.getElementById('rpt-send-bar').style.display='none';
+  document.getElementById('rpt-to').value='';
+  const body=document.getElementById('rpt-body');
+  body.innerHTML=`<div class="rpt-loading"><div class="rpt-spinner"></div><div style="font-size:13px;color:#888">Generating AI report…</div></div>`;
+  const ov=document.getElementById('rpt-overlay');
+  ov.style.display='flex';
+  setTimeout(()=>ov.classList.add('open'),10);
+  setTimeout(()=>{
+    const sentChip=s.chips[0];
+    const sentColor=sentChip.cls==='c-pos'?'#15803d':sentChip.cls==='c-neg'?'#991b1b':'#1d4ed8';
+    const topSrc=[...new Set(s.articles.slice(0,4).map(a=>a.source))].join(', ');
+    const channels=[...new Set(s.articles.map(a=>a.media))];
+    const channelStr=channels.join(', ');
+    const aveBreakdown=s.articles.slice(0,4).map(a=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e4e6ea;font-size:13px"><span style="color:#41454d">${a.source}</span><span style="font-weight:600;color:#181d26">${a.ave}</span></div>`).join('');
+    const recItems=[
+      s.chips[0].cls==='c-neg'?'Issue a formal response within 12 hours to neutralize negative framing.':'Amplify positive coverage through owned channels and social boost.',
+      `Engage top ${s.articles[0].source} journalist for follow-up feature placement.`,
+      `Monitor ${channels.includes('Social')?'social sentiment':'secondary outlet pickup'} over the next 48 hours for sentiment shifts.`,
+      'Prepare spokesperson talking points aligned to current narrative thread.',
+    ];
+    body.innerHTML=`
+      <div style="padding:22px 26px;display:flex;flex-direction:column;gap:20px">
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#181d26;text-transform:uppercase;margin-bottom:6px">Executive Summary</div>
+          <div style="font-size:13.5px;color:#41454d;line-height:1.7">${s.why} Coverage spans <strong>${channelStr}</strong> with <strong>${s.articles.length} articles</strong> and total AVE of <strong>${s.ave}</strong>. The dominant sentiment is <strong style="color:${sentColor}">${sentChip.t.toLowerCase()}</strong>.</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#181d26;text-transform:uppercase;margin-bottom:12px">Key Stories</div>
+          ${s.articles.slice(0,4).map((a,i)=>`<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #e4e6ea;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:#181d26;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">${i+1}</div><div style="flex:1"><div style="font-size:14px;font-weight:600;color:#181d26;line-height:1.4">${a.hl}</div><div style="font-size:12.5px;color:#6b7280;margin-top:3px">${a.source} · ${a.date} · ${a.ave}</div></div></div>`).join('')}
+          ${s.articles.length>4?`<div style="font-size:12px;color:#6b7280;padding:8px 0">+${s.articles.length-4} additional articles not shown</div>`:''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="background:#f7f8fa;border-radius:8px;padding:14px;border:1px solid #e4e6ea">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#181d26;text-transform:uppercase;margin-bottom:10px">Channel Breakdown</div>
+            ${channels.map(ch=>{const cnt=s.articles.filter(a=>a.media===ch).length;const pct=Math.round(cnt/s.articles.length*100);return`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12.5px;color:#41454d;margin-bottom:3px"><span>${ch}</span><span>${cnt} articles</span></div><div style="background:#e4e6ea;border-radius:3px;height:4px"><div style="background:#181d26;height:4px;border-radius:3px;width:${pct}%"></div></div></div>`;}).join('')}
+          </div>
+          <div style="background:#f7f8fa;border-radius:8px;padding:14px;border:1px solid #e4e6ea">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#181d26;text-transform:uppercase;margin-bottom:10px">AVE Breakdown</div>
+            ${aveBreakdown}
+            <div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:13.5px;font-weight:700"><span style="color:#41454d">Total</span><span style="color:#181d26">${s.ave}</span></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#181d26;text-transform:uppercase;margin-bottom:12px">Recommendations</div>
+          ${recItems.map((r,i)=>`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #e4e6ea;font-size:13.5px;color:#41454d;line-height:1.5"><i data-lucide="circle-check" style="color:#16a34a;margin-top:2px;flex-shrink:0"></i>${r}</div>`).join('')}
+        </div>
+        <div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:6px;padding:12px 14px;font-size:12px;color:#92400e"><i data-lucide="alert-triangle" style="margin-right:6px"></i>Generated by AI — verify figures against source articles before distribution.</div>
+      </div>`;
+    document.getElementById('rpt-send-bar').style.display='flex';
+  },1600);
+}
+
+function closeAIReport(){
+  const ov=document.getElementById('rpt-overlay');
+  ov.classList.remove('open');
+  setTimeout(()=>{ov.style.display='none';},250);
+}
+
+// ── Export modal ──
+function openExport(){
+  const ov=document.getElementById('exp-overlay');
+  ov.style.display='flex';
+  requestAnimationFrame(()=>ov.classList.add('open'));
+  validateExport();
+  initIcons();
+}
+function closeExport(){
+  const ov=document.getElementById('exp-overlay');
+  ov.classList.remove('open');
+  setTimeout(()=>{ov.style.display='none';},250);
+}
+function validateExport(){
+  const to=document.getElementById('exp-to').value.trim();
+  const ok=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to);
+  document.getElementById('exp-send').disabled=!ok;
+}
+function sendExport(){
+  const to=document.getElementById('exp-to').value.trim();
+  const type=document.getElementById('exp-type').value;
+  const fmt=document.getElementById('exp-format').value;
+  closeExport();
+  showSimpleToast(`${type} (${fmt}) sent to <strong style="font-weight:600">${to}</strong>`,'send');
+}
+
+// ── Mention detail drawer ──
+const mentionData=[
+  {outlet:'Inquirer',sub:'Philippine Daily Inquirer',author:'Daxim L. Lucas',date:'May 25, 2026',ago:'14h ago',section:'Business',ave:'PHP 397.9K',title:"BIZ BUZZ: Jimenez twits PLDT's foes",sv:4.33,chart:[4,18,7,9,5,12,2,1,3],brand:'positive',tone:'positive',authorScore:'3.21',avgSv:'4.33',keywords:[['dito tel',1],['pldt',2],['jimenez',1]],entities:['PLDT','DITO Telecommunity','Eric Alberto','Smart Communications','Globe Telecom','Converge ICT','Manny V. Pangilinan','Dennis Uy','NTC','5G']},
+  {type:'tv',outlet:'ANC',sub:'ANC 24/7',author:'Michelle Ong, Stanley A. Palisada',date:'June 16, 2026',ago:'9h ago',section:'News',ave:'PHP 62.6K',title:'Globe forms intelligence and trust office for stronger AI, cybersecurity capabilities',sv:5.65,chart:[3,7,10,8,11,6,4,2,1],brand:'positive',tone:'positive',authorScore:'2.10',avgSv:'5.65',keywords:[['globe telecom',1]],entities:['Globe Telecom','Globe','Anton Reynaldo Bonifacio'],program:'Market Edge',segment:'News',length:'00:00:34',aired:'June 16, 2026 05:33 AM',poster:'image/imgi_227_maxresdefault.jpg',transcript:'Good morning and welcome back to Market Edge here on ANC. Topping our Weekend Corporate Stories this hour is Globe Telecom, which has just announced a major reorganization of its technology and governance teams.\nThe telco giant is consolidating its key transformation and trust-enabling groups into a single unit it is calling the Intelligence and Trust Office. Globe says the new office will help strengthen its enterprise-wide artificial intelligence, data, and cybersecurity functions, as well as its broader digital trust capabilities.\nIn a statement, the company said the move is designed to sustain its long-term sustainability goals while sharpening its focus on customer protection and responsible innovation. Globe Chief Information Security Officer Anton Reynaldo Bonifacio will lead the new office, reporting directly to the office of the chief executive.\nAccording to the company, the new structure brings together teams that were previously spread across several departments, including data governance, network security, fraud prevention, and privacy compliance. Globe believes that uniting them will allow faster and more coordinated responses to emerging threats.\nExecutives say the timing is deliberate. With more transactions, more services, and more customer touchpoints moving online, the company argues that trust has become as important to its business as network coverage and pricing.\nAnalysts we spoke with say the restructuring reflects a wider industry trend, as telecommunications firms face mounting pressure to secure customer data and to deploy AI responsibly. They add that consolidating these functions under one leader should speed up decision-making and reduce duplication across the organization.\nOne technology analyst told this program that the creation of a dedicated trust office is a signal to enterprise clients in particular. Large corporate customers, the analyst said, increasingly want assurances about how their data is handled before signing long-term contracts.\nAnother market watcher noted that the move could help Globe stand out in a crowded field. As competitors race to expand coverage, positioning the brand around security and responsible AI may appeal to government agencies, banks, and other regulated industries.\nThe announcement also comes as the wider sector invests heavily in artificial intelligence. Globe has said it intends to use AI across customer service, fraud detection, and network optimization, and the new office is expected to set the guardrails for how those tools are built and deployed.\nOn the question of jobs, the company said the reorganization is not a cost-cutting exercise. Globe described it as a realignment of existing talent, with most affected staff moving into the new office rather than leaving the company.\nTurning now to the market reaction. Globe shares were little changed in early trading following the announcement, with investors largely viewing the reorganization as a long-term governance play rather than a near-term earnings driver.\nTraders we monitored said the muted move was expected, given that the restructuring does not change the near-term revenue outlook. Even so, several flagged it as a positive for the longer-term investment case.\nCompetitors are watching closely. Industry sources suggest rival carriers may announce similar initiatives in the coming months, as the pressure to demonstrate strong data governance grows across the sector.\nThere is also a regulatory dimension. With data privacy rules tightening and authorities paying closer attention to how companies handle personal information, a dedicated trust office could help Globe stay ahead of compliance requirements.\nConsumer advocates offered cautious support. They welcomed the focus on customer protection, but said the real test will be whether the new office translates into clearer policies, faster breach responses, and better support for ordinary subscribers.\nFor its part, Globe says it will share more details about the office and its roadmap in the coming weeks, including how it plans to measure progress on data protection and responsible AI.\nWe will have more on this story, including reaction from industry groups and regulators, later in the program. We will also speak with a panel of analysts about what the reorganization means for the broader telecommunications race.\nBut for now, that is the latest from the corporate desk. After the break, we turn to the markets, the peso, and the trading week ahead. Stay with us here on Market Edge. Back to you.'},
+  {type:'tv',outlet:'CNN PH',sub:'CNN Philippines',author:'Rico Hizon',date:'May 25, 2026',ago:'16h ago',section:'News',ave:'PHP 710.0K',title:'Telco war escalates: Jimenez vs. Reyes feud explained',sv:4.82,chart:[5,9,12,7,10,6,3,2,1],brand:'neutral',tone:'mixed',authorScore:'3.40',avgSv:'4.82',keywords:[['pldt',2],['dito',1],['jimenez',1]],entities:['PLDT','DITO Telecommunity','Eric Alberto'],program:'The Final Word',segment:'News',length:'00:02:15',aired:'May 25, 2026 09:00 PM',poster:'image/imgi_304_hqdefault.jpg',transcript:'Good evening, I am Rico Hizon, and this is The Final Word. Our top story tonight: the rivalry between two of the biggest telecommunications companies in the country has spilled out into the open, and we break down what it means for ordinary consumers.\nIt started earlier this week when DITO Telecommunity chief Eric Alberto made a series of pointed remarks aimed squarely at incumbent PLDT. Within hours, the comments were picked up across business outlets, broadcast, and radio, fueling a very public exchange between the two camps.\nTo help us make sense of it all, we are joined by a panel of industry analysts. They argue that the feud, while dramatic, is ultimately a sign of intensifying competition, the kind that could benefit subscribers through lower prices and faster network expansion.\nOur panel also points to the race to roll out 5G coverage across the Visayas and Mindanao as the real battleground. Whoever earns the trust of regional markets, they say, will likely define the next phase of the telecommunications war.\nWe also asked whether regulators should step in. The consensus was that the agencies should keep a close watch, but allow market forces to play out, so long as service quality and consumer protection are not compromised.\nWe will be right back with reaction from consumer groups and a closer look at the latest subscriber numbers, right after the break. Stay with us here on The Final Word.'},
+  {type:'radio',outlet:'DZRH',sub:'DZRH News',author:'Mon Jocson',date:'May 25, 2026',ago:'21h ago',section:'News',ave:'PHP 75.0K',title:'Telco rivalry: Jimenez sa PLDT, sumagot',sv:2.64,chart:[2,5,8,6,9,4,3,2,1],brand:'neutral',tone:'mixed',authorScore:'1.80',avgSv:'2.64',keywords:[['pldt',1],['dito',1],['jimenez',1]],entities:['PLDT','DITO Telecommunity','Eric Alberto'],program:'Damdaming Bayan',segment:'News',length:'00:03:42',aired:'May 25, 2026 06:15 AM',transcript:'Magandang umaga, and welcome to DZRH News. We begin this hour with the escalating rivalry between the two biggest telecommunications players in the country, after DITO Telecommunity chief Eric Alberto fired fresh remarks at incumbent PLDT.\nAyon sa aming mga ulat, the comments were picked up quickly across radio, online, and broadcast outlets, and have reignited debate about competition and pricing in the telecommunications sector.\nAnalysts we reached by phone say the public exchange, while heated, is a sign of a maturing market. They argue that stronger competition should, over time, mean better service and lower costs for ordinary subscribers.\nPLDT, for its part, has yet to issue a formal response. We will bring you their statement as soon as it is released.\nFor now, consumer groups are urging both companies to focus less on the war of words and more on improving coverage in the provinces. The National Telecommunications Commission has not announced any new action on the matter.\nWe will have a full update at the top of the next hour. Ito ang DZRH, ang inyong bagong himpapawid. Stay tuned.'},
+  {type:'broadsheet',outlet:'BusinessWorld',sub:'BusinessWorld',author:'Ashley Erika O. Jose',date:'Jun 16, 2026',ago:'1d ago',section:'Economy / Corporate News',ave:'PHP 462.2K',title:'Globe creates intelligence office as AI push accelerates',sv:3.92,chart:[4,9,12,8,11,6,3,2,1],brand:'positive',tone:'positive',authorScore:'2.74',avgSv:'3.92',keywords:[['globe',2],['ai',1]],entities:['Globe Telecom','Globe'],page:'S1/B1',pdfUrl:'PDF/cl15.pdf',fullImage:'image/2.png'},
+  {type:'provincial',outlet:'SunStar Cebu',sub:'SunStar Cebu',author:'John Rey Saavedra',date:'Jun 15, 2026',ago:'2d ago',section:'Local Business',ave:'PHP 88.2K',title:'DITO expands Visayas footprint with new Cebu data hub',sv:2.41,chart:[3,6,9,7,10,5,3,2,1],brand:'positive',tone:'positive',authorScore:'1.90',avgSv:'2.41',keywords:[['dito',2],['cebu',1]],entities:['DITO Telecommunity','Cebu'],page:'A3',pdfUrl:'PDF/cl15.pdf',fullImage:'image/2.png'},
+  {type:'tabloid',outlet:'Bulgar',sub:'Bulgar',author:'Staff Writer',date:'Jun 14, 2026',ago:'3d ago',section:'Negosyo',ave:'PHP 41.5K',title:'Telco giants nagbangayan: presyo ng data, bababa raw',sv:1.62,chart:[2,5,7,4,8,3,2,1,1],brand:'neutral',tone:'mixed',authorScore:'1.20',avgSv:'1.62',keywords:[['telco',1],['data',1]],entities:['PLDT','DITO Telecommunity'],page:'7',pdfUrl:'PDF/cl15.pdf',fullImage:'image/2.png'},
+  {type:'magazine',outlet:'Esquire PH',sub:'Esquire Philippines',author:'Patricia Reyes',date:'Jun 10, 2026',ago:'7d ago',section:'Business Features',ave:'PHP 156.0K',title:'The trust race: how Philippine telcos are reinventing themselves',sv:3.18,chart:[4,7,11,9,12,8,5,3,2],brand:'positive',tone:'positive',authorScore:'2.60',avgSv:'3.18',keywords:[['telco',2],['trust',1]],entities:['Globe Telecom','PLDT','DITO Telecommunity'],page:'F1',pdfUrl:'PDF/cl15.pdf',fullImage:'image/2.png'},
+  {outlet:'Inquirer Plus',sub:'INQUIRER PLUS',author:'Daxim L. Lucas',date:'May 25, 2026',ago:'14h ago',section:'News',ave:'PHP 206.5K',title:'BIZ BUZZ: Jimenez twits PLDTs foes Inquirer Plus',sv:1.8,chart:[3,6,9,12,7,4,2,1,1],brand:'neutral',tone:'mixed',authorScore:'1.40',avgSv:'1.80',keywords:[['dito tel',1],['pldt',1]],entities:[]},
+  {outlet:'Philstar',sub:'Philstar Online',author:'Elijah Tubayan',date:'May 25, 2026',ago:'15h ago',section:'News',ave:'PHP 631.0K',title:"PLDTs 'butcher COO publicly slices telco rivals",sv:4.14,chart:[5,8,11,9,14,7,3,2,1],brand:'negative',tone:'negative',authorScore:'2.88',avgSv:'4.14',keywords:[['pldt',3],['telco',2],['dito',1]],entities:['PLDT','Smart Communications']},
+  {type:'blog',outlet:'Manila Shaker',sub:'Manila Shaker Philippines',author:'Ramon Castillo',date:'May 24, 2026',ago:'23h ago',section:'News',ave:'PHP 91.8K',title:'DITO StreamZone199 Now Available',sv:1.14,chart:[2,4,6,3,8,5,2,1,1],brand:'positive',tone:'positive',authorScore:'0.92',avgSv:'1.14',keywords:[['dito',2],['streamzone',1]],entities:['DITO Telecommunity']},
+  {outlet:'Yahoo PH',sub:'Yahoo Philippines',author:'Staff Writer',date:'May 24, 2026',ago:'1d ago',section:'News',ave:'PHP 98.4K',title:'Iridium, Planet Labs, and Ziff Davis Shares Skyrocket, What You Need T...',sv:5.23,chart:[6,9,14,11,8,12,5,3,2],brand:'positive',tone:'positive',authorScore:'4.10',avgSv:'5.23',keywords:[['iridium',2],['planet labs',1],['ziff davis',1]],entities:['Iridium','Planet Labs','Ziff Davis']},
+  {outlet:'Inquirer',sub:'Inquirer Online',author:'Lawrence Agcaoili',date:'May 23, 2026',ago:'1d ago',section:'News',ave:'PHP 190.5K',title:'DITO reigns supreme as the Philippines fastest mobile network by Opens...',sv:5.22,chart:[5,10,16,12,9,7,4,2,1],brand:'positive',tone:'positive',authorScore:'4.05',avgSv:'5.22',keywords:[['dito',3],['opensignal',1],['5g',2]],entities:['DITO Telecommunity','Opensignal']},
+  {outlet:'Insider Ph',sub:'Insider Ph',author:'Maria Santos',date:'May 23, 2026',ago:'2d ago',section:'News',ave:'PHP 184.7K',title:'Visayan Electric eyes smarter energy services with DITO',sv:1.33,chart:[2,5,7,4,6,3,2,1,1],brand:'neutral',tone:'mixed',authorScore:'1.10',avgSv:'1.33',keywords:[['dito',1],['visayan electric',1]],entities:['DITO Telecommunity','Visayan Electric']},
+  {outlet:'Manila Bulletin',sub:'Manila Bulletin',author:'Bernie Cahiles-Magkilat',date:'May 22, 2026',ago:'3d ago',section:'Technology',ave:'PHP 142.3K',title:'DITO partners with local government for digital transformation push',sv:2.87,chart:[3,7,10,8,11,6,4,2,1],brand:'positive',tone:'positive',authorScore:'2.30',avgSv:'2.87',keywords:[['dito',2],['digital',1],['government',1]],entities:['DITO Telecommunity']},
+  {outlet:'BusinessWorld',sub:'Business World Online',author:'Ashley Erika O. Jose',date:'May 22, 2026',ago:'3d ago',section:'Business',ave:'PHP 256.1K',title:'Telco war heats up as DITO expands 5G coverage to Visayas',sv:3.41,chart:[4,18,7,9,5,12,2,1,3],brand:'neutral',tone:'positive',authorScore:'0.00',avgSv:'0.00',keywords:[['dito tel',1],['dito telecommunity',1]],entities:[]},
+  {outlet:'SunStar Cebu',sub:'SunStar Cebu',author:'John Rey Saavedra',date:'May 21, 2026',ago:'4d ago',section:'Local News',ave:'PHP 78.9K',title:'DITO Telecommunity opens new flagship store in Cebu City',sv:2.05,chart:[3,6,8,5,9,4,2,1,1],brand:'positive',tone:'positive',authorScore:'1.65',avgSv:'2.05',keywords:[['dito',2],['cebu',1],['store',1]],entities:['DITO Telecommunity','Cebu City']}
+];
+// Additional mock mentions so the card grid fills 12 per page and pagination spans multiple pages
+(function(){
+  const src=[
+    ['Rappler','Rappler','News','positive','positive','DITO boosts rural connectivity across Mindanao'],
+    ['GMA News','GMA News Online','News','neutral','mixed','Globe answers DITO 5G expansion with new cell sites'],
+    ['ABS-CBN','ABS-CBN News','News','negative','negative','PLDT shares dip amid intensifying telco rivalry'],
+    ['The Manila Times','The Manila Times','Business','positive','positive','Smart rolls out upgraded unlimited data plans'],
+    ['Business Mirror','Business Mirror','Business','neutral','positive','DITO crosses 10M subscriber milestone'],
+    ['Tech in Asia','Tech in Asia','Technology','positive','positive','DITO Sky home internet enters beta testing'],
+    ['Manila Standard','Manila Standard','News','neutral','mixed','Consumer group ranks PH mobile networks for 2026'],
+    ['Daily Tribune','Daily Tribune','Business','negative','negative','Regulator reviews spectrum allocation for telcos'],
+    ['Interaksyon','Interaksyon','News','positive','positive','DITO partners with LGUs for free public WiFi'],
+    ['Unbox PH','Unbox Ph','Technology','positive','positive','DITO wins 2026 customer satisfaction award','blog'],
+    ['YugaTech','YugaTech','Technology','neutral','positive','Mobile data prices fall as competition heats up','blog'],
+    ['BizNews Asia','BizNews Asia','Business','positive','positive','DITO eyes IPO as it nears profitability'],
+    ['Adobo Magazine','Adobo Magazine','Business','neutral','mixed','Telco infrastructure sharing deal signed'],
+    ['PhilNews','PhilNews PH','News','positive','positive','DITO expands fiber footprint in Luzon']
+  ];
+  const charts=[[3,7,10,8,11,6,4,2,1],[2,5,9,12,7,4,3,1,1],[5,8,11,9,14,7,3,2,1],[4,6,8,5,9,4,2,1,1]];
+  src.forEach((m,k)=>{
+    const sv=+(((k*0.41+1.3)%4.5)+0.6).toFixed(2);
+    mentionData.push({type:m[6],outlet:m[0],sub:m[1],author:'Staff Writer',date:'May 20, 2026',ago:(k+5)+'d ago',section:m[2],ave:'PHP '+(60+k*21)+'K',title:m[5],sv:sv,chart:charts[k%charts.length],brand:m[3],tone:m[4],authorScore:(1+(k%4)).toFixed(2),avgSv:sv.toFixed(2),keywords:[['dito',1],['telco',1]],entities:['DITO Telecommunity']});
+  });
+})();
+
+let mdActive=-1;
+let mdMode='split';            // default view: 'split' (docked) | 'modal' (overlay) | 'reader' (3-pane)
+let mdSidebarWasCollapsed=false;
+let _nlSidebarWasCollapsed=false;
+let mdPage=0;                  // article-list pagination
+const MD_PER_PAGE=10;
+let tblPage=0;                 // table pagination (list + detail mode)
+const TBL_PER_PAGE=10;          // full list view
+const TBL_DETAIL_PER_PAGE=15;   // detail / split view
+function tblPerPage(){const p=document.getElementById('page-mentions');return p&&p.classList.contains('detail-open')?TBL_DETAIL_PER_PAGE:TBL_PER_PAGE;}
+function mdTotalPages(){return Math.max(1,Math.ceil(mentionData.length/MD_PER_PAGE));}
+function gotoMdPage(p){
+  mdPage=Math.max(0,Math.min(p,mdTotalPages()-1));
+  const host=mdMode==='reader'?document.getElementById('mr-list'):document.getElementById('mention-list');
+  if(host){host.innerHTML=renderMentionList();initIcons();}
+}
+function highlightMentionRow(idx){
+  document.querySelectorAll('.tbl tbody tr').forEach(tr=>tr.classList.toggle('row-selected',parseInt(tr.dataset.idx)===idx));
+}
+function tblTotalPages(){return Math.max(1,Math.ceil(mentionData.length/tblPerPage()));}
+function renderTableRow(d,globalIdx){
+  const sentClass={positive:'pos',negative:'neg',neutral:'neu'}[d.brand]||'none';
+  const sentLabel={positive:'Positive',negative:'Negative',neutral:'Neutral'}[d.brand]||'Not set';
+  return `<tr data-idx="${globalIdx}">
+    <td><span class="tcb"></span></td>
+    <td><span class="sv-val">${d.sv}</span></td>
+    <td><span class="ave-val">${d.ave}</span></td>
+    <td><div class="hl-cell"><span class="hl-icon type-${articleType(d)}" data-btip="${_makeTip({label:typeLabel(d)})}" ><i data-lucide="${typeIcon(d)}"></i></span><span class="hl-text">${d.title}</span></div></td>
+    <td><div class="pub-name">${d.sub}</div><div class="pub-cat">${d.section}</div></td>
+    <td class="tbl-sent-cell">${sentimentCellHtml(d.brand)}</td>
+    <td><div class="date-main">${d.date}</div><div class="date-ago">${d.ago}</div></td>
+    <td><span class="row-dots">⋯</span></td>
+  </tr>`;
+}
+function renderTableRows(){
+  const isDetail=document.getElementById('page-mentions').classList.contains('detail-open');
+  const total=mentionData.length,pages=tblTotalPages();
+  tblPage=Math.max(0,Math.min(tblPage,pages-1));
+  const pp=tblPerPage();                                     // 10 in list view, 15 in detail
+  const start=tblPage*pp;
+  const end=Math.min(start+pp,total);
+  const tbody=document.getElementById('tbl-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=mentionData.slice(start,end).map((d,k)=>renderTableRow(d,start+k)).join('');
+  if(isDetail){
+    const infoEl=document.getElementById('tbl-pg-info');
+    const numEl=document.getElementById('tbl-pg-num');
+    const prevEl=document.getElementById('tbl-pg-prev');
+    const nextEl=document.getElementById('tbl-pg-next');
+    if(infoEl)infoEl.textContent=`${start+1}–${end} of ${total}`;
+    if(numEl)numEl.textContent=`${tblPage+1} / ${pages}`;
+    if(prevEl)prevEl.disabled=tblPage<=0;
+    if(nextEl)nextEl.disabled=tblPage>=pages-1;
+  }else{
+    const infoEl=document.getElementById('tbl-list-pg-info');
+    const btnsEl=document.getElementById('tbl-list-pg-btns');
+    if(infoEl)infoEl.textContent=`${start+1}–${end} of ${total} results`;
+    if(btnsEl){
+      let h=`<button class="pgb arrow" onclick="goTblPage(tblPage-1)"${tblPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+      for(let p=0;p<pages;p++){h+=`<button class="pgb${p===tblPage?' on':''}" onclick="goTblPage(${p})">${p+1}</button>`;}
+      h+=`<button class="pgb arrow" onclick="goTblPage(tblPage+1)"${tblPage>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+      btnsEl.innerHTML=h;
+    }
+  }
+  if(mdActive>=0)highlightMentionRow(mdActive);
+  initIcons();
+}
+function goTblPage(n){
+  tblPage=Math.max(0,Math.min(n,tblTotalPages()-1));
+  renderTableRows();
+  const sc=document.querySelector('.tbl-scroll');if(sc)sc.scrollTop=0;
+}
+let mdListScrollTop=0; // persists list scroll position across reader entry/exit
+function setMdMode(mode){
+  if(mode===mdMode)return;
+  // Save list scroll position before entering reader
+  if(mode==='reader'){
+    const list=document.getElementById('mention-list');
+    if(list)mdListScrollTop=list.scrollTop;
+  }
+  // Fade out current reader before switching away from it
+  if(mdMode==='reader'&&mode==='split'){
+    const reader=document.getElementById('mention-reader');
+    if(reader){
+      reader.classList.add('is-exiting');
+      setTimeout(()=>_applyMdMode(mode),200);
+      return;
+    }
+  }
+  _applyMdMode(mode);
+}
+function _applyMdMode(mode){
+  mdMode=mode;
+  const ov=document.getElementById('mention-overlay');
+  const sb=document.querySelector('.sidebar');
+  const main=document.querySelector('.main');
+  if(mode==='reader'){
+    // Open full-screen reader overlay
+    ov.classList.add('reader');ov.classList.remove('split');
+    if(main){main.classList.add('md-reader-on');main.classList.remove('md-split');}
+    if(sb){mdSidebarWasCollapsed=sb.classList.contains('collapsed');sb.classList.add('collapsed');}
+    ov.style.display='flex';
+    requestAnimationFrame(()=>ov.classList.add('open'));
+    renderMentionView();
+    const reader=document.getElementById('mention-reader');
+    if(reader){reader.classList.remove('is-exiting');reader.classList.add('is-entering');setTimeout(()=>reader.classList.remove('is-entering'),300);}
+    const ahc=document.getElementById('ah-reader-ctrls');
+    if(ahc){ahc.innerHTML=renderReaderHeaderCtrls();ahc.style.display='flex';}
+  } else {
+    // Return to inline layout: close overlay, re-render inline detail
+    ov.classList.remove('reader');ov.classList.remove('split');ov.classList.remove('open');
+    setTimeout(()=>ov.style.display='none',300);
+    if(main){main.classList.remove('md-reader-on');main.classList.remove('md-split');}
+    if(sb&&!mdSidebarWasCollapsed)sb.classList.remove('collapsed');
+    const ahc=document.getElementById('ah-reader-ctrls');
+    if(ahc){ahc.innerHTML='';ahc.style.display='none';}
+    requestAnimationFrame(()=>{
+      renderTableRows();
+      if(mentionData[mdActive])renderInlineDetail(mentionData[mdActive]);
+    });
+  }
+}
+function renderMentionList(){
+  const total=mentionData.length,pages=mdTotalPages();
+  if(mdPage>=pages)mdPage=pages-1;
+  const start=mdPage*MD_PER_PAGE,end=Math.min(start+MD_PER_PAGE,total);
+  const sentCls={positive:'pos',negative:'neg',neutral:'neu'};
+  const svMin=1.0,svMax=5.5;
+  const items=mentionData.slice(start,end).map((d,k)=>{const j=start+k;
+    const pct=Math.round(60+((Math.min(Math.max(parseFloat(d.sv)||1,svMin),svMax)-svMin)/(svMax-svMin))*36);
+    const cls=pct>=85?'sc-hi':pct>=70?'sc-mid':'sc-lo';
+    return `<div class="md-li${j===mdActive?' active':''}" id="md-li-${j}" onclick="selectMention(${j})">
+    <span class="md-li-ico type-${articleType(d)}" data-btip="${_makeTip({label:typeLabel(d)})}"><i data-lucide="${typeIcon(d)}"></i></span>
+    <div class="md-li-body">
+      <div class="md-li-title">${d.title}</div>
+      <div class="md-li-meta">
+        <span class="md-li-dot ${sentCls[d.brand]||'neu'}" title="${d.brand} sentiment"></span>
+        <span class="md-li-src">${d.outlet}</span>
+        <span class="md-li-mid">·</span>
+        <span class="md-li-ago">${d.ago||d.date}</span>
+      </div>
+    </div>
+    <i data-lucide="chevron-right" class="md-li-chev"></i>
+  </div>`;}).join('');
+  const pager=`<div class="md-list-pager">
+    <button class="md-pg-btn" onclick="gotoMdPage(${mdPage-1})" title="Previous page" ${mdPage<=0?'disabled':''}><i data-lucide="chevron-left"></i></button>
+    <span class="md-pg-info">${start+1}–${end} of ${total}</span>
+    <button class="md-pg-btn" onclick="gotoMdPage(${mdPage+1})" title="Next page" ${mdPage>=pages-1?'disabled':''}><i data-lucide="chevron-right"></i></button>
+  </div>`;
+  return `<div class="md-list-header">Mentions · ${total}</div>${items}${pager}`;
+}
+function openMention(i){
+  if(!mentionData[i])return;
+  mdActive=i;
+  mdMode='split';
+  tblPage=Math.floor(i/TBL_DETAIL_PER_PAGE);
+  const sb=document.querySelector('.sidebar');
+  mdSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
+  if(sb)sb.classList.add('collapsed');
+  const ret=document.getElementById('fc-detail-return');
+  if(ret){ret.style.display='inline-flex';initIcons();}
+  document.getElementById('page-mentions').classList.add('detail-open');
+  renderTableRows();
+  renderInlineDetail(mentionData[i]);
+}
+function selectMention(i){
+  if(!mentionData[i])return;
+  mdActive=i;
+  // flip the list to the active item's page if needed (otherwise the list keeps its scroll)
+  const pageOf=Math.floor(i/MD_PER_PAGE),pageChanged=pageOf!==mdPage;
+  if(pageChanged)mdPage=pageOf;
+  if(mdMode==='reader'){
+    // update only the article panes; the list column stays put
+    document.getElementById('mr-main').innerHTML=renderReaderMain(mentionData[i]);
+    renderReaderSide(mentionData[i]);
+    const art=document.getElementById('mr-main');if(art)art.scrollTop=0;
+    const left=document.querySelector('.mr-panel-left');if(left)left.scrollTop=0;
+    const ahc=document.getElementById('ah-reader-ctrls');if(ahc)ahc.innerHTML=renderReaderHeaderCtrls(); // refresh prev/next state
+    if(pageChanged){const l=document.getElementById('mr-list');if(l)l.innerHTML=renderMentionList();}
+  }else{
+    renderInlineDetail(mentionData[i]);
+    highlightMentionRow(i);
+  }
+  initIcons();
+}
+function mdNav(dir){
+  const next=mdActive+dir;
+  if(next<0||next>=mentionData.length)return;
+  selectMention(next);
+  const li=document.getElementById('md-li-'+next);
+  if(li)li.scrollIntoView({block:'nearest'});
+}
+function toggleMdList(){
+  document.getElementById('mention-shell').classList.toggle('list-open');
+}
+function closeMention(){
+  if(mdMode==='reader'){
+    // From reader: return to inline layout, keep detail-open
+    returnToFeed();
+    return;
+  }
+  // From inline: close detail entirely, restore filter bar, sidebar and full table
+  const ret=document.getElementById('fc-detail-return');
+  if(ret)ret.style.display='none';
+  const sb=document.querySelector('.sidebar');
+  if(sb&&!mdSidebarWasCollapsed)sb.classList.remove('collapsed');
+  const page=document.getElementById('page-mentions');
+  page.classList.remove('detail-open');
+  page.classList.remove('theater');
+  tblPage=0;
+  renderTableRows();
+  highlightMentionRow(-1);
+  mdMode='split';
+}
+// Return from reader to split view — keeps overlay open, sidebar visible, active article highlighted
+function returnToFeed(){
+  // Save panel scroll before switching
+  const panelLeft=document.querySelector('.mr-panel-left');
+  if(panelLeft)mdListScrollTop=panelLeft.scrollTop;
+  setMdMode('split');
+}
+// Keyboard nav while the drawer is open (↑/↓ = prev/next, Esc = close)
+document.addEventListener('keydown',function(e){
+  const ov=document.getElementById('mention-overlay');
+  if(!ov||!ov.classList.contains('open'))return;
+  if(e.key==='ArrowDown'){e.preventDefault();mdNav(1);}
+  else if(e.key==='ArrowUp'){e.preventDefault();mdNav(-1);}
+  else if(e.key==='Escape'){closeMention();}
+});
+const MD_BRAND={positive:['pos','smile','Positive'],negative:['neg','frown','Negative'],neutral:['neu','meh','Neutral']};
+const MD_TONE={positive:['pos','thumbs-up','Positive'],negative:['neg','thumbs-down','Negative'],mixed:['neu','minus','Mixed']};
+function mdBadge(map,val){const[c,ic,lbl]=map[val]||map[Object.keys(map)[0]];return `<span class="md-badge ${c}"><i data-lucide="${ic}"></i>${lbl}</span>`;}
+// Icon-based 3-option selectors for Brand Sentiment (faces) and Article Tone (thumbs)
+const MD_SENTIMENT_OPTS=[['positive','smile','Good for Brand','pos'],['neutral','meh','Neutral','neu'],['negative','frown','Bad for Brand','neg']];
+const MD_TONE_OPTS=[['positive','thumbs-up','Positive Tone','pos'],['mixed','minus','Neutral Tone','neu'],['negative','thumbs-down','Negative Tone','neg']];
+const MD_SOCIALS=[['fa-facebook-f','#1877F2'],['fa-twitter','#1DA1F2'],['fa-instagram','#E4405F'],['fa-linkedin-in','#0A66C2'],['fa-youtube','#FF0000'],['fa-pinterest-p','#E60023'],['fa-reddit-alien','#FF4500'],['fa-tiktok','#111111']];
+function renderSocialIcons(){
+  return `<div class="md-socials">${MD_SOCIALS.map(([c,col])=>`<span class="md-soc" style="background:${col}" onmouseenter="this.style.opacity='0.8'" onmouseleave="this.style.opacity='1'"><i class="fa-brands ${c}"></i></span>`).join('')}</div>`;
+}
+// Entities: typed icon + color (type inferred from the name)
+const ENT_TYPES={org:['building-2','#0d9488'],person:['user','#2563eb'],location:['map-pin','#d97706'],other:['tag','#6b7280']};
+function entityType(name){
+  if(/\b(City|Visayas|Luzon|Mindanao|Philippines|Manila|Cebu|Davao|Quezon)\b/i.test(name))return 'location';
+  if(/\b(Inc|Corp|Communications?|Telecommunity|Labs?|Electric|Networks?|Davis|Opensignal|PLDT|DITO|Globe|Smart|Iridium|Telecom|Media|Mobile)\b/i.test(name)||name===name.toUpperCase())return 'org';
+  if(/^[A-Z][a-zA-Z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-zA-Z]+/.test(name))return 'person';
+  return 'org';
+}
+const ENT_TYPE_LABELS={org:'Organisation',person:'Person',location:'Location',other:'Other'};
+function entityPillHtml(name,countMap){
+  const type=entityType(name);
+  const [ic,col]=ENT_TYPES[type]||ENT_TYPES.org;
+  const count=(countMap&&countMap[name])||1;
+  const typeLabel=ENT_TYPE_LABELS[type]||'Organisation';
+  const wikiSlug=encodeURIComponent(name.replace(/\s+/g,'_'));
+  const tid=_makeTip({entityName:name,entityType:typeLabel,entityCount:count,wikiSlug});
+  return `<span class="md-ent-pill" data-btip="${tid}"><span class="md-ent-ico" style="background:${col}"><i data-lucide="${ic}"></i></span>${name}</span>`;
+}
+// Entities block: first 6 pills + a "Show all" button (opens the full-list modal)
+function entCountMap(d){
+  const map={};
+  (d.entities||[]).forEach(n=>{map[n]=(map[n]||0)+1;});
+  return map;
+}
+function renderEntities(d){
+  const ents=d.entities||[];
+  if(!ents.length)return `<div class="md-entities-empty">No entities extracted for this article</div>`;
+  const cm=entCountMap(d);
+  const shown=ents.slice(0,5).map(n=>entityPillHtml(n,cm)).join('');
+  const more=ents.length>5?`<button class="ent-more" onclick="openEntities(event)">Show all ${ents.length}</button>`:'';
+  return `<div class="md-kw">${shown}${more}</div>`;
+}
+function openEntities(e){
+  if(e)e.stopPropagation();
+  const d=mentionData[mdActive];if(!d)return;
+  const modal=document.getElementById('ent-modal');if(!modal)return;
+  const body=document.getElementById('ent-modal-body'),title=document.getElementById('ent-modal-title');
+  const cm=entCountMap(d);
+  if(body)body.innerHTML=`<div class="md-kw">${(d.entities||[]).map(n=>entityPillHtml(n,cm)).join('')}</div>`;
+  if(title)title.textContent=`Entities · ${(d.entities||[]).length}`;
+  modal.classList.add('open');initIcons();
+}
+function closeEntities(){const m=document.getElementById('ent-modal');if(m)m.classList.remove('open');}
+function mdSelector(field,val,opts){
+  const active=opts.find(o=>o[0]===val);   // no match → nothing selected yet
+  const label=active?`<span class="md-sel-lbl ${active[3]}">${active[2]}</span>`:`<span class="md-sel-lbl none">Not set</span>`;
+  return `<div class="md-sel">
+    ${opts.map(([v,ic,lbl,cls])=>`<button class="md-sel-btn ${cls}${v===val?' on':''}" data-btip="${_makeTip({label:lbl})}" onclick="setMdField('${field}','${v}')"><i data-lucide="${ic}"></i></button>`).join('')}
+    ${label}
+  </div>`;
+}
+function setMdField(field,val){
+  if(!mentionData[mdActive])return;
+  // toggle: clicking the active option clears it back to the unselected state
+  mentionData[mdActive][field]=(mentionData[mdActive][field]===val)?'':val;
+  const cur=mentionData[mdActive][field];
+  if(mdMode==='reader'){
+    renderReaderSide(mentionData[mdActive]);
+  }else{
+    renderInlineDetail(mentionData[mdActive]);
+  }
+  if(field==='brand'){                 // keep the list dot AND the table column in sync (grey when unset)
+    const li=document.getElementById('md-li-'+mdActive),dot=li&&li.querySelector('.md-li-dot');
+    if(dot)dot.className='md-li-dot '+({positive:'pos',negative:'neg',neutral:'neu'}[cur]||'neu');
+    const trow=document.querySelector('.tbl tbody tr[data-idx="'+mdActive+'"]'),sc=trow&&trow.querySelector('.tbl-sent-cell');
+    if(sc)sc.innerHTML=sentimentCellHtml(cur);
+    const card=document.getElementById('mention-card-'+mdActive),csc=card&&card.querySelector('.tbl-sent');
+    if(csc)csc.outerHTML=sentimentCellHtml(cur);   // keep card view pill in sync too
+  }
+  initIcons();
+}
+// Mentions table sentiment column (injected from mentionData, kept in sync with the selectors)
+function sentimentCellHtml(brand){
+  const m={positive:['pos','Positive'],neutral:['neu','Neutral'],negative:['neg','Negative']}[brand];
+  return m?`<span class="tbl-sent ${m[0]}"><span class="tbl-sent-dot"></span>${m[1]}</span>`
+          :`<span class="tbl-sent none"><span class="tbl-sent-dot"></span>Not set</span>`;
+}
+function initSentimentColumn(){
+  document.querySelectorAll('.tbl tbody tr').forEach((tr,i)=>{
+    if(tr.querySelector('.tbl-sent-cell'))return;       // don't double-inject
+    const d=mentionData[i];if(!d)return;
+    const td=document.createElement('td');
+    td.className='tbl-sent-cell';
+    td.innerHTML=sentimentCellHtml(d.brand);
+    tr.insertBefore(td,tr.children[5]);                 // after Publication (idx 4), before Date
+  });
+}
+// ── Mentions Table / Card view ──
+let mentionsView='table';
+let mcPage=0; const MC_PER_PAGE=12;
+function renderMentionCards(){
+  const total=mentionData.length,pages=Math.max(1,Math.ceil(total/MC_PER_PAGE));
+  if(mcPage>=pages)mcPage=pages-1;
+  const start=mcPage*MC_PER_PAGE,end=Math.min(start+MC_PER_PAGE,total);
+  const cards=mentionData.slice(start,end).map((d,k)=>{const i=start+k;const hasImg=['online','blog','tv'].includes(articleType(d));return `<div class="mc-card" id="mention-card-${i}" onclick="openMention(${i})">
+    ${hasImg?`<div class="mc-thumb"><img src="https://picsum.photos/seed/${encodeURIComponent(d.outlet+d.sv)}/480/270" alt=""></div>`:''}
+    <div class="mc-body">
+      <div class="mc-top">
+        <span class="mc-ico type-${articleType(d)}" data-btip="${_makeTip({label:typeLabel(d)})}"><i data-lucide="${typeIcon(d)}"></i></span>
+        <div class="mc-pub"><div class="mc-pub-name">${d.sub}</div><div class="mc-pub-cat">${d.section}</div></div>
+        ${sentimentCellHtml(d.brand)}
+      </div>
+      <div class="mc-hl">${d.title}</div>
+      <div class="mc-foot">
+        <span class="mc-metric"><span class="mc-metric-lbl">SV</span> ${d.sv}</span><span class="mc-dot">·</span>
+        <span class="mc-metric ave">${d.ave}</span><span class="mc-dot">·</span>
+        <span>${d.ago||d.date}</span>
+      </div>
+    </div>
+  </div>`;}).join('');
+  let nums='';for(let p=0;p<pages;p++){nums+=`<button class="pgb${p===mcPage?' on':''}" onclick="gotoMcPage(${p})">${p+1}</button>`;}
+  const pager=`<div class="mc-pager">
+    <div class="pg-info">${start+1}–${end} of ${total} results</div>
+    <div class="pg-btns">
+      <button class="pgb arrow" onclick="gotoMcPage(${mcPage-1})" ${mcPage<=0?'disabled':''}><i data-lucide="chevron-left"></i></button>
+      ${nums}
+      <button class="pgb arrow" onclick="gotoMcPage(${mcPage+1})" ${mcPage>=pages-1?'disabled':''}><i data-lucide="chevron-right"></i></button>
+    </div>
+  </div>`;
+  return `<div class="mc-grid">${cards}</div>${pager}`;
+}
+function gotoMcPage(p){
+  const pages=Math.max(1,Math.ceil(mentionData.length/MC_PER_PAGE));
+  mcPage=Math.max(0,Math.min(p,pages-1));
+  document.getElementById('mentions-cards').innerHTML=renderMentionCards();
+  initIcons();
+}
+function setMentionsView(v){
+  mentionsView=v;
+  const tableWrap=document.querySelector('.tbl-scroll'),cards=document.getElementById('mentions-cards'),footer=document.querySelector('.tbl-footer');
+  const tb=document.getElementById('tvb-table'),cb=document.getElementById('tvb-cards');
+  if(tb)tb.classList.toggle('on',v==='table');
+  if(cb)cb.classList.toggle('on',v==='cards');
+  if(v==='cards'){
+    cards.innerHTML=renderMentionCards();
+    cards.style.display='block';
+    if(tableWrap)tableWrap.style.display='none';
+    if(footer)footer.style.display='none';   // cards have their own pager
+    initIcons();
+  }else{
+    cards.style.display='none';
+    if(tableWrap)tableWrap.style.display='block';
+    if(footer)footer.style.display='flex';
+  }
+}
+function renderModeToggle(){
+  return `<div class="md-mode-toggle">
+    <button class="md-mode-btn ${mdMode==='split'?'on':''}" onclick="setMdMode('split')" title="Split view"><i data-lucide="columns-2"></i></button>
+    <button class="md-mode-btn ${mdMode==='reader'?'on':''}" onclick="setMdMode('reader')" title="Reader view"><i data-lucide="book-open"></i></button>
+  </div>`;
+}
+// Story Value bar chart block (shared by the detail panel and the reader analytics pane)
+function chartDayLabels(d,mode){
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const base=new Date(d.date);base.setHours(0,0,0,0);
+  const n=d.chart.length;
+  if(mode==='month'){
+    // group bars into ~3 week buckets labelled by week start
+    return d.chart.map((_,j)=>{
+      const dt=new Date(base);dt.setDate(base.getDate()-(n-1-j));
+      const wk=Math.floor(j/(n/3));
+      return j===0||Math.floor((j-1)/(n/3))!==wk?`${MONTHS[dt.getMonth()]} W${Math.ceil(dt.getDate()/7)}`:'';
+    });
+  }
+  return d.chart.map((_,j)=>{const dt=new Date(base);dt.setDate(base.getDate()-(n-1-j));return `${MONTHS[dt.getMonth()]} ${dt.getDate()}`;});
+}
+function mdChartBlock(d,mode){
+  mode=mode||'day';
+  const rawMax=Math.max(...d.chart,1),hi=d.chart.indexOf(rawMax),step=2;
+  const axisMax=Math.max(Math.ceil(rawMax/step)*step,step);
+  const labels=chartDayLabels(d,mode);
+  const avePerDay=buildAvePerDay(d);
+  const bars=d.chart.map((v,j)=>{
+    const tid=_makeTip({date:labels[j],coverage:v,sv:d.sv,ave:fmtAve(avePerDay[j])});
+    return `<div class="md-bar${j===hi?' hi':''}" style="height:${Math.max(v/axisMax*100,2)}%;animation-delay:${(j*0.04).toFixed(2)}s" data-btip="${tid}"><span class="md-bar-lbl">${labels[j]}</span></div>`;
+  }).join('');
+  let axis='',grid='';
+  for(let t=axisMax;t>=0;t-=step){const pct=(t/axisMax*100).toFixed(2);axis+=`<span class="md-axis-tick" style="bottom:${pct}%">${t}</span>`;if(t>0)grid+=`<span class="md-gridline" style="bottom:${pct}%"></span>`;}
+  return `<div class="md-chart-wrap"><div class="md-axis">${axis}</div><div class="md-chart md-chart--labeled">${grid}${bars}</div></div>`;
+}
+// ── Frequency distribution (Story Value + AVE) — reuses the shared md-chart primitives so it matches the design system ──
+function parseAve(s){let n=parseFloat(String(s).replace(/[^0-9.]/g,''))||0;if(/m/i.test(s))n*=1e6;else if(/k/i.test(s))n*=1e3;return n;}
+function fmtAve(n){if(n>=1e6)return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M';if(n>=1e3)return Math.round(n/1e3)+'K';return Math.round(n);}
+function buildFreq(d){
+  const vols=d.chart,BINS=6;
+  const max=Math.max(...vols,1),size=max/BINS||1;
+  const svCounts=new Array(BINS).fill(0),aveSums=new Array(BINS).fill(0);
+  const total=vols.reduce((a,b)=>a+b,0)||1,rate=parseAve(d.ave)/total;
+  vols.forEach(v=>{const b=Math.min(BINS-1,Math.floor(v/size));svCounts[b]++;aveSums[b]+=v*rate;});
+  return {svCounts,aveSums};
+}
+function buildAvePerDay(d){
+  const total=d.chart.reduce((a,b)=>a+b,0)||1,rate=parseAve(d.ave)/total;
+  return d.chart.map(v=>v*rate);
+}
+function freqChart(bins,opts){
+  opts=opts||{};
+  const max=Math.max(...bins,1),hi=bins.indexOf(Math.max(...bins));
+  const labels=opts.labels||[];
+  const labeled=labels.length===bins.length;
+  const bars=bins.map((v,j)=>{
+    const lbl=labeled?`<span class="md-bar-lbl">${labels[j]}</span>`:'';
+    const tipAttr=labeled?`data-btip="${_makeTip({date:labels[j],ave:opts.fmt?opts.fmt(v):v,coverage:Math.round(v)})}"`:'';
+    return `<div class="md-bar ${opts.cls||''}${j===hi?' hi':''}" style="height:${Math.max(v/max*100,2)}%;animation-delay:${(j*0.04).toFixed(2)}s" ${tipAttr}>${lbl}</div>`;
+  }).join('');
+  const T=opts.ticks||4;let axis='',grid='';
+  for(let k=T;k>=0;k--){const val=max*k/T,pct=(k/T*100).toFixed(2);axis+=`<span class="md-axis-tick" style="bottom:${pct}%">${opts.fmt?opts.fmt(val):Math.round(val)}</span>`;if(k>0)grid+=`<span class="md-gridline" style="bottom:${pct}%"></span>`;}
+  return `<div class="md-chart-wrap"><div class="md-axis">${axis}</div><div class="md-chart${labeled?' md-chart--labeled':''}">${grid}${bars}</div></div>`;
+}
+function toggleFreq(btn){
+  const panel=document.getElementById('adp-freq');
+  if(!panel)return;
+  if(panel.hasAttribute('hidden')){panel.removeAttribute('hidden');btn.textContent='Hide Frequency Distribution';initIcons();}
+  else{panel.setAttribute('hidden','');btn.textContent='Show Frequency Distribution';}
+}
+
+// Combined Story Value / AVE card — switch which metric's chart is shown
+function switchMetric(tab,key){
+  const card=tab.closest('.adp-metric');
+  if(!card)return;
+  card.querySelectorAll('.adp-mtile').forEach(t=>t.classList.toggle('act',t===tab));
+  card.querySelectorAll('.adp-metric-pane').forEach(p=>p.toggleAttribute('hidden',p.dataset.m!==key));
+}
+// ── Article type (Online News vs Cable TV) ──
+// Article-type registry — add a type by adding one entry here
+const ARTICLE_TYPES={online:{icon:'newspaper',label:'Online News'},tv:{icon:'tv',label:'TV'},blog:{icon:'rss',label:'Blog'},radio:{icon:'radio',label:'Radio'},broadsheet:{icon:'file-text',label:'Broadsheet'},provincial:{icon:'map-pin',label:'Provincial'},tabloid:{icon:'scroll-text',label:'Tabloid'},magazine:{icon:'book-open',label:'Magazine'}};
+function articleType(d){return (d&&ARTICLE_TYPES[d.type])?d.type:'online';}
+function typeLabel(d){return ARTICLE_TYPES[articleType(d)].label;}
+function isPdfPreview(d){return ['broadsheet','provincial','tabloid','magazine'].includes(articleType(d));} // print types share the PDF preview
+function isTV(d){return !!(d&&d.type==='tv');}          // TV uses the <video> media element
+function isBroadcast(d){return !!(d&&(d.type==='tv'||d.type==='radio'));} // TV + Radio share the player + transcript layout
+function typeIcon(d){return ARTICLE_TYPES[articleType(d)].icon;}
+// Meta rows for the detail/reader sidebar — broadcast fields for TV, web fields otherwise (p = class prefix 'adp'|'mr')
+function renderMetaRows(d,p){
+  const mentions=d.chart.reduce((a,b)=>a+b,0);
+  const row=(k,v)=>`<div class="${p}-meta-row"><span class="${p}-meta-k">${k}</span><span class="${p}-meta-v">${v}</span></div>`;
+  if(isBroadcast(d)){
+    return row('Mentions',mentions)+row(d.type==='radio'?'Station':'Network',d.sub)+row('Program',d.program||'—')+row('Segment Type',d.segment||'News')+row('Length',d.length||'—')+row('Est. Reach',d.ave)+row('Aired',`${d.aired||d.date}<br><span style="font-size:11px;font-weight:400;color:var(--muted)">${d.ago}</span>`);
+  }
+  return row('Mentions',mentions)+row('Publisher',d.sub)+row('Section',d.section)+row('Emphasis','mention')+row('Est. Reach',d.ave)+row('Published',`${d.date}<br><span style="font-size:11px;font-weight:400;color:var(--muted)">${d.ago}</span>`);
+}
+// Cable TV broadcast card — title + source/date + video player (p = class prefix 'adp'|'mr')
+function renderTVCard(d,p){
+  const radio=d.type==='radio';
+  const poster=d.poster||`https://picsum.photos/seed/${encodeURIComponent(d.outlet+d.sv)}/880/495`;
+  const src=d.audioUrl||d.videoUrl||'Video/Tensyon%20sumiklab%20sa%20pagitan.mp4';
+  const eqBars=radio?Array.from({length:48},(_,i)=>{const env=Math.sin((i/47)*Math.PI);return `<span style="--i:${i};--peak:${(0.2+env*0.8).toFixed(2)}"></span>`;}).join(''):'';
+  const media=radio
+    ? `<audio class="tv-video" src="${src}" preload="metadata"></audio><div class="tv-eq">${eqBars}</div>`
+    : `<video class="tv-video" src="${src}" poster="${poster}" preload="metadata" playsinline></video>`;
+  return `
+    <h1 class="${p}-title">${d.title}</h1>
+    <div class="${p}-byline">
+      <span class="${p}-pub">${d.sub}</span>
+      <span class="${p}-pub-dot"></span>
+      <span class="${p}-posted">Aired ${d.aired||d.date}</span>
+    </div>
+    ${renderArticleActions(d)}
+    <div class="tv-player${radio?' tv-player-radio':''}" onclick="tvVideoClick(event)" title="${radio?'Play broadcast':'Play clip'}">
+      ${media}
+      <span class="tv-net">${(d.outlet||d.sub).toUpperCase()}</span>
+      <button class="tv-play" aria-label="Play"><i data-lucide="play"></i></button>
+      <div class="tv-bar" onclick="event.stopPropagation()">
+        <button class="tv-cbtn tv-toggle" title="Play / Pause" onclick="tvTogglePlay(event)"><i data-lucide="play" class="tvi tvi-play"></i><i data-lucide="pause" class="tvi tvi-pause"></i></button>
+        <input class="tv-seek" type="range" min="0" max="100" value="0" step="0.1" oninput="tvSeek(this)" aria-label="Seek">
+        <span class="tv-time">0:00 / 0:00</span>
+        <button class="tv-cbtn tv-mute" title="Mute" onclick="tvMute(event)"><i data-lucide="volume-2" class="tvi tvi-on"></i><i data-lucide="volume-x" class="tvi tvi-off"></i></button>
+        <button class="tv-cbtn" title="Theater mode" onclick="toggleTheater(event)"><i data-lucide="gallery-horizontal-end"></i></button>
+        <button class="tv-cbtn" title="Full screen" onclick="playerFullscreen(event)"><i data-lucide="maximize"></i></button>
+      </div>
+    </div>`;
+}
+// Cable TV transcript section — toolbar (search/size/copy/download) + paragraphs + AI disclaimer
+function renderTVTranscript(d){
+  return `
+    <div class="tv-transcript">
+      <div class="tv-trans-toolbar">
+        <div class="tv-trans-hd"><i data-lucide="captions"></i> Broadcast transcript</div>
+        <div class="tv-trans-tools">
+          <div class="tv-trans-search">
+            <i data-lucide="search"></i>
+            <input type="text" placeholder="Search transcript…" oninput="tvTranscriptSearch(this)" aria-label="Search transcript">
+            <span class="tv-trans-count"></span>
+          </div>
+          <button class="tv-tbtn" title="Text size" onclick="tvTextSize(this)"><i data-lucide="type"></i></button>
+          <button class="tv-tbtn" title="Copy transcript" onclick="tvTranscriptCopy(this)"><i data-lucide="copy"></i></button>
+          <button class="tv-tbtn" title="Download transcript (.txt)" data-title="${(d.title||'transcript').replace(/"/g,'')}" onclick="tvTranscriptDownload(this)"><i data-lucide="download"></i></button>
+        </div>
+      </div>
+      <div class="tv-trans-body">
+        ${(d.transcript||'Transcript not available for this segment.').split('\n').map(t=>`<p>${t}</p>`).join('')}
+      </div>
+    </div>
+    <div class="tv-disclaimer">Note: Transcript generated by an AI speech-to-text system and may contain inaccuracies. Verify significant details independently.</div>`;
+}
+// Transcript toolbar actions
+function tvTransBody(el){const w=el.closest('.tv-transcript');return w&&w.querySelector('.tv-trans-body');}
+function tvTransText(body){return Array.from(body.querySelectorAll('p')).map(p=>p.textContent).join('\n\n');}
+function tvEsc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function tvTranscriptSearch(input){
+  const body=tvTransBody(input);if(!body)return;
+  const q=input.value.trim();let count=0;
+  const re=q?new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'):null;
+  body.querySelectorAll('p').forEach(p=>{
+    const text=p.textContent;
+    p.innerHTML=re?tvEsc(text).replace(re,m=>{count++;return '<mark>'+m+'</mark>';}):tvEsc(text);
+  });
+  const c=input.parentElement.querySelector('.tv-trans-count');
+  if(c)c.textContent=q?(count+' match'+(count!==1?'es':'')):'';
+}
+function tvTranscriptCopy(btn){
+  const body=tvTransBody(btn);if(!body)return;
+  const text=tvTransText(body);
+  if(navigator.clipboard)navigator.clipboard.writeText(text).then(()=>showTrackerToast('Transcript copied to clipboard')).catch(()=>showTrackerToast('Copy failed'));
+}
+function tvTranscriptDownload(btn){
+  const body=tvTransBody(btn);if(!body)return;
+  const text=tvTransText(body);
+  const name=((btn.dataset.title||'transcript').replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'').slice(0,60)||'transcript')+'.txt';
+  const a=document.createElement('a');const url=URL.createObjectURL(new Blob([text],{type:'text/plain'}));
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  showTrackerToast('Transcript downloaded');
+}
+function tvTextSize(btn){
+  const body=tvTransBody(btn);if(!body)return;
+  const sizes=['','tv-size-lg','tv-size-sm'];
+  body.classList.remove('tv-size-lg','tv-size-sm');
+  const i=((parseInt(body.dataset.size||'0',10))+1)%sizes.length;
+  body.dataset.size=i;if(sizes[i])body.classList.add(sizes[i]);
+}
+// Custom video controls (play/pause, seek, time, mute, theater, full screen)
+function tvFmt(s){s=Math.max(0,Math.floor(s||0));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+function tvVideoClick(e){const v=e.currentTarget.querySelector('.tv-video');if(!v)return;if(v.paused)v.play().catch(()=>{});else v.pause();}
+function tvTogglePlay(e){e.stopPropagation();const v=e.currentTarget.closest('.tv-player').querySelector('.tv-video');if(!v)return;if(v.paused)v.play().catch(()=>{});else v.pause();}
+function tvMute(e){e.stopPropagation();const v=e.currentTarget.closest('.tv-player').querySelector('.tv-video');if(v)v.muted=!v.muted;}
+function tvSeek(input){const v=input.closest('.tv-player').querySelector('.tv-video');if(v&&v.duration)v.currentTime=(input.value/100)*v.duration;}
+// Bind each player's video to its bar (idempotent — safe to call after every render)
+// Smooth word-karaoke driven by requestAnimationFrame (timeupdate is too coarse at ~4fps)
+let tvCapRAF=0;
+function stopCap(){if(tvCapRAF){cancelAnimationFrame(tvCapRAF);tvCapRAF=0;}}
+function startCap(v){stopCap();const tick=()=>{if(v.paused||v.ended){tvCapRAF=0;return;}capTick(v);tvCapRAF=requestAnimationFrame(tick);};tvCapRAF=requestAnimationFrame(tick);}
+function capTick(v){
+  const tb=document.querySelector('.tv-trans-body');
+  if(!tb||!tb.classList.contains('captions-on')||!v.duration)return;
+  const ps=tb.querySelectorAll('p');if(!ps.length)return;
+  const N=ps.length,prog=v.currentTime/v.duration;
+  const idx=Math.min(N-1,Math.floor(prog*N));
+  if(String(idx)!==v.dataset.capIdx){
+    const prev=tb.querySelector('p.tv-cap-active');
+    if(prev){prev.classList.remove('tv-cap-active');if(prev.dataset.txt!==undefined){prev.textContent=prev.dataset.txt;delete prev.dataset.txt;}}
+    v.dataset.capIdx=idx;v.dataset.capWord='-1';
+    const cp=ps[idx];cp.classList.add('tv-cap-active');
+    if(cp.dataset.txt===undefined){
+      cp.dataset.txt=cp.textContent;
+      const lens=[];
+      cp.innerHTML=cp.textContent.split(/(\s+)/).map(t=>{if(/^\s+$/.test(t))return t;lens.push(t.length);return `<span class="tv-w">${tvEsc(t)}</span>`;}).join('');
+      const total=lens.reduce((a,b)=>a+b,0)||1;let acc=0;
+      cp._ends=lens.map(l=>{acc+=l;return acc/total;});   // word duration ∝ length (natural cadence)
+    }
+    cp.scrollIntoView({block:'nearest',behavior:'smooth'});
+  }
+  const cp=ps[idx],words=cp.querySelectorAll('.tv-w');
+  if(words.length){
+    const within=Math.max(0,Math.min(0.9999,(prog-idx/N)*N));
+    const ends=cp._ends||[];
+    let widx=ends.findIndex(e=>within<e);if(widx<0)widx=words.length-1;
+    if(String(widx)!==v.dataset.capWord){
+      v.dataset.capWord=widx;
+      words.forEach((w,i)=>{w.classList.toggle('tv-w-done',i<widx);w.classList.toggle('tv-w-now',i===widx);});
+    }
+  }
+}
+function tvWire(){
+  document.querySelectorAll('.tv-video').forEach(function(v){
+    if(v.dataset.wired)return; v.dataset.wired='1';
+    const player=v.closest('.tv-player');
+    const seek=player.querySelector('.tv-seek'),time=player.querySelector('.tv-time');
+    const tbody=()=>document.querySelector('.tv-trans-body');
+    v.addEventListener('play',()=>{player.classList.add('playing','vp-playing');const tb=tbody();if(tb)tb.classList.add('captions-on');startCap(v);});
+    v.addEventListener('pause',()=>{player.classList.remove('vp-playing');const tb=tbody();if(tb)tb.classList.remove('captions-on');stopCap();});
+    v.addEventListener('ended',()=>{stopCap();const tb=tbody();if(tb){tb.classList.remove('captions-on');tb.querySelectorAll('p.tv-cap-active').forEach(p=>{p.classList.remove('tv-cap-active');if(p.dataset.txt!==undefined){p.textContent=p.dataset.txt;delete p.dataset.txt;}});}v.dataset.capIdx='';v.dataset.capWord='';});
+    v.addEventListener('volumechange',()=>player.classList.toggle('muted',v.muted||v.volume===0));
+    v.addEventListener('loadedmetadata',()=>{if(time)time.textContent='0:00 / '+tvFmt(v.duration);});
+    v.addEventListener('timeupdate',()=>{
+      if(seek&&v.duration)seek.value=(v.currentTime/v.duration)*100;
+      if(time)time.textContent=tvFmt(v.currentTime)+' / '+tvFmt(v.duration||0);
+    });
+  });
+}
+// Theater mode — expand video + transcript across both columns, hide the list + side cards
+function toggleTheater(e){
+  if(e)e.stopPropagation();
+  const page=document.getElementById('page-mentions');
+  if(page)page.classList.toggle('theater');
+}
+// Native full screen on the mock player element
+function playerFullscreen(e){
+  if(e)e.stopPropagation();
+  const player=e&&e.currentTarget?e.currentTarget.closest('.tv-player'):document.querySelector('.tv-player');
+  if(!player)return;
+  if(document.fullscreenElement)document.exitFullscreen();
+  else if(player.requestFullscreen)player.requestFullscreen();
+}
+// Esc leaves theater (when not in native fullscreen, which Esc handles itself)
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&!document.fullscreenElement){
+    const em=document.getElementById('ent-modal');
+    if(em&&em.classList.contains('open')){closeEntities();return;}
+    const lb=document.getElementById('bs-lightbox');
+    if(lb&&lb.classList.contains('open')){closeBroadsheet();return;}
+    const page=document.getElementById('page-mentions');
+    if(page&&page.classList.contains('theater'))page.classList.remove('theater');
+  }
+});
+// Quick share/download actions for a content preview (Email + PDF for all; + media download for TV/Radio)
+function renderArticleActions(d){
+  const src=d.videoUrl||d.audioUrl||'Video/Tensyon%20sumiklab%20sa%20pagitan.mp4';
+  let extra='';
+  if(d.type==='tv')extra=`<button class="qa-btn" onclick="qaDownload('${src}',event)"><i data-lucide="video"></i> Download Video</button>`;
+  else if(d.type==='radio')extra=`<button class="qa-btn" onclick="qaDownload('${src}',event)"><i data-lucide="headphones"></i> Download Audio</button>`;
+  else if(isPdfPreview(d))extra=`<button class="qa-btn" onclick="openBroadsheet('${d.fullImage||'image/2.png'}')"><i data-lucide="book-open"></i> Preview full broadsheet</button>`;
+  return `<div class="qa-row">
+    <button class="qa-btn" onclick="qaEmail(event)"><i data-lucide="mail"></i> Send via Email</button>
+    <button class="qa-btn" onclick="qaPdf(event)"><i data-lucide="file-down"></i> Export as PDF</button>
+    ${extra}
+  </div>`;
+}
+function qaEmail(e){if(e)e.stopPropagation();showTrackerToast('Article sent via email');}
+function qaPdf(e){if(e)e.stopPropagation();showTrackerToast('Exported as PDF');}
+function qaDownload(src,e){if(e)e.stopPropagation();const a=document.createElement('a');a.href=src;a.download='';document.body.appendChild(a);a.click();a.remove();showTrackerToast('Download started');}
+// Article body — Cable TV shows player + transcript together (used by reader); Online shows hero image + excerpt (p = class prefix 'adp'|'mr')
+function renderArticleBody(d,p){
+  if(isBroadcast(d)){
+    return renderTVCard(d,p)+renderTVTranscript(d);
+  }
+  if(isPdfPreview(d)){
+    const pdf=d.pdfUrl||'PDF/cl15.pdf';
+    return `
+      <h1 class="${p}-title">${d.title}</h1>
+      <div class="${p}-byline">
+        <span class="${p}-pub">${d.sub}</span>
+        <span class="${p}-pub-dot"></span>
+        <span class="${p}-posted">Published ${d.date}${d.page?' · Page '+d.page:''}</span>
+      </div>
+      ${renderArticleActions(d)}
+      <div class="bs-pdf"><iframe src="${pdf}#view=Fit" title="${d.title}" loading="lazy"></iframe></div>`;
+  }
+  const excerpt=`This article from ${d.sub} covers "${d.title}". ${d.sub} reports on the developments around the story, its key players, and the wider market impact. Coverage continues across online, print and broadcast outlets as the narrative develops. Read the full piece at the source for complete context, quotes and figures…`;
+  return `
+    <h1 class="${p}-title">${d.title}</h1>
+    <div class="${p}-byline">
+      <span class="${p}-pub">${d.sub}</span>
+      <span class="${p}-pub-dot"></span>
+      <span class="${p}-posted">Posted on ${d.date}</span>
+    </div>
+    ${renderArticleActions(d)}
+    <div class="${p}-hero">
+      <img class="${p}-hero-img" src="https://picsum.photos/seed/${encodeURIComponent(d.outlet+d.sv)}/880/495" alt="">
+      <span class="${p==='adp'?'adp-hero-credit':'mr-credit'}">${d.outlet.toUpperCase()}</span>
+    </div>
+    <p class="${p}-excerpt">${excerpt}</p>
+    ${p==='adp'?`<button class="adp-read-btn" onclick="setMdMode('reader')">Read Full Article</button>`:`<button class="mr-read">Read Full Article</button>`}`;
+}
+// Full-broadsheet lightbox
+function openBroadsheet(src){
+  const lb=document.getElementById('bs-lightbox');if(!lb)return;
+  const img=document.getElementById('bs-lb-img');if(img)img.src=src;
+  lb.classList.add('open');
+}
+function closeBroadsheet(){
+  const lb=document.getElementById('bs-lightbox');if(!lb)return;
+  lb.classList.remove('open');
+  const img=document.getElementById('bs-lb-img');if(img)img.src='';
+}
+// Reader (panes split out so article switches update without re-rendering the list)
+function renderReaderSide(d){
+  // Col 1 — metadata + author
+  const kw=d.keywords.map(([t,n])=>`<span class="md-kw-pill">${t} - ${n}</span>`).join('');
+  const entities=renderEntities(d);
+  document.getElementById('mr-col-meta').innerHTML=`
+    <div class="mr-card">
+      <div class="mr-sv-row">
+        <div><div class="mr-sv-lbl">Story Value</div><div class="mr-sv-num">${d.sv}</div></div>
+        <div><div class="mr-sv-lbl">AVE</div><div class="mr-sv-num ave">${d.ave}</div></div>
+      </div>
+      <button class="mr-btn-freq">Show Frequency Distribution</button>
+    </div>
+    <div class="mr-card">
+      ${renderMetaRows(d,'mr')}
+    </div>
+    <div class="mr-card">
+      <div class="mr-card-hd">Author(s)</div>
+      <div class="md-author-row"><span class="md-author-avatar">${d.author.charAt(0)}</span><span class="md-author-name">${d.author}</span></div>
+      ${renderSocialIcons()}
+      <div class="md-stats">
+        <div><div class="md-stat-lbl">Author Score</div><div class="md-stat-val">${d.authorScore}</div></div>
+        <div><div class="md-stat-lbl">Avg SV</div><div class="md-stat-val">${d.avgSv}</div></div>
+      </div>
+    </div>`;
+  document.getElementById('mr-col-analytics').innerHTML=`
+    <div class="mr-card">${renderReaderInsights(d)}</div>
+    <div class="mr-card">
+      <div class="mr-card-hd">Brand Sentiment</div>
+      ${mdSelector('brand',d.brand,MD_SENTIMENT_OPTS)}
+      <div class="mr-card-hd" style="margin-top:16px">Article Tone</div>
+      ${mdSelector('tone',d.tone,MD_TONE_OPTS)}
+    </div>
+    <div class="mr-card"><div class="mr-card-hd">Keywords</div><div class="md-kw">${kw}</div></div>
+    <div class="mr-card"><div class="mr-card-hd">Entities</div>${entities}</div>`;
+  return '';
+}
+// Analytics folded into the reading flow as an "Insights" block (Story Value dedup'd to the meta sidebar)
+function renderReaderInsights(d){
+  return `
+    <div class="mr-insights-hd">Insights</div>
+    <div class="md-sec-lbl">Story Value · coverage volume <i data-lucide="info"></i></div>
+    ${mdChartBlock(d)}
+    <div class="md-sv-cap">Last ${d.chart.length} days</div>`;
+}
+function renderReaderMain(d){
+  return `
+    <div class="mr-col-article-inner">
+      ${renderArticleBody(d,'mr')}
+    </div>`;
+}
+// Reader header controls live in the app header (beside the avatar) while reader is open
+function renderReaderHeaderCtrls(){
+  return `
+    ${renderModeToggle()}
+    <button class="md-nav" onclick="mdNav(-1)" title="Previous (↑)" ${mdActive<=0?'disabled':''}><i data-lucide="chevron-up"></i></button>
+    <button class="md-nav" onclick="mdNav(1)" title="Next (↓)" ${mdActive>=mentionData.length-1?'disabled':''}><i data-lucide="chevron-down"></i></button>
+    <button class="ah-return-btn" onclick="returnToFeed()"><i data-lucide="arrow-left"></i> Return to Mentions Feed</button>`;
+}
+// Reader = compact list + 3-column stage (meta | analytics | article); controls render in the app header
+function renderReader(d){
+  return `
+    <div class="mr-cols">
+      <div class="md-list" id="mr-list">${renderMentionList()}</div>
+      <div class="mr-stage">
+        <div class="mr-panel-left">
+          <div class="mr-col-meta" id="mr-col-meta"></div>
+          <div class="mr-col-analytics" id="mr-col-analytics"></div>
+        </div>
+        <div class="mr-col-article" id="mr-main">${renderReaderMain(d)}</div>
+      </div>
+    </div>`;
+}
+// Render whichever view matches the active mode (clearing the other to avoid duplicate md-li IDs)
+function renderMentionView(){
+  const ahc=document.getElementById('ah-reader-ctrls');
+  if(mdMode==='reader'){
+    document.getElementById('mention-list').innerHTML='';
+    document.getElementById('mention-panel').innerHTML='';
+    const d=mentionData[mdActive];
+    document.getElementById('mention-reader').innerHTML=renderReader(d);
+    renderReaderSide(d);
+    if(ahc){ahc.innerHTML=renderReaderHeaderCtrls();ahc.style.display='flex';}
+  }else{
+    document.getElementById('mention-reader').innerHTML='';
+    document.getElementById('mention-list').innerHTML=renderMentionList();
+    document.getElementById('mention-panel').innerHTML=renderMention(mentionData[mdActive]);
+    if(ahc){ahc.innerHTML='';ahc.style.display='none';}
+  }
+  initIcons();
+}
+function renderMention(d){
+  const rawMax=Math.max(...d.chart,1);
+  const hi=d.chart.indexOf(rawMax);
+  const step=2;
+  const axisMax=Math.max(Math.ceil(rawMax/step)*step,step);
+  const _labels=chartDayLabels(d,'day');
+  const _avePerDay=buildAvePerDay(d);
+  const bars=d.chart.map((v,j)=>{
+    const tid=_makeTip({date:_labels[j],coverage:v,sv:d.sv,ave:fmtAve(_avePerDay[j])});
+    return `<div class="md-bar${j===hi?' hi':''}" style="height:${Math.max(v/axisMax*100,2)}%;animation-delay:${(j*0.04).toFixed(2)}s" data-btip="${tid}"><span class="md-bar-lbl">${_labels[j]}</span></div>`;
+  }).join('');
+  let axis='',grid='';
+  for(let t=axisMax;t>=0;t-=step){
+    const pct=(t/axisMax*100).toFixed(2);
+    axis+=`<span class="md-axis-tick" style="bottom:${pct}%">${t}</span>`;
+    if(t>0)grid+=`<span class="md-gridline" style="bottom:${pct}%"></span>`;
+  }
+  const kw=d.keywords.map(([t,n])=>`<span class="md-kw-pill">${t} - ${n}</span>`).join('');
+  const entities=renderEntities(d);
+  return `
+    <div class="md-head">
+      <button class="md-nav md-list-toggle" onclick="toggleMdList()" title="Show list"><i data-lucide="menu"></i></button>
+      <div class="md-head-main">
+        <div class="md-title">${d.title}</div>
+        <div class="md-meta" style="margin-top:6px;margin-bottom:0">
+          <span>${d.sub}</span><span class="md-dot"></span>
+          <span>${d.date}</span>
+        </div>
+      </div>
+      <div class="md-head-actions">
+        ${renderModeToggle()}
+        <button class="md-nav" onclick="mdNav(-1)" title="Previous (↑)" ${mdActive<=0?'disabled':''}><i data-lucide="chevron-up"></i></button>
+        <button class="md-nav" onclick="mdNav(1)" title="Next (↓)" ${mdActive>=mentionData.length-1?'disabled':''}><i data-lucide="chevron-down"></i></button>
+        <button class="md-close" onclick="closeMention()" title="Close"><i data-lucide="x"></i></button>
+      </div>
+    </div>
+    <div class="md-actions">
+      <button class="md-icon-btn" title="Email"><i data-lucide="mail"></i></button>
+      <button class="md-icon-btn" title="Save"><i data-lucide="bookmark"></i></button>
+      <button class="md-icon-btn" title="Copy link"><i data-lucide="link"></i></button>
+      <button class="md-icon-btn" title="Add"><i data-lucide="plus"></i></button>
+      <div class="md-actions-right">
+        <button class="md-btn-pdf">Download PDF</button>
+        <button class="md-btn-read" onclick="setMdMode('reader')">Read Article</button>
+      </div>
+    </div>
+    <div class="md-sec" style="border-top:none;padding-top:0">
+      <div class="md-sec-lbl">Story Value <i data-lucide="info"></i></div>
+      <div class="md-sv-num">${d.sv}</div>
+      <div class="md-chart-wrap"><div class="md-axis">${axis}</div><div class="md-chart md-chart--labeled">${grid}${bars}</div></div>
+      <div class="md-sv-cap">Coverage volume · last ${d.chart.length} days</div>
+    </div>
+    <div class="md-sec">
+      <div class="md-sec-lbl">Brand Sentiment <i data-lucide="info"></i></div>
+      ${mdSelector('brand',d.brand,MD_SENTIMENT_OPTS)}
+      <div class="md-sec-lbl" style="margin-top:16px">Article Tone <i data-lucide="info"></i></div>
+      ${mdSelector('tone',d.tone,MD_TONE_OPTS)}
+    </div>
+    <div class="md-sec">
+      <div class="md-sec-lbl">Author(s)</div>
+      <div class="md-author-row">
+        <span class="md-author-avatar">${d.author.charAt(0)}</span>
+        <span class="md-author-name">${d.author}</span>
+      </div>
+      ${renderSocialIcons()}
+      <div class="md-stats">
+        <div><div class="md-stat-lbl">Author Score</div><div class="md-stat-val">${d.authorScore}</div></div>
+        <div><div class="md-stat-lbl">Avg SV</div><div class="md-stat-val">${d.avgSv}</div></div>
+      </div>
+    </div>
+    <div class="md-sec md-sec-2col">
+      <div>
+        <div class="md-sec-lbl">Keywords</div>
+        <div class="md-kw">${kw}</div>
+      </div>
+      <div>
+        <div class="md-sec-lbl">Entities <i data-lucide="info"></i></div>
+        ${entities}
+      </div>
+    </div>`;
+}
+
+function renderInlineDetail(d){
+  const kw=d.keywords.map(([t,n])=>`<span class="md-kw-pill">${t} - ${n}</span>`).join('');
+  const entities=renderEntities(d);
+  const mentions=d.chart.reduce((a,b)=>a+b,0);
+  const fq=buildFreq(d);
+
+  // Left column hidden — table takes that role
+  document.getElementById('adp-col-left').innerHTML='';
+
+  // Middle column (30%): all data cards stacked
+  document.getElementById('adp-col-mid').innerHTML=`
+    ${isBroadcast(d)?`<div class="adp-card adp-tv-card">${renderTVCard(d,'adp')}</div>`:''}
+    <div class="adp-card adp-metric">
+      <div class="adp-metric-tiles">
+        <button class="adp-mtile act" onclick="switchMetric(this,'sv')"><span class="adp-mtile-lbl">Story Value</span><span class="adp-mtile-val">${d.sv}</span></button>
+        <button class="adp-mtile" onclick="switchMetric(this,'ave')"><span class="adp-mtile-lbl">AVE</span><span class="adp-mtile-val ave">${d.ave}</span></button>
+      </div>
+      <div class="adp-metric-pane" data-m="sv">
+        <div class="md-sec-lbl">Story Value · coverage volume <i data-lucide="info"></i></div>
+        ${mdChartBlock(d,'day')}
+        <div class="md-sv-cap">Last ${d.chart.length} days</div>
+      </div>
+      <div class="adp-metric-pane" data-m="ave" hidden>
+        <div class="md-sec-lbl">AVE · distribution <i data-lucide="info"></i></div>
+        ${freqChart(buildAvePerDay(d),{cls:'ave',ticks:4,fmt:fmtAve,labels:chartDayLabels(d,'day')})}
+        <div class="md-sv-cap">Last ${d.chart.length} days</div>
+      </div>
+    </div>
+    <div class="adp-card-pair">
+      <div class="adp-card">
+        ${renderMetaRows(d,'adp')}
+      </div>
+      <div class="adp-card">
+        <div class="adp-card-hd">Author(s)</div>
+        <div class="md-author-row"><span class="md-author-avatar">${d.author.charAt(0)}</span><span class="md-author-name">${d.author}</span></div>
+        ${renderSocialIcons()}
+        <div class="md-stats">
+          <div><div class="md-stat-lbl">Author Score</div><div class="md-stat-val">${d.authorScore}</div></div>
+          <div><div class="md-stat-lbl">Avg SV</div><div class="md-stat-val">${d.avgSv}</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="adp-card">
+      <div class="adp-sent-grid">
+        <div>
+          <div class="adp-card-hd">Brand Sentiment</div>
+          ${mdSelector('brand',d.brand,MD_SENTIMENT_OPTS)}
+        </div>
+        <div>
+          <div class="adp-card-hd">Article Tone</div>
+          ${mdSelector('tone',d.tone,MD_TONE_OPTS)}
+        </div>
+      </div>
+    </div>
+    <div class="adp-card-pair-half">
+      <div class="adp-card">
+        <div class="adp-card-hd">Keywords</div>
+        <div class="md-kw">${kw}</div>
+      </div>
+      <div class="adp-card">
+        <div class="adp-card-hd">Entities</div>
+        ${entities}
+      </div>
+    </div>`;
+
+  // Right column (40%): Article content — video + transcript for Cable TV, image + excerpt for Online
+  document.getElementById('adp-col-right').innerHTML=`
+    <div class="adp-article">
+      ${isBroadcast(d)?renderTVTranscript(d):renderArticleBody(d,'adp')}
+    </div>`;
+
+  initIcons();
+}
+
+function sendAIReport(){
+  const to=document.getElementById('rpt-to').value.trim();
+  if(!to){document.getElementById('rpt-to').focus();document.getElementById('rpt-to').style.borderColor='#d44';return;}
+  document.getElementById('rpt-to').style.borderColor='#ddd';
+  closeAIReport();
+  showTrackerToast('AI report sent to '+to,null,'rpt');
+}
+
+function downloadAIReport(){
+  closeAIReport();
+  showTrackerToast('Report downloaded as PDF',null,'dl');
+}
+
+function showDemo(type,story){
+  if(type==='newsletter')showNewsletter(story);
+  else showAIReport(story);
+}
+
+function doGenerate(){
+  const out=document.getElementById('ai-out'),btn=document.getElementById('gen-btn');
+  out.classList.add('loading');out.textContent='Analysing coverage patterns for today...';btn.disabled=true;
+  setTimeout(()=>{
+    out.classList.remove('loading');
+    out.textContent="Today's DITO Telecommunity coverage is dominated by two parallel narratives: Manny Jimenez's sharp BIZ BUZZ commentary on PLDT picked up across three Tier 1 outlets within 15 hours, and an independent Opensignal benchmark crowning DITO the country's fastest mobile network. Sentiment is split — the Jimenez story reads neutral but adversarial, while the Opensignal recognition and 5G Visayas expansion deliver clean positive frames worth amplifying. Volume is up 22% versus yesterday on the back of the BIZ BUZZ pickup; the next 24 hours will likely surface follow-up commentary from PLDT and analyst reaction to the Opensignal ranking. Watch the Cebu flagship store opening and the Visayan Electric partnership for regional pickup heading into the weekend.";
+    btn.disabled=false;
+  },900);
+}
+
+function applyAveColor(){
+  const card=document.getElementById('ss-1');
+  if(!card)return;
+  const val=parseFloat(card.querySelector('.ss-num').dataset.val)||0;
+  const target=parseFloat(card.dataset.target)||1;
+  const el=card.querySelector('.ss-val');
+  el.classList.remove('grn','red');
+  el.classList.add(val>=target?'grn':'red');
+}
+if(document.getElementById('page-mentions')){
+  renderTrendRows();
+  applyAveColor();
+  rerenderList('spot');
+}
+
+// Pagination interactivity
+document.querySelectorAll('.pgb').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    if(btn.classList.contains('arrow')) return;
+    document.querySelectorAll('.pgb').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+  });
+});
+// Checkbox toggle
+document.querySelectorAll('.tcb').forEach(cb=>{
+  cb.addEventListener('click',()=>{
+    if(cb.style.background==='rgb(74, 63, 140)'){
+      cb.style.background='#fff';
+      cb.innerHTML='';
+    } else {
+      cb.style.background='#181d26';
+      cb.style.borderColor='#181d26';
+      cb.innerHTML='<i data-lucide="check" style="color:#fff;width:10px;height:10px;display:flex;align-items:center;justify-content:center;height:100%"></i>';
+      initIcons();
+    }
+  });
+});
+// ── PAGE ROUTING (pages are now separate HTML files sharing this script) ──
+let currentPage=document.getElementById('page-tracker')?'tracker'
+               :document.getElementById('page-dashboard')?'dashboard':'mentions';
+function goPage(page){
+  if(currentPage===page)return;
+  window.location.href=page+'.html';
+}
+
+// ── ACTIVITY TRACKER DATA ──
+const TC={
+  'Press Release':{cls:'type-pr',icls:'icon-pr',icon:'file-text'},
+  'Event':{cls:'type-ev',icls:'icon-ev',icon:'calendar'},
+  'Crisis':{cls:'type-cr',icls:'icon-cr',icon:'alert-triangle'},
+  'Trending':{cls:'type-tr',icls:'icon-tr',icon:'flame'},
+  'Product':{cls:'type-pd',icls:'icon-pd',icon:'box'},
+};
+const ATmc={'TV':'media-tv','Online':'media-online','Print':'media-print','Radio':'media-radio','Social':'media-social'};
+const ATicn={'TV':{cls:'type-tv',icon:'tv'},'Online':{cls:'type-online',icon:'newspaper'},'Print':{cls:'type-broadsheet',icon:'file-text'},'Radio':{cls:'type-radio',icon:'radio'},'Social':{cls:'type-blog',icon:'share-2'}};
+const DB=[
+  {media:'Online',source:'Manila Times Online',title:'DITO expands 5G footprint in Metro Manila',date:'May 20, 2026',value:312000},
+  {media:'Print',source:'Philippine Daily Inquirer',title:'DITO Telecommunity posts record subscriber growth',date:'May 19, 2026',value:520000},
+  {media:'TV',source:'ABS-CBN News',title:'DITO eyes Visayas coverage by Q3 2026',date:'May 18, 2026',value:890000},
+  {media:'Online',source:'BusinessWorld',title:'DITO partners with Huawei for network upgrade',date:'May 17, 2026',value:195000},
+  {media:'Online',source:'Rappler',title:'DITO StreamZone promo draws 2M new users',date:'May 16, 2026',value:245000},
+  {media:'TV',source:'CNN Philippines',title:'DITO CME reports Q1 profit surge',date:'May 15, 2026',value:710000},
+  {media:'Print',source:'Philippine Star',title:'DITO rated fastest network by Opensignal',date:'May 14, 2026',value:380000},
+  {media:'Online',source:'One News PH',title:'DITO launches rural connectivity program',date:'May 13, 2026',value:175000},
+  {media:'Social',source:'Facebook / DITO',title:'DITO 5G now live in 50 cities',date:'May 12, 2026',value:45000},
+];
+let acts=[
+  {id:1,title:'DITO 5G Expansion — Visayas Coverage Push',type:'Press Release',date:'2026-05-18',content:'DITO Telecommunity accelerating 5G rollout across Visayas region. Coverage expansion to reach Cebu Iloilo Bacolod by Q3 2026. Partnership with Huawei for network infrastructure upgrade.',matches:[
+    {id:'m1',media:'Online',source:'BusinessWorld',title:'Telco war heats up as DITO expands 5G coverage to Visayas',date:'May 22, 2026',value:256000,score:0.94,manual:false},
+    {id:'m2',media:'Online',source:'SunStar Cebu',title:'DITO Telecommunity opens new flagship store in Cebu City',date:'May 21, 2026',value:78000,score:0.87,manual:false},
+    {id:'m3',media:'TV',source:'ABS-CBN News',title:'DITO eyes Visayas coverage by Q3 2026',date:'May 18, 2026',value:890000,score:0.81,manual:false},
+    {id:'m4',media:'Online',source:'Inquirer Online',title:'DITO reigns supreme as the Philippines fastest mobile network',date:'May 23, 2026',value:190000,score:0.76,manual:false},
+  ]},
+  {id:2,title:'Jimenez PLDT Rivalry — Executive Response',type:'Crisis',date:'2026-05-25',content:'Official response to PLDT executive statements on competitive landscape. Jimenez remarks on market positioning drove Tier 1 pickup across major outlets within 24 hours.',matches:[
+    {id:'m6',media:'Print',source:'Philippine Daily Inquirer',title:"BIZ BUZZ: Jimenez twits PLDT's foes",date:'May 25, 2026',value:397000,score:0.96,manual:false},
+    {id:'m7',media:'Online',source:'Inquirer Plus',title:'BIZ BUZZ: Jimenez twits PLDTs foes Inquirer Plus',date:'May 25, 2026',value:206000,score:0.91,manual:false},
+    {id:'m8',media:'Online',source:'Philstar Online',title:"PLDTs 'butcher COO publicly slices telco rivals",date:'May 25, 2026',value:631000,score:0.88,manual:false},
+    {id:'m9',media:'TV',source:'ABS-CBN News',title:'Telco war escalates: Jimenez vs. Reyes feud explained',date:'May 25, 2026',value:890000,score:0.83,manual:false},
+  ]},
+];
+let atNid=3,trackerSel=null,trackerTabs={},msQ={},msF={},msR={},aiCache={},atTypeFilter='',atSearchFilter='',atAddOpen={},artFilter={},artSort={},freshTrack={},scanKwOff={};
+let atSelectMode=false,atSelected=new Set();
+let matchSel={}; // per-activity selected match IDs: {actId: Set}
+
+function fv(v){return v>=1000000?'PHP '+(v/1000000).toFixed(1)+'M':v>=1000?'PHP '+(v/1000).toFixed(0)+'K':'PHP '+v;}
+function fmtActDate(s){if(!s)return'';const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);if(!m)return s;const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m[2]-1];return`${mo} ${+m[3]}, ${m[1]}`;}
+function tAve(m){const t=m.reduce((s,x)=>s+x.value,0);return fv(t);}
+function scC(s){if(!s)return{b:'#e4e6ea',t:'#9097a3'};if(s>=0.85)return{b:'#41454d',t:'#9097a3'};if(s>=0.7)return{b:'#6b7280',t:'#9097a3'};return{b:'#9097a3',t:'#9097a3'};}
+
+const TBAR={'Press Release':'bar-pr','Event':'bar-ev','Crisis':'bar-cr','Trending':'bar-tr','Product':'bar-pd'};
+
+function toggleAtTypeDD(e){
+  e.stopPropagation();
+  const menu=document.getElementById('at-type-menu');
+  if(menu) menu.classList.toggle('open');
+}
+document.addEventListener('click',function(){
+  const menu=document.getElementById('at-type-menu');
+  if(menu) menu.classList.remove('open');
+});
+
+function setAtFilter(k,v){
+  if(k==='type'){
+    atTypeFilter=v;
+    const label=document.getElementById('at-type-label');
+    if(label) label.textContent=v||'All Types';
+    document.querySelectorAll('.at-type-opt').forEach(o=>{
+      const txt=o.querySelector('span')?.textContent||'';
+      o.classList.toggle('active', v===''?txt==='All Types':txt===v);
+    });
+    const menu=document.getElementById('at-type-menu');
+    if(menu) menu.classList.remove('open');
+  } else {
+    atSearchFilter=v;
+  }
+  renderTracker();
+}
+
+
+function renderTracker(){
+  document.getElementById('nb-tracker').textContent=acts.length;
+
+  // apply filters
+  let visible=acts;
+  if(atTypeFilter) visible=visible.filter(a=>a.type===atTypeFilter);
+  if(atSearchFilter) visible=visible.filter(a=>a.title.toLowerCase().includes(atSearchFilter.toLowerCase())||a.content.toLowerCase().includes(atSearchFilter.toLowerCase()));
+
+  const listEl=document.getElementById('at-list-scroll');
+  if(!listEl)return;
+  if(visible.length===0){
+    listEl.innerHTML=`<div style="text-align:center;padding:40px 20px;color:#ccc;font-size:12px"><i data-lucide="search" style="width:20px;height:20px;display:block;margin-bottom:10px"></i>${atTypeFilter||atSearchFilter?'No activities match your filter.':'No activities yet. Click + New activity to get started.'}</div>`;
+  } else {
+    listEl.innerHTML=visible.map((a,i)=>{
+      const tc=TC[a.type]||TC['Press Release'];
+      const barCls=TBAR[a.type]||'bar-pr';
+      const isChecked=atSelected.has(a.id);
+      return`<div class="activity-card${trackerSel===a.id&&!isChecked?' selected':''}${isChecked?' ac-checked':''}" data-id="${a.id}" style="animation-delay:${i*0.05}s" onclick="selAct(${a.id})">
+        <div class="ac-type-bar ${barCls}"></div>
+        <div class="ac-checkbox${isChecked?' checked':''}" onclick="event.stopPropagation();toggleAtCard(${a.id})">${isChecked?'<i data-lucide="check" style="width:10px;height:10px"></i>':''}</div>
+        <div class="ac-icon ${tc.icls}" data-btip="${_makeTip({label:a.type})}"><i data-lucide="${tc.icon}"></i></div>
+        <div class="card-acts" onclick="event.stopPropagation()">
+          <div class="card-act-btn edit" onclick="showEdit(${a.id})" title="Edit"><i data-lucide="pencil" style="width:10px;height:10px"></i></div>
+          <div class="card-act-btn del" onclick="confirmDelete(${a.id})" title="Delete"><i data-lucide="trash-2" style="width:10px;height:10px"></i></div>
+        </div>
+        <div class="ac-body">
+          <div class="ac-title-text">${a.title}</div>
+          <div class="ac-preview">${a.content}</div>
+          <div class="ac-meta">
+            <span class="ac-stat" style="color:#181d26;font-weight:500"><i data-lucide="link" style="width:10px;height:10px"></i> ${a.matches.length} matches</span>
+            <span class="ac-stat" style="color:#16a34a;font-weight:600"><i data-lucide="circle-dollar-sign" style="width:10px;height:10px"></i> ${tAve(a.matches)}</span>
+            <span class="ac-date ac-date-end">${fmtActDate(a.date)}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // update count badge
+  const countEl=document.getElementById('at-list-count');
+  if(countEl) countEl.textContent=visible.length;
+
+  // render detail panel
+  const detailEl=document.getElementById('at-detail-panel');
+  if(!detailEl)return;
+  if(trackerSel){
+    detailEl.innerHTML=renderTrackerDetail();
+  } else {
+    detailEl.innerHTML=`<div class="at-empty-state"><i data-lucide="mouse-pointer-2"></i><p>Select an activity to view matched articles</p></div>`;
+  }
+  initIcons();
+}
+
+function renderTrackerDetail(){
+  const a=acts.find(x=>x.id===trackerSel);if(!a)return'';
+  const tc=TC[a.type]||TC['Press Release'];
+  const aiC=a.matches.filter(m=>!m.manual).length;
+  const mnC=a.matches.filter(m=>m.manual).length;
+  const total=a.matches.reduce((s,m)=>s+m.value,0);
+  const avgScore=a.matches.filter(m=>m.score).length>0
+    ?Math.round(a.matches.filter(m=>m.score).reduce((s,m,_,arr)=>s+m.score/arr.length,0)*100)
+    :null;
+
+  const aiMatches=a.matches.filter(m=>!m.manual);
+  const manMatches=a.matches.filter(m=>m.manual);
+
+  const allMatches=[...aiMatches,...manMatches];
+  const mSel=matchSel[a.id]||(matchSel[a.id]=new Set());
+  const renderMatchRow=(m,i)=>{
+    const mic=ATicn[m.media]||{cls:'type-online',icon:'newspaper'},pct=m.score?Math.round(m.score*100):null;
+    const scoreCls=pct>=85?'sc-hi':pct>=70?'sc-mid':'sc-lo';
+    const checked=mSel.has(m.id);
+    return`<tr id="mr-${m.id}" class="match-tbl-row${checked?' match-row-checked':''}" style="animation-delay:${i*0.03}s">
+      <td style="width:32px;text-align:center"><span class="tcb${checked?' tcb-on':''}" onclick="toggleMatchSel(${a.id},'${m.id}')">${checked?'<i data-lucide="check" style="width:9px;height:9px;color:#fff"></i>':''}</span></td>
+      <td>
+        <div class="hl-cell">
+          <span class="hl-icon ${mic.cls}" data-btip="${_makeTip({label:m.media})}"><i data-lucide="${mic.icon}"></i></span>
+          <div>
+            <div class="match-hl">${m.title}</div>
+            ${m.manual?`<span style="font-size:10px;color:#854f0b;background:#faeeda;padding:1px 6px;border-radius:10px;font-weight:500;display:inline-block;margin-top:3px">Manual</span>`:''}
+          </div>
+        </div>
+      </td>
+      <td style="width:130px"><div class="pub-name">${m.source}</div></td>
+      <td style="width:100px"><span class="match-ave">${fv(m.value)}</span></td>
+      <td style="width:120px">${pct?`<span class="art-score-val ${scoreCls}">${pct}% match</span><div class="match-score-track" style="margin-top:4px"><div class="match-score-fill" style="width:${pct}%;background:${pct>=85?'#16a34a':pct>=70?'#d97706':'#9ca3af'}"></div></div>`:'—'}</td>
+      <td style="width:90px;white-space:nowrap"><div class="date-main">${m.date}</div></td>
+      <td style="width:36px;text-align:center"><div class="remove-btn" onclick="rmMatch(${a.id},'${m.id}')" title="Remove"><i data-lucide="trash-2" style="width:12px;height:12px"></i></div></td>
+    </tr>`;
+  };
+
+  // search panel state
+  const searchOpen=!!(atAddOpen&&atAddOpen[a.id]);
+  const q=msQ[a.id]||'',f=msF[a.id]||'',res=msR[a.id]||[];
+  const existing=new Set(a.matches.map(m=>m.title));
+  const filtered=f?res.filter(r=>r.media===f):res;
+
+  const searchResults=q
+    ?(filtered.length===0
+      ?`<div style="text-align:center;padding:14px 0;color:#ccc;font-size:12px">No results — try different keywords</div>`
+      :filtered.map((r,i)=>{
+          const mc2=ATmc[r.media]||'media-online',inAct=existing.has(r.title);
+          return`<div class="match-row" style="animation-delay:${i*0.03}s">
+            <div class="match-main">
+              <div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:4px"><span class="media-badge ${mc2}">${r.media}</span><span class="match-hl">${r.title}</span></div>
+              <div class="match-meta"><span class="match-source">${r.source}</span><span class="match-date">${r.date}</span><span class="match-ave">${fv(r.value)} AVE</span>${inAct?`<span style="font-size:10px;color:#276627;background:#e8f5e8;padding:1px 6px;border-radius:10px;font-weight:500"><i data-lucide="check" style="width:10px;height:10px"></i> Added</span>`:''}</div>
+            </div>
+            ${!inAct?`<button class="at-btn-primary-sm" onclick="addMan(${a.id},'${r.title.replace(/'/g,"\\'")}',${r.value},'${r.media}','${r.source}','${r.date}')"><i data-lucide="plus" style="width:10px;height:10px"></i> Add</button>`:''}
+          </div>`;
+        }).join(''))
+    :'';
+
+  // coverage snapshot channels
+  const channels=[...new Set(a.matches.map(m=>m.media))];
+  const channelRows=channels.length>0
+    ?channels.map(ch=>{
+        const items=a.matches.filter(m=>m.media===ch),ave=items.reduce((s,m)=>s+m.value,0),mc2=ATmc[ch]||'media-online';
+        return`<div class="dcov-ch-row">
+          <span class="media-badge ${mc2}">${ch}</span>
+          <span style="font-size:12.5px;color:#777">${items.length} article${items.length!==1?'s':''}</span>
+          <span style="font-size:11px;color:#ddd">·</span>
+          <span style="font-size:13px;font-weight:600;color:#276627">${fv(ave)}</span>
+        </div>`;
+      }).join('')
+    :`<div style="font-size:12.5px;color:#ccc">No coverage yet</div>`;
+
+  return`<div class="detail-wrap" id="dw">
+    <!-- Inline radar overlay (shown during scan) -->
+    <div class="detail-radar" id="dr-${a.id}" style="display:none">
+      <div class="dr-card">
+        <div class="dr-wrap">
+          <div class="dr-ring dr-r1"></div>
+          <div class="dr-ring dr-r2"></div>
+          <div class="dr-ring dr-r3"></div>
+          <div class="dr-center"></div>
+          <svg width="80" height="80" style="position:absolute;top:0;left:0">
+            <defs><radialGradient id="sg" cx="100%" cy="100%" r="100%"><stop offset="0%" stop-color="#181d26" stop-opacity="0.3"/><stop offset="100%" stop-color="#181d26" stop-opacity="0"/></radialGradient></defs>
+            <g style="transform-origin:40px 40px;animation:radarSweep 2s linear infinite"><path d="M40,40 L40,0 A40,40,0,0,1,80,40 Z" fill="url(#sg)"/></g>
+          </svg>
+          <div class="dr-ping" style="top:18px;left:48px;animation-delay:0.3s"></div>
+          <div class="dr-ping" style="top:45px;left:22px;animation-delay:1.1s"></div>
+          <div class="dr-ping" style="top:28px;left:58px;animation-delay:1.7s"></div>
+        </div>
+        <div class="dr-counter" id="dr-ctr-${a.id}">0</div>
+        <div class="dr-label" id="dr-lbl-${a.id}">Initializing scan...</div>
+        <div class="dr-sublabel" id="dr-sub-${a.id}">Preparing similarity engine</div>
+        <div class="dr-progress"><div class="dr-bar" id="dr-bar-${a.id}"></div></div>
+      </div>
+    </div>
+    <!-- Header -->
+    <div class="detail-head">
+      <div class="ac-icon ac-icon--lg ${tc.icls}" style="flex-shrink:0;align-self:flex-start;margin-top:2px" data-btip="${_makeTip({label:a.type})}"><i data-lucide="${tc.icon}"></i></div>
+      <div class="detail-head-body">
+        <div class="detail-head-title">${a.title}</div>
+        <div class="detail-head-meta">
+          <span style="font-size:11px;color:#aaa">${fmtActDate(a.date)}</span>
+        </div>
+        ${(!freshTrack[a.id]&&a.content)?`<div style="font-size:11.5px;color:#9090a0;line-height:1.5;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;cursor:default" title="${a.content.replace(/"/g,'&quot;')}">${a.content.length>100?a.content.slice(0,100)+'…':a.content}</div>`:''}
+      </div>
+      <div class="detail-head-actions">
+        ${!freshTrack[a.id]?`<button class="at-btn-edit" onclick="showEdit(${a.id})"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit</button>`:''}
+        <button class="at-btn-ghost" onclick="closeDetail()" title="Close"><i data-lucide="x" style="width:12px;height:12px"></i></button>
+      </div>
+    </div>
+
+    <!-- Coverage snapshot: hidden before scan -->
+    ${!freshTrack[a.id]?`<div class="dcoverage">
+      <div class="brief-stats at-kpi-strip" id="at-kpi-strip-${a.id}">
+        <div class="ss" data-kpi-tip="0" data-kpi-channels="${encodeURIComponent(JSON.stringify(channels.map(ch=>{const items=a.matches.filter(m=>m.media===ch),ave=items.reduce((s,m)=>s+m.value,0);return{ch,ave,count:items.length,cls:ATmc[ch]||'media-online'};})))}">
+          <span class="ss-scan-ring"></span>
+          <div class="ss-ico ss-ico-2"><i data-lucide="circle-dollar-sign"></i></div>
+          <div class="ss-val hero grn">${fv(total)}</div>
+          <div class="ss-lbl">total AVE</div>
+        </div>
+        <div class="ss" data-kpi-tip="1">
+          <span class="ss-scan-ring"></span>
+          <div class="ss-ico ss-ico-1"><i data-lucide="sparkles"></i></div>
+          <div class="ss-val">${aiC}</div>
+          <div class="ss-lbl">AI matches</div>
+        </div>
+        <div class="ss" data-kpi-tip="2">
+          <span class="ss-scan-ring"></span>
+          <div class="ss-ico ss-ico-3"><i data-lucide="gauge"></i></div>
+          <div class="ss-val">${avgScore!==null?avgScore+'%':'—'}</div>
+          <div class="ss-lbl">avg similarity</div>
+        </div>
+        <div class="ss" data-kpi-tip="3">
+          <span class="ss-scan-ring"></span>
+          <div class="ss-ico ss-ico-4"><i data-lucide="hand"></i></div>
+          <div class="ss-val${mnC===0?' muted':''}">${mnC}</div>
+          <div class="ss-lbl">manually added</div>
+        </div>
+      </div>
+    </div>`:''}
+
+    <!-- Unified scrollable pane -->
+    <div class="dpane">
+
+      <!-- Section header + filter bar: hidden before scan -->
+      ${!freshTrack[a.id]?`<div class="dpane-section-hd">
+        <span class="dpane-section-hd-label"><i data-lucide="newspaper" style="color:#181d26"></i> Matched articles</span>
+        <button onclick="toggleAddSearch(${a.id})" style="font-size:11px;padding:4px 10px;background:${searchOpen?'#f0f0f2':'transparent'};color:#181d26;border:1px solid #d4d6da;border-radius:5px;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:'Inter',sans-serif;font-weight:500;transition:all 0.12s"><i data-lucide="${searchOpen?'chevron-up':'plus'}" style="width:10px;height:10px"></i> Add article</button>
+      </div>
+      <div class="art-filter-bar">
+        <select class="art-sort-dd" onchange="setArtSort(${a.id},this.value)">
+          <option value="similarity"${(artSort[a.id]||'similarity')==='similarity'?' selected':''}>Sort: Similarity</option>
+          <option value="ave"${(artSort[a.id]||'')==='ave'?' selected':''}>Sort: AVE</option>
+          <option value="date"${(artSort[a.id]||'')==='date'?' selected':''}>Sort: Date</option>
+        </select>
+        <span class="art-count">All coverage — ${a.matches.length} article${a.matches.length!==1?'s':''}</span>
+        <div class="art-media-pills">${['All','Print','Online','TV','Radio'].map(x=>{const sel=artFilter[a.id]||[];if(x==='All')return `<span class="art-pill${sel.length===0?' on':''}" onclick="clearArtFilter(${a.id})">All</span>`;const on=sel.includes(x);return `<span class="art-pill${on?' on':''}" onclick="toggleArtFilter(${a.id},'${x}')">${on?'<i data-lucide="check"></i> ':''}${x}</span>`;}).join('')}</div>
+      </div>`:''}
+
+
+      <!-- Collapsible search panel -->
+      ${searchOpen?`<div class="add-art-panel">
+        <div class="inline-search-bar">
+          <div class="ms-input-wrap"><i data-lucide="search" style="width:12px;height:12px;color:#bbb"></i><input type="text" placeholder="Search articles to add..." id="ms-q" value="${q}" onkeydown="if(event.key==='Enter')doSrch(${a.id})" autofocus></div>
+          <button class="at-btn-new" style="font-size:12px;padding:7px 14px;font-weight:500" onclick="doSrch(${a.id})">Search</button>
+        </div>
+        <div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap">${['All','Online','Print','TV','Radio'].map(x=>`<span class="ms-f${f===(x==='All'?'':x)?' on':''}" onclick="setMsF(${a.id},'${x==='All'?'':x}')">${x}</span>`).join('')}</div>
+        <div class="inline-search-results">${searchResults}</div>
+      </div>`:''}
+
+      <!-- Article list (filtered + sorted) -->
+      ${(()=>{
+        const af=artFilter[a.id]||[],as=artSort[a.id]||'similarity';
+        let list=a.matches.filter(m=>af.length===0||af.includes(m.media));
+        if(as==='ave') list=[...list].sort((a,b)=>b.value-a.value);
+        else if(as==='date') list=[...list].sort((a,b)=>new Date(b.date)-new Date(a.date));
+        else list=[...list].sort((a,b)=>(b.score||0)-(a.score||0));
+        if(list.length===0&&a.matches.length===0&&freshTrack[a.id]){
+          const kws=extractKeywords(a.title+' '+a.content);
+          const off=scanKwOff[a.id]||new Set();
+          const kwHtml=kws.map(k=>`<span class="scan-kw${off.has(k)?' off':''}" onclick="toggleScanKw(${a.id},'${k}')">${k}</span>`).join('');
+          return`<div class="ready-banner">
+            <div class="rb-icon"><i data-lucide="radio-tower"></i></div>
+            <div class="rb-title">Story ready to scan</div>
+            <div class="rb-sub">${a.title}</div>
+            <div class="rb-from"><i data-lucide="arrow-up" style="width:10px;height:10px"></i> Tracked from Today's spotlight</div>
+            <div class="scan-kw-row" style="justify-content:center;margin-bottom:20px">${kwHtml}</div>
+            <button class="at-btn-ai" onclick="runScan(${a.id})" style="padding:9px 28px;font-size:13px"><i data-lucide="radio-tower" style="width:14px;height:14px"></i> Scan now</button>
+            <button class="at-btn-ghost" onclick="dismissScan(${a.id})" style="font-size:11px;margin-top:8px;border:none;background:transparent;color:#bbb;cursor:pointer;font-family:'Inter',sans-serif">Dismiss</button>
+          </div>`;
+        }
+        if(list.length===0&&a.matches.length===0) return`<div style="padding:28px 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px"><i data-lucide="search" style="width:20px;height:20px;color:#ddd"></i><div style="font-size:13px;font-weight:600;color:#aaa">No coverage yet</div><div style="font-size:12px;color:#ccc;margin-bottom:4px">Use "+ Add article" to search and add coverage manually.</div></div>`;
+        if(list.length===0) return`<div style="padding:18px 0;text-align:center;color:#ccc;font-size:12px">No articles match this filter.</div>`;
+        const selCount=mSel.size;
+        const allChecked=list.length>0&&list.every(m=>mSel.has(m.id));
+        const someChecked=selCount>0&&!allChecked;
+        const delBar=selCount>0?`<div class="match-del-bar" id="mdb-${a.id}">
+          <span class="match-del-bar-count">${selCount} article${selCount!==1?'s':''} selected</span>
+          <div class="match-del-bar-actions">
+            <button class="match-del-cancel" onclick="clearMatchSel(${a.id})">Cancel</button>
+            <button class="match-del-btn" onclick="confirmMatchBulkDelete(${a.id})"><i data-lucide="trash-2" style="width:10px;height:10px"></i> Delete</button>
+          </div>
+        </div>`:'';
+        return`${delBar}<table class="tbl match-tbl"><thead><tr>
+          <th style="width:32px;text-align:center"><span class="tcb${allChecked?' tcb-on':''}" style="${someChecked?'background:var(--ink-2);border-color:var(--ink-2)':''}" onclick="toggleMatchSelAll(${a.id})">${allChecked?'<i data-lucide="check" style="width:9px;height:9px;color:#fff"></i>':someChecked?'<i data-lucide="minus" style="width:9px;height:9px;color:#fff"></i>':''}</span></th>
+          <th>Headline</th>
+          <th style="width:130px">Outlet</th>
+          <th style="width:100px">AVE</th>
+          <th style="width:120px">Match</th>
+          <th style="width:90px;white-space:nowrap">Date</th>
+          <th style="width:36px"></th>
+        </tr></thead><tbody>${list.map((m,i)=>renderMatchRow(m,i)).join('')}</tbody></table>`;
+      })()}
+
+      <!-- AI report target -->
+      <div id="ai-report-${a.id}"></div>
+
+    </div>
+
+    <!-- Action bar: hidden before scan -->
+    ${!freshTrack[a.id]?`<div class="at-action-bar">
+      <button class="at-btn-csv" onclick="dlCSV(${a.id})"><i data-lucide="file-spreadsheet" style="width:12px;height:12px"></i> Download CSV</button>
+      <button class="at-btn-ai" id="ai-btn-${a.id}" onclick="genAI(${a.id})"><i data-lucide="sparkles" style="width:12px;height:12px"></i> Generate AI summary</button>
+    </div>`:''}
+  </div>`;
+}
+
+function genAI(id){
+  const a=acts.find(x=>x.id===id);if(!a)return;
+  const btn=document.getElementById(`ai-btn-${id}`);
+  const rpt=document.getElementById(`ai-report-${id}`);
+  if(!rpt)return;
+  if(aiCache[id]){rpt.innerHTML=buildAIPanel(aiCache[id]);return;}
+  if(btn){btn.disabled=true;btn.innerHTML=`<i data-lucide="loader-2" style="width:12px;height:12px;animation:spin 1s linear infinite"></i> Generating...`;}
+  rpt.innerHTML=`<div class="ai-report-panel"><div class="ai-report-lbl"><i data-lucide="sparkles" style="width:12px;height:12px"></i> AI summary report</div><div class="ai-report-txt loading">Analysing coverage patterns and writing your summary...</div></div>`;
+  initIcons();
+  setTimeout(()=>{
+    const txt=`Today's coverage of "${a.title}" generated ${a.matches.length} matched articles across ${[...new Set(a.matches.map(m=>m.media))].join(', ')} with a combined AVE of ${tAve(a.matches)}.\n\nThe AI-matched articles show strong thematic alignment with the source content, particularly around the core narrative. Sentiment across outlets trends neutral to positive, with Tier 1 publications providing the highest-value pickup.\n\nRecommendation: Prioritise amplification through Online and Print channels where engagement is highest. Monitor TV pickup for the next 24 hours.`;
+    aiCache[id]=txt;
+    if(btn){btn.disabled=false;btn.innerHTML=`<i data-lucide="sparkles" style="width:12px;height:12px"></i> Regenerate AI summary`;}
+    const rp=document.getElementById(`ai-report-${id}`);if(rp)rp.innerHTML=buildAIPanel(txt);
+    initIcons();
+  },1200);
+}
+
+function buildAIPanel(txt){
+  const paras=txt.split(/\n\n+/).filter(p=>p.trim());
+  const labels=['Coverage summary','Key insights','Recommendation'];
+  const colors=['#181d26','#41454d','#16a34a'];
+  return`<div class="ai-report-panel"><div class="ai-report-lbl"><i data-lucide="sparkles" style="width:12px;height:12px"></i> AI summary report</div>${paras.map((p,i)=>`<div style="margin-bottom:${i<paras.length-1?'12px':'0'}"><div style="font-size:10px;font-weight:600;color:${colors[i]||'#41454d'};text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">${labels[i]||''}</div><div class="ai-report-txt">${p.trim()}</div></div>`).join('')}</div>`;
+}
+
+function dlCSV(id){
+  const a=acts.find(x=>x.id===id);if(!a)return;
+  const esc=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  let csv='MEDIA METER — ACTIVITY TRACKER REPORT\n';
+  csv+=`Title:,${esc(a.title)}\nType:,${esc(a.type)}\nDate:,${esc(a.date)}\n\nMATCHED ARTICLES\n#,Media,Source,Headline,Date,AVE (PHP),Similarity,Type\n`;
+  a.matches.forEach((m,i)=>{csv+=`${i+1},${esc(m.media)},${esc(m.source)},${esc(m.title)},${esc(m.date)},${m.value},${m.score?Math.round(m.score*100)+'%':'Manual'},${m.manual?'Manual':'AI-matched'}\n`;});
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;link.download=`ActivityTracker_${a.title.replace(/[^a-z0-9]/gi,'_')}.csv`;link.click();
+  URL.revokeObjectURL(url);
+}
+
+function toggleMatchSel(aid,mid){
+  const mSel=matchSel[aid]||(matchSel[aid]=new Set());
+  if(mSel.has(mid))mSel.delete(mid);else mSel.add(mid);
+  renderDetailOnly();
+}
+function toggleMatchSelAll(aid){
+  const a=acts.find(x=>x.id===aid);if(!a)return;
+  const mSel=matchSel[aid]||(matchSel[aid]=new Set());
+  const af=artFilter[aid]||[],as=artSort[aid]||'similarity';
+  let list=a.matches.filter(m=>af.length===0||af.includes(m.media));
+  const allChecked=list.length>0&&list.every(m=>mSel.has(m.id));
+  if(allChecked)list.forEach(m=>mSel.delete(m.id));
+  else list.forEach(m=>mSel.add(m.id));
+  renderDetailOnly();
+}
+function clearMatchSel(aid){
+  matchSel[aid]=new Set();
+  renderDetailOnly();
+}
+function confirmMatchBulkDelete(aid){
+  const mSel=matchSel[aid];if(!mSel||mSel.size===0)return;
+  const n=mSel.size;
+  const ov=document.getElementById('confirm-overlay');
+  const bx=document.getElementById('confirm-box');
+  bx.innerHTML=`<div style="font-size:15px;font-weight:600;color:#181d26;margin-bottom:8px">Delete ${n} article${n!==1?'s':''}?</div>
+    <div style="font-size:13px;color:#666;margin-bottom:20px">This will permanently remove ${n} selected article${n!==1?'s':''} from this activity.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="document.getElementById('confirm-overlay').style.display='none'" style="padding:8px 16px;border:1px solid #ddd;border-radius:6px;background:#fff;font-size:13px;cursor:pointer">Cancel</button>
+      <button onclick="doMatchBulkDelete(${aid})" style="padding:8px 16px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600">Delete</button>
+    </div>`;
+  ov.style.display='flex';
+}
+function doMatchBulkDelete(aid){
+  const a=acts.find(x=>x.id===aid);if(!a)return;
+  const mSel=matchSel[aid];if(!mSel)return;
+  a.matches=a.matches.filter(m=>!mSel.has(m.id));
+  matchSel[aid]=new Set();
+  document.getElementById('confirm-overlay').style.display='none';
+  renderDetailOnly();
+}
+function rmMatch(aid,mid){
+  const el=document.getElementById('mr-'+mid);
+  if(el){el.classList.add('removing');setTimeout(()=>{const a=acts.find(x=>x.id===aid);if(a)a.matches=a.matches.filter(m=>m.id!==mid);renderDetailOnly();},250);}
+}
+function selAct(id){trackerSel=id;if(!trackerTabs[id])trackerTabs[id]='matches';renderDetailOnly();}
+function closeDetail(){trackerSel=null;renderDetailOnly();}
+function setTab(t){renderDetailOnly();}
+function setMsF(id,f){msF[id]=f;renderDetailOnly();}
+function renderDetailOnly(){
+  const detailEl=document.getElementById('at-detail-panel');
+  if(!detailEl)return;
+  if(trackerSel){
+    detailEl.innerHTML=renderTrackerDetail();
+  } else {
+    detailEl.innerHTML=`<div class="at-empty-state"><i data-lucide="mouse-pointer-2"></i><p>Select an activity to view matched articles</p></div>`;
+  }
+  initIcons();
+  wireKpiTooltips();
+  // update selected state on list cards
+  document.querySelectorAll('.activity-card').forEach(c=>{
+    const id=parseInt(c.getAttribute('data-id'));
+    c.classList.toggle('selected',id===trackerSel);
+  });
+}
+
+function wireKpiTooltips(){}// no-op — delegation handled at document level below
+(function(){
+  const kpiInfo=[
+    ['Total AVE','Advertising Value Equivalent — estimated media value of all matched articles for this activity.'],
+    ['AI Matches','Articles automatically matched by the AI similarity engine based on your activity content.'],
+    ['Avg Similarity','Average confidence score across all AI-matched articles — higher means a closer match.'],
+    ['Manually Added','Articles added manually outside of AI matching — useful for coverage the engine may have missed.']
+  ];
+  function getKpiPop(){let p=document.getElementById('ss-pop');if(!p){p=document.createElement('div');p.id='ss-pop';document.body.appendChild(p);}return p;}
+  function showKpiPop(card){
+    const i=parseInt(card.getAttribute('data-kpi-tip'));
+    const d=kpiInfo[i];if(!d)return;
+    const pop=getKpiPop();
+    let html=`<div class="ss-pop-title">${d[0]}</div><div class="ss-pop-body">${d[1]}</div>`;
+    if(i===0&&card.dataset.kpiChannels){
+      try{
+        const chs=JSON.parse(decodeURIComponent(card.dataset.kpiChannels));
+        const maxAve=Math.max(...chs.map(c=>c.ave),1);
+        html+=`<div class="ss-pop-breakdown">${chs.map(c=>{
+          const pct=Math.round(c.ave/maxAve*100);
+          const chColor={'media-tv':'#a78bfa','media-online':'#60a5fa','media-print':'#86d9a8','media-radio':'#fcd34d'}[c.cls]||'rgba(255,255,255,0.4)';
+          return`<div class="ss-pop-ch-row">
+            <span class="ss-pop-ch-name">${c.ch}</span>
+            <div class="ss-pop-bar-wrap"><div class="ss-pop-bar" style="width:${pct}%;background:${chColor}"></div></div>
+            <span class="ss-pop-ch-ave">${fv(c.ave)}</span>
+          </div>`;
+        }).join('')}</div>`;
+      }catch(e){}
+    }
+    pop.innerHTML=html;
+    pop.classList.add('show');
+    // two-pass: measure after paint so getBoundingClientRect is accurate
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      const r=card.getBoundingClientRect(),pr=pop.getBoundingClientRect();
+      let left=r.left+r.width/2-pr.width/2;
+      left=Math.max(8,Math.min(left,window.innerWidth-pr.width-8));
+      let top=r.top-pr.height-12;
+      const flipped=top<8;
+      if(flipped)top=r.bottom+12;
+      pop.style.left=left+'px';pop.style.top=top+'px';
+      pop.style.setProperty('--arrow-x',(r.left+r.width/2-left)+'px');
+      pop.classList.toggle('ss-pop--below',flipped);
+      pop.classList.toggle('ss-pop--above',!flipped);
+    }));
+  }
+  document.addEventListener('mouseover',e=>{
+    const card=e.target.closest('[data-kpi-tip]');
+    if(card)showKpiPop(card);
+  });
+  document.addEventListener('mouseout',e=>{
+    const card=e.target.closest('[data-kpi-tip]');
+    if(card&&!card.contains(e.relatedTarget)){
+      const pop=document.getElementById('ss-pop');if(pop)pop.classList.remove('show');
+    }
+  });
+})();
+function toggleScanKw(id,kw){
+  if(!scanKwOff[id])scanKwOff[id]=new Set();
+  if(scanKwOff[id].has(kw))scanKwOff[id].delete(kw);
+  else scanKwOff[id].add(kw);
+  renderDetailOnly();
+}
+
+function addScanKw(id,val){
+  val=val.trim();if(!val)return;
+  const a=acts.find(x=>x.id===id);if(!a)return;
+  a.content=a.content+' '+val;
+  renderDetailOnly();
+}
+
+function dismissScan(id){
+  freshTrack[id]=false;
+  renderDetailOnly();
+}
+
+function runScan(id){
+  const a=acts.find(x=>x.id===id);if(!a)return;
+  const ov=document.getElementById('dr-'+id);if(!ov)return;
+  ov.style.display='flex';
+
+  const steps=[
+    {pct:8,  lbl:'Initializing scan...',        sub:'Loading similarity engine',               ctr:0},
+    {pct:22, lbl:'Tokenizing your content...',   sub:'Breaking down key phrases and entities',  ctr:312},
+    {pct:40, lbl:'Scanning article database...', sub:'Comparing against 3,437 verified articles',ctr:1204},
+    {pct:60, lbl:'Calculating similarity scores...',sub:'Running vector comparisons',           ctr:2318},
+    {pct:78, lbl:'Ranking results...',           sub:'Sorting by relevance score',              ctr:3062},
+    {pct:92, lbl:'Finalising matches...',        sub:'Preparing your results',                  ctr:3437},
+    {pct:100,lbl:'Scan complete!',               sub:'Matches found — review below',            ctr:3437},
+  ];
+
+  const bar=document.getElementById('dr-bar-'+id);
+  const lbl=document.getElementById('dr-lbl-'+id);
+  const sub=document.getElementById('dr-sub-'+id);
+  const ctr=document.getElementById('dr-ctr-'+id);
+  let step=0;
+
+  function tick(){
+    if(step>=steps.length){
+      setTimeout(()=>{
+        ov.style.display='none';
+        const today=new Date();
+        const fmt=d=>`${d.toLocaleString('en-PH',{month:'short'})} ${d.getDate()}, ${d.getFullYear()}`;
+        const d1=fmt(today),d2=fmt(new Date(today-86400000)),d3=fmt(new Date(today-2*86400000)),d4=fmt(new Date(today-3*86400000)),d5=fmt(new Date(today-4*86400000)),d6=fmt(new Date(today-5*86400000));
+        const scanMatches=[
+          {id:'sc1',media:'Online',source:'BusinessWorld',title:`Telco war heats up as Jimenez fires back at PLDT rivals`,date:d1,value:397000,score:0.96,manual:false},
+          {id:'sc2',media:'Print',source:'Philippine Daily Inquirer',title:`BIZ BUZZ: Jimenez twits PLDT's foes in pointed remarks`,date:d1,value:520000,score:0.93,manual:false},
+          {id:'sc3',media:'TV',source:'ABS-CBN News',title:`Telco war escalates: Jimenez vs. Reyes feud explained`,date:d2,value:890000,score:0.88,manual:false},
+          {id:'sc4',media:'Online',source:'Rappler',title:`Why Jimenez's PLDT comments matter — analyst reaction`,date:d2,value:245000,score:0.84,manual:false},
+          {id:'sc5',media:'TV',source:'CNN Philippines',title:`What Jimenez's PLDT remarks mean for DITO's market push`,date:d3,value:710000,score:0.81,manual:false},
+          {id:'sc6',media:'Online',source:'Philstar Online',title:`PLDT COO publicly responds to DITO Jimenez statements`,date:d3,value:631000,score:0.77,manual:false},
+          {id:'sc7',media:'Online',source:'Manila Bulletin',title:`DITO's Jimenez addresses PLDT criticism head-on`,date:d4,value:280000,score:0.74,manual:false},
+          {id:'sc8',media:'Radio',source:'DZRH News',title:`Telco rivalry: Jimenez sa PLDT, sumagot na`,date:d5,value:75000,score:0.70,manual:false},
+        ];
+        scanMatches.forEach(m=>{if(!a.matches.find(x=>x.id===m.id))a.matches.push(m);});
+        freshTrack[id]=false;
+        renderDetailOnly();
+      },500);
+      return;
+    }
+    const s=steps[step];
+    bar.style.width=s.pct+'%';
+    lbl.textContent=s.lbl;
+    sub.textContent=s.sub;
+    const from=parseInt((ctr.textContent||'0').replace(/,/g,''))||0;
+    let cur=from,i=0,inc=(s.ctr-from)/20;
+    const t=setInterval(()=>{
+      cur+=inc;i++;
+      ctr.textContent=Math.round(cur).toLocaleString();
+      if(i>=20){ctr.textContent=s.ctr.toLocaleString();clearInterval(t);}
+    },20);
+    step++;
+    setTimeout(tick,s.pct===100?600:520);
+  }
+  tick();
+}
+
+function toggleAddSearch(id){
+  atAddOpen[id]=!atAddOpen[id];
+  if(!atAddOpen[id]){msQ[id]='';msR[id]=[];}
+  renderDetailOnly();
+}
+function clearArtFilter(id){artFilter[id]=[];renderDetailOnly();}
+function toggleArtFilter(id,val){const a=artFilter[id]||(artFilter[id]=[]);const i=a.indexOf(val);if(i>=0)a.splice(i,1);else a.push(val);renderDetailOnly();}
+function setArtSort(id,val){artSort[id]=val;renderDetailOnly();}
+function doSrch(id){
+  const inp=document.getElementById('ms-q');if(!inp)return;
+  const q=inp.value.trim().toLowerCase();msQ[id]=q;
+  if(!q){msR[id]=[];renderDetailOnly();return;}
+  msR[id]=DB.filter(d=>d.title.toLowerCase().includes(q)||d.source.toLowerCase().includes(q)||d.media.toLowerCase().includes(q));
+  renderDetailOnly();
+}
+function addMan(aid,title,value,media,source,date){
+  const a=acts.find(x=>x.id===aid);if(!a)return;
+  a.matches.unshift({id:'man'+Date.now(),media,source,title,date,value,score:null,manual:true});renderDetailOnly();
+  showSimpleToast(`Article added to <strong style="font-weight:600">${a.title}</strong>`,'circle-check');
+}
+
+function showEdit(id){
+  const a=acts.find(x=>x.id===id);if(!a)return;
+  trackerSel=id;
+  const detailEl=document.getElementById('at-detail-panel');if(!detailEl)return;
+  detailEl.innerHTML=`<div class="detail-wrap" style="animation:fadeIn 0.2s ease">
+    <div class="detail-head">
+      <span style="font-size:13px;font-weight:600;color:#181d26;display:flex;align-items:center;gap:7px;flex:1"><i data-lucide="pencil" style="color:#181d26"></i> Edit activity</span>
+      <button class="at-btn-ghost" onclick="renderDetailOnly()"><i data-lucide="x" style="width:12px;height:12px"></i> Cancel</button>
+    </div>
+    <div class="dpane" style="overflow-y:auto">
+      <div class="edit-banner"><i data-lucide="alert-triangle" style="width:14px;height:14px"></i> Editing will not re-run the scan. Use "Add manually" to update matches after saving.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="grid-column:1/-1"><label class="form-label">Title</label><input class="form-input" type="text" id="e-title" value="${a.title}"></div>
+        <div><label class="form-label">Type</label><select class="form-select" id="e-type">${['Press Release','Event','Crisis','Trending','Product'].map(t=>`<option${a.type===t?' selected':''}>${t}</option>`).join('')}</select></div>
+        <div><label class="form-label">Date released</label><input class="form-input" type="date" id="e-date" value="${a.date}"></div>
+        <div style="grid-column:1/-1"><label class="form-label">Content</label><textarea class="form-textarea" id="e-content">${a.content}</textarea></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:14px;border-top:1px solid #f0f0f6">
+        <button class="at-btn-danger" onclick="confirmDelete(${id})"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete</button>
+        <div style="display:flex;gap:8px">
+          <button class="at-btn-outline" onclick="renderDetailOnly()">Cancel</button>
+          <button class="at-btn-new" onclick="saveEdit(${id})"><i data-lucide="save" style="width:12px;height:12px"></i> Save changes</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  initIcons();
+}
+
+function saveEdit(id){
+  const a=acts.find(x=>x.id===id);if(!a)return;
+  const title=document.getElementById('e-title').value.trim();
+  const type=document.getElementById('e-type').value;
+  const date=document.getElementById('e-date').value;
+  const content=document.getElementById('e-content').value.trim();
+  if(!title||!type||!date||!content){alert('Please fill in all fields.');return;}
+  a.title=title;a.type=type;a.date=date;a.content=content;
+  delete aiCache[id];trackerSel=id;trackerTabs[id]='matches';renderTracker();
+  renderDetailOnly();
+}
+
+function confirmDelete(id){
+  const a=acts.find(x=>x.id===id);if(!a)return;
+  const ov=document.getElementById('confirm-overlay'),box=document.getElementById('confirm-box');
+  ov.style.display='flex';
+  box.innerHTML=`<div>
+    <div class="confirm-title"><i data-lucide="alert-triangle" style="width:14px;height:14px;color:#a32d2d"></i> Delete activity?</div>
+    <div class="confirm-body">Permanently delete <strong>"${a.title}"</strong> and all ${a.matches.length} matched article${a.matches.length!==1?'s':''}?<br><br><span style="color:#a32d2d;font-weight:500">This cannot be undone.</span></div>
+    <div class="confirm-actions">
+      <button class="at-btn-outline" onclick="closeConfirm()">Cancel</button>
+      <button style="font-size:12px;padding:7px 16px;background:#a32d2d;color:#fff;border:none;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-weight:500;font-family:inherit" onclick="doDelete(${id})"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Yes, delete</button>
+    </div>
+  </div>`;
+  initIcons();
+}
+
+function doDelete(id){
+  closeConfirm();acts=acts.filter(x=>x.id!==id);
+  if(trackerSel===id)trackerSel=null;
+  delete trackerTabs[id];delete msQ[id];delete msF[id];delete msR[id];delete aiCache[id];delete matchSel[id];
+  renderTracker();renderDetailOnly();
+}
+function closeConfirm(){document.getElementById('confirm-overlay').style.display='none';}
+
+function toggleAtSelect(){
+  atSelectMode=true;atSelected.clear();
+  const acts=document.querySelector('.at-list-header-actions');if(acts)acts.style.display='none';
+  document.getElementById('at-select-bar').style.display='flex';
+  document.getElementById('at-list-header').classList.add('select-mode');
+  renderTracker();
+}
+function exitAtSelect(){
+  atSelected.clear();
+  const bar=document.getElementById('at-select-bar');if(bar)bar.style.display='none';
+  const actions=document.getElementById('at-list-header-actions');if(actions)actions.style.display='flex';
+  const label=document.getElementById('at-list-header-label');if(label)label.style.display='';
+  renderTracker();
+}
+function _syncSelectBar(){
+  const bar=document.getElementById('at-select-bar');
+  const actions=document.getElementById('at-list-header-actions');
+  const label=document.getElementById('at-list-header-label');
+  const total=document.querySelectorAll('.activity-card').length;
+  const allChecked=atSelected.size>=total&&total>0;
+  const someChecked=atSelected.size>0&&!allChecked;
+  if(atSelected.size>0){
+    if(bar)bar.style.display='flex';
+    if(actions)actions.style.display='none';
+    if(label)label.style.display='none';
+  } else {
+    if(bar)bar.style.display='none';
+    if(actions)actions.style.display='flex';
+    if(label)label.style.display='';
+  }
+  const countEl=document.getElementById('at-select-count');
+  if(countEl)countEl.textContent=atSelected.size+' selected';
+  const delBtn=document.getElementById('at-bulk-delete-btn');
+  if(delBtn)delBtn.disabled=atSelected.size===0;
+  // update header checkbox state
+  const hdCb=document.getElementById('at-hd-checkbox');
+  if(hdCb){
+    hdCb.classList.toggle('checked',allChecked);
+    hdCb.classList.toggle('indeterminate',someChecked);
+    hdCb.innerHTML=allChecked?'<i data-lucide="check" style="width:10px;height:10px"></i>':someChecked?'<span class="at-hd-cb-dash"></span>':'';
+  }
+  document.querySelectorAll('.activity-card').forEach(c=>{
+    const cid=parseInt(c.getAttribute('data-id'));
+    c.classList.toggle('ac-checked',atSelected.has(cid));
+    const cb=c.querySelector('.ac-checkbox');
+    if(cb){cb.classList.toggle('checked',atSelected.has(cid));cb.innerHTML=atSelected.has(cid)?'<i data-lucide="check" style="width:10px;height:10px"></i>':'';}
+  });
+  initIcons();
+}
+function toggleAtCard(id){
+  if(atSelected.has(id))atSelected.delete(id);else atSelected.add(id);
+  _syncSelectBar();
+}
+function toggleSelectAll(){
+  const cards=document.querySelectorAll('.activity-card');
+  const total=cards.length;
+  if(atSelected.size>=total){
+    atSelected.clear();
+  } else {
+    cards.forEach(c=>atSelected.add(parseInt(c.getAttribute('data-id'))));
+  }
+  _syncSelectBar();
+}
+function confirmBulkDelete(){
+  if(atSelected.size===0)return;
+  const ov=document.getElementById('confirm-overlay'),box=document.getElementById('confirm-box');
+  ov.style.display='flex';
+  box.innerHTML=`<div>
+    <div class="confirm-title"><i data-lucide="alert-triangle" style="width:14px;height:14px;color:#a32d2d"></i> Delete ${atSelected.size} activit${atSelected.size===1?'y':'ies'}?</div>
+    <div class="confirm-body">Permanently delete <strong>${atSelected.size} selected activit${atSelected.size===1?'y':'ies'}</strong> and all their matched articles.<br><br><span style="color:#a32d2d;font-weight:500">This cannot be undone.</span></div>
+    <div class="confirm-actions">
+      <button class="at-btn-outline" onclick="closeConfirm()">Cancel</button>
+      <button style="font-size:12px;padding:7px 16px;background:#a32d2d;color:#fff;border:none;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-weight:500;font-family:inherit" onclick="doBulkDelete()"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Yes, delete all</button>
+    </div>
+  </div>`;
+  initIcons();
+}
+function doBulkDelete(){
+  closeConfirm();
+  atSelected.forEach(id=>{
+    acts=acts.filter(x=>x.id!==id);
+    if(trackerSel===id)trackerSel=null;
+    delete trackerTabs[id];delete msQ[id];delete msF[id];delete msR[id];delete aiCache[id];delete matchSel[id];
+  });
+  exitAtSelect();
+}
+
+function showCreate(){
+  trackerSel=null;
+  const detailEl=document.getElementById('at-detail-panel');if(!detailEl)return;
+  detailEl.innerHTML=`<div class="detail-wrap" style="animation:fadeIn 0.2s ease;position:relative">
+    <div class="detail-radar" id="dr-create" style="display:none">
+      <div class="dr-card">
+        <div class="dr-wrap">
+          <div class="dr-ring dr-r1"></div>
+          <div class="dr-ring dr-r2"></div>
+          <div class="dr-ring dr-r3"></div>
+          <div class="dr-center"></div>
+          <svg width="80" height="80" style="position:absolute;top:0;left:0">
+            <defs><radialGradient id="sg2" cx="100%" cy="100%" r="100%"><stop offset="0%" stop-color="#181d26" stop-opacity="0.3"/><stop offset="100%" stop-color="#181d26" stop-opacity="0"/></radialGradient></defs>
+            <g style="transform-origin:40px 40px;animation:radarSweep 2s linear infinite"><path d="M40,40 L40,0 A40,40,0,0,1,80,40 Z" fill="url(#sg2)"/></g>
+          </svg>
+          <div class="dr-ping" style="top:18px;left:48px;animation-delay:0.3s"></div>
+          <div class="dr-ping" style="top:45px;left:22px;animation-delay:1.1s"></div>
+          <div class="dr-ping" style="top:28px;left:58px;animation-delay:1.7s"></div>
+        </div>
+        <div class="dr-counter" id="dr-ctr-create">0</div>
+        <div class="dr-label" id="dr-lbl-create">Initializing scan...</div>
+        <div class="dr-sublabel" id="dr-sub-create">Preparing similarity engine</div>
+        <div class="dr-progress"><div class="dr-bar" id="dr-bar-create"></div></div>
+      </div>
+    </div>
+    <div class="detail-head">
+      <span style="font-size:13px;font-weight:600;color:#181d26;display:flex;align-items:center;gap:7px;flex:1"><i data-lucide="plus" style="color:#181d26"></i> New activity</span>
+      <button class="at-btn-ghost" onclick="renderDetailOnly()"><i data-lucide="x" style="width:12px;height:12px"></i> Cancel</button>
+    </div>
+    <div class="dpane" style="overflow-y:auto;padding-top:24px">
+      <div style="font-size:12px;color:#41454d;margin-bottom:18px;padding:9px 11px;background:#f7f8fa;border-radius:0 5px 5px 0;border-left:3px solid #181d26"><i data-lucide="sparkles" style="width:12px;height:12px;color:#181d26;margin-right:4px"></i>Fill in the details below. Click <strong>Scan for matches</strong> to find related coverage.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="grid-column:1/-1"><label class="form-label">Title</label><input class="form-input" type="text" id="f-title" placeholder="e.g. DITO 5G Launch Press Release"></div>
+        <div><label class="form-label">Type</label><select class="form-select" id="f-type"><option value="">Select type...</option><option>Press Release</option><option>Event</option><option>Crisis</option><option>Trending</option><option>Product</option></select></div>
+        <div><label class="form-label">Date released</label><input class="form-input" type="date" id="f-date" value="${new Date().toISOString().split('T')[0]}"></div>
+        <div style="grid-column:1/-1"><label class="form-label">Content</label><textarea class="form-textarea" id="f-content" placeholder="Paste your press release or activity summary here..."></textarea><div style="font-size:11px;color:#bbb;margin-top:4px;text-align:right" id="cc">0 characters</div></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:14px;border-top:1px solid #f0f0f6">
+        <span style="font-size:12px;color:#aaa"><i data-lucide="database" style="width:12px;height:12px;margin-right:3px"></i>Will scan across 3,437 articles</span>
+        <button class="at-btn-scan" onclick="startScan()"><i data-lucide="search" style="width:14px;height:14px"></i> Scan for matches</button>
+      </div>
+    </div>
+  </div>`;
+  initIcons();
+  const fc=document.getElementById('f-content');
+  if(fc) fc.addEventListener('input',function(){const cc=document.getElementById('cc');if(cc)cc.textContent=this.value.length+' characters';});
+}
+
+function startScan(){
+  const title=document.getElementById('f-title').value.trim();
+  const type=document.getElementById('f-type').value;
+  const date=document.getElementById('f-date').value;
+  const content=document.getElementById('f-content').value.trim();
+  if(!title){document.getElementById('f-title').focus();document.getElementById('f-title').style.borderColor='#d44';return;}
+  if(!type){document.getElementById('f-type').style.borderColor='#d44';return;}
+  if(!content){document.getElementById('f-content').focus();document.getElementById('f-content').style.borderColor='#d44';return;}
+  ['f-title','f-type','f-content'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.borderColor='';});
+
+  const ov=document.getElementById('dr-create');if(!ov)return;
+  ov.style.display='flex';
+
+  const steps=[
+    {pct:8,  lbl:'Initializing scan...',        sub:'Loading similarity engine',               ctr:0},
+    {pct:22, lbl:'Tokenizing your content...',   sub:'Breaking down key phrases and entities',  ctr:312},
+    {pct:40, lbl:'Scanning article database...', sub:'Comparing against 3,437 verified articles',ctr:1204},
+    {pct:60, lbl:'Calculating similarity scores...',sub:'Running vector comparisons',           ctr:2318},
+    {pct:78, lbl:'Ranking results...',           sub:'Sorting by relevance score',              ctr:3062},
+    {pct:92, lbl:'Finalising matches...',        sub:'Preparing your results',                  ctr:3437},
+    {pct:100,lbl:'Scan complete!',               sub:'Matches found — review below',            ctr:3437},
+  ];
+
+  const bar=document.getElementById('dr-bar-create');
+  const lbl=document.getElementById('dr-lbl-create');
+  const sub=document.getElementById('dr-sub-create');
+  const ctr=document.getElementById('dr-ctr-create');
+  let step=0;
+
+  function tick(){
+    if(step>=steps.length){
+      setTimeout(()=>{
+        ov.style.display='none';
+        const today=new Date();
+        const fmt=d=>`${d.toLocaleString('en-PH',{month:'short'})} ${d.getDate()}, ${d.getFullYear()}`;
+        const d1=fmt(today),d2=fmt(new Date(today-86400000)),d3=fmt(new Date(today-2*86400000)),d4=fmt(new Date(today-3*86400000));
+        const na={id:atNid++,title,type,date,content,matches:[
+          {id:'n1',media:'Online',source:'Manila Times Online',title:'DITO expands 5G footprint in Metro Manila',date:d1,value:312000,score:0.93,manual:false},
+          {id:'n2',media:'Print',source:'Philippine Daily Inquirer',title:'DITO Telecommunity posts record subscriber growth',date:d2,value:520000,score:0.88,manual:false},
+          {id:'n3',media:'TV',source:'ABS-CBN News',title:'DITO eyes Visayas coverage by Q3 2026',date:d3,value:890000,score:0.84,manual:false},
+          {id:'n4',media:'Online',source:'BusinessWorld',title:'DITO partners with Huawei for network upgrade',date:d4,value:195000,score:0.79,manual:false},
+        ]};
+        acts.unshift(na);trackerSel=na.id;trackerTabs[na.id]='matches';renderTracker();renderDetailOnly();
+      },500);
+      return;
+    }
+    const s=steps[step];
+    bar.style.width=s.pct+'%';
+    lbl.textContent=s.lbl;
+    sub.textContent=s.sub;
+    const from=parseInt((ctr.textContent||'0').replace(/,/g,''))||0;
+    let cur=from,i=0,inc=(s.ctr-from)/20;
+    const t=setInterval(()=>{
+      cur+=inc;i++;
+      ctr.textContent=Math.round(cur).toLocaleString();
+      if(i>=20){ctr.textContent=s.ctr.toLocaleString();clearInterval(t);}
+    },20);
+    step++;
+    setTimeout(tick,480);
+  }
+  tick();
+}
+
+// Toggle left navigation sidebar (icon rotates, labels fade, width animates)
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('collapsed');
+}
+
+// Nav switching
+document.querySelectorAll('.nav-i').forEach(n=>{
+  n.addEventListener('click',()=>{
+    document.querySelectorAll('.nav-i').forEach(x=>x.classList.remove('act'));
+    n.classList.add('act');
+  });
+});
+
+// ── Open article detail in a new tab (delegated: works for the brief article
+//    lists AND the static Mentions table, including dynamically rendered rows) ──
+function openArticleDetail(d){
+  const u='article.html?'+new URLSearchParams({
+    title:d.title||'',source:d.source||'',section:d.section||'',
+    date:d.date||'',ave:d.ave||'',sv:d.sv||'',media:d.media||''
+  }).toString();
+  window.open(u,'_blank');
+}
+// "Read Article" → open the full article page in a new tab with the active mention's data
+function openArticleTab(){
+  const d=mentionData[mdActive];if(!d)return;
+  openArticleDetail({title:d.title,source:d.sub,section:d.section,date:d.date,ave:d.ave,sv:d.sv});
+}
+document.addEventListener('click',function(e){
+  // ignore clicks on interactive controls inside a row
+  if(e.target.closest('input,button,a,select,.tcb,.row-dots,.remove-btn')) return;
+  const ar=e.target.closest('.art-row');
+  if(ar){
+    openArticleDetail({
+      title:ar.querySelector('.art-hl')?.textContent.trim(),
+      source:ar.querySelector('.art-source')?.textContent.trim(),
+      date:ar.querySelector('.art-date')?.textContent.trim(),
+      ave:ar.querySelector('.art-ave')?.textContent.trim(),
+      media:ar.querySelector('.media-badge')?.textContent.trim()
+    });
+    return;
+  }
+  const tr=e.target.closest('.tbl tbody tr');
+  if(tr){
+    const title=tr.querySelector('.hl-text')?.textContent.trim();
+    if(!title) return; // header / non-article rows
+    // open the right-side detail drawer for the clicked mention
+    const rows=Array.from(tr.parentElement.querySelectorAll('tr'));
+    const idx=rows.indexOf(tr);
+    if(idx<0||idx>=mentionData.length)return;
+    const ov=document.getElementById('mention-overlay');
+    // in split view the table IS the list — just swap the docked detail; otherwise open the modal
+    if(mdMode==='split' && ov.classList.contains('open')){ selectMention(idx); }
+    else { openMention(idx); }
+  }
+});
+function initIcons(){
+  lucide.createIcons();
+  document.querySelectorAll('[data-lucide] svg').forEach(svg=>{
+    svg.removeAttribute('width');
+    svg.removeAttribute('height');
+  });
+  if(typeof tvWire==='function')tvWire();
+}
+// ── Bar chart rich tooltip ──
+const _barTips=new Map();
+let _barTipId=0;
+function _makeTip(data){const id='bt'+(++_barTipId);_barTips.set(id,data);return id;}
+(function(){
+  const el=document.createElement('div');
+  el.id='md-tooltip';
+  document.body.appendChild(el);
+  function anchorBelow(bar){
+    const r=bar.getBoundingClientRect();
+    el.classList.add('anchored');
+    // wait one frame so offsetWidth is measured after content is set
+    requestAnimationFrame(()=>{
+      const W=el.offsetWidth,vw=window.innerWidth;
+      let left=r.left+r.width/2-W/2;
+      left=Math.max(6,Math.min(left,vw-W-6));
+      el.style.left=left+'px';
+      el.style.top=(r.bottom+8)+'px';
+      // position arrow relative to icon center
+      const arrowX=r.left+r.width/2-left;
+      el.style.setProperty('--arrow-x',arrowX+'px');
+    });
+  }
+  function show(bar,x,y){
+    const t=_barTips.get(bar.dataset.btip);
+    if(!t)return;
+    el.classList.remove('anchored');
+    let html='';
+    if(t.label!=null){
+      // Anchored tooltip with arrow (e.g. article type icon or KPI card)
+      html+=`<div class="tip-date">${t.label}</div>`;
+      if(t.detail)html+=`<div class="tip-detail">${t.detail}</div>`;
+      el.innerHTML=html;
+      el.classList.toggle('has-detail',!!t.detail);
+      el.classList.add('visible');
+      anchorBelow(bar);
+      return;
+    } else if(t.entityName!=null){
+      // Entity pill tooltip
+      html+=`<div class="tip-date">${t.entityName}</div>`;
+      html+=`<div class="tip-row"><span class="tip-lbl">Type</span><span class="tip-val">${t.entityType}</span></div>`;
+      html+=`<div class="tip-row"><span class="tip-lbl">Mentions</span><span class="tip-val">${t.entityCount}</span></div>`;
+      html+=`<div class="tip-links"><a class="tip-link" href="https://en.wikipedia.org/wiki/${t.wikiSlug}" target="_blank" rel="noopener">Wikipedia ↗</a><a class="tip-link" href="https://www.wikidata.org/wiki/Special:Search?search=${t.wikiSlug}" target="_blank" rel="noopener">Wikidata ↗</a></div>`;
+    } else {
+      // Bar chart tooltip
+      html+=`<div class="tip-date">${t.date||''}</div>`;
+      if(t.coverage!=null) html+=`<div class="tip-row"><span class="tip-lbl">Coverage</span><span class="tip-val">${t.coverage} mention${t.coverage!==1?'s':''}</span></div>`;
+      if(t.ave!=null)      html+=`<div class="tip-row"><span class="tip-lbl">AVE</span><span class="tip-val">PHP ${t.ave}</span></div>`;
+      if(t.sv!=null)       html+=`<div class="tip-row"><span class="tip-lbl">Story Value</span><span class="tip-val">${t.sv}</span></div>`;
+    }
+    el.innerHTML=html;
+    el.classList.add('visible');
+    move(x,y);
+  }
+  function move(x,y){
+    if(el.classList.contains('anchored'))return;
+    const W=el.offsetWidth,H=el.offsetHeight,vw=window.innerWidth,vh=window.innerHeight;
+    el.style.left=(x+14+W>vw?x-W-8:x+14)+'px';
+    el.style.top=(y-H/2<0?4:y+H/2>vh?vh-H-4:y-H/2)+'px';
+  }
+  function hide(){el.classList.remove('visible','anchored');}
+  document.addEventListener('mouseover',e=>{const b=e.target.closest('[data-btip]');if(b)show(b,e.clientX,e.clientY);else hide();});
+  document.addEventListener('mousemove',e=>{if(el.classList.contains('visible'))move(e.clientX,e.clientY);});
+  document.addEventListener('mouseout',e=>{if(!e.target.closest('[data-btip]'))hide();});
+})();
+initIcons();
+if(document.getElementById('page-mentions')){
+  renderTableRows();
+  document.querySelectorAll(".ss-trend:not(.neu)").forEach(function(t){ if(/[↓−-]/.test(t.textContent)) t.classList.add("neg"); });
+}
+// ── KPI card hover explainer popover (study 2) ──
+(function(){
+  const info={
+    0:['Mentions today','Total media mentions captured today across all monitored sources (<span style="color:#4ade80;font-weight:600">↑22%</span> vs yesterday).'],
+    1:['Combined AVE','Advertising Value Equivalent — estimated ad-spend value of today\'s coverage: <span style="color:#4ade80;font-weight:600">PHP 2.78M</span>.'],
+    2:['Sentiment today','Overall tone of today\'s coverage — <span style="color:#4ade80;font-weight:600">22% positive</span> · <span style="color:#9ca3af;font-weight:600">68% neutral</span> · <span style="color:#f87171;font-weight:600">10% negative</span>.'],
+    3:['Tier 1 articles','Mentions from Tier 1 (top-priority) publications flagged today: <span style="color:#a78bfa;font-weight:600">3 articles</span>.']
+  };
+  let pop;
+  function showPop(card,i){
+    let d=info[i]; if(!d)return;
+    if(i===2&&card.dataset.pos){
+      d=['Sentiment today','Overall tone of today\'s coverage — <span style="color:#4ade80;font-weight:600">'+card.dataset.pos+'% positive</span> · <span style="color:#9ca3af;font-weight:600">'+card.dataset.neu+'% neutral</span> · <span style="color:#f87171;font-weight:600">'+card.dataset.neg+'% negative</span>.'];
+    }
+    if(!pop){pop=document.createElement('div');pop.id='ss-pop';document.body.appendChild(pop);}
+    pop.innerHTML='<div class="ss-pop-title">'+d[0]+'</div>'+d[1];
+    pop.classList.add('show');
+    requestAnimationFrame(()=>{
+      const r=card.getBoundingClientRect(),pr=pop.getBoundingClientRect();
+      let left=r.left+r.width/2-pr.width/2;
+      left=Math.max(8,Math.min(left,window.innerWidth-pr.width-8));
+      let top=r.top-pr.height-12;
+      const flipped=top<8;
+      if(flipped)top=r.bottom+12;
+      pop.style.left=left+'px';pop.style.top=top+'px';
+      pop.style.setProperty('--arrow-x',(r.left+r.width/2-left)+'px');
+      pop.classList.toggle('ss-pop--above',!flipped);
+      pop.classList.toggle('ss-pop--below',flipped);
+    });
+  }
+  function hidePop(){ if(pop)pop.classList.remove('show','ss-pop--above','ss-pop--below'); }
+  document.querySelectorAll('.brief-stats .ss').forEach((c,i)=>{
+    c.addEventListener('mouseenter',()=>showPop(c,i));
+    c.addEventListener('mouseleave',hidePop);
+  });
+})();
+// ── KPI scan-ring + count-up animation ──
+function countUp(el,target,duration,onComplete){
+  // ease-out-expo: rockets up fast, decelerates crisply into the final value
+  el.textContent=0;
+  const start=performance.now();
+  const isFloat=target%1!==0;
+  (function tick(now){
+    const p=Math.min((now-start)/duration,1);
+    const ease=p===1?1:1-Math.pow(2,-10*p);
+    const val=isFloat?(ease*target).toFixed(2):(Math.round(ease*target));
+    el.textContent=val;
+    if(p<1){requestAnimationFrame(tick);}
+    else{
+      el.textContent=isFloat?target.toFixed(2):target;
+      if(onComplete)onComplete();
+    }
+  })(start);
+}
+// ── Randomize the sentiment KPI card on each refresh (cycles positive / neutral / negative) ──
+function randomizeSentiment(){
+  const card=document.getElementById('ss-2');
+  if(!card)return;
+  // breakdowns each sum to 100; `cls` drives card bg via #ss-2:has(.ss-trend.X)
+  const SENTS=[
+    {label:'positive',cls:'pos',pos:74,neu:18,neg:8},
+    {label:'positive',cls:'pos',pos:61,neu:30,neg:9},
+    {label:'neutral', cls:'neu',pos:22,neu:68,neg:10},
+    {label:'neutral', cls:'neu',pos:19,neu:55,neg:26},
+    {label:'negative',cls:'neg',pos:14,neu:29,neg:57},
+    {label:'negative',cls:'neg',pos:9, neu:33,neg:58},
+  ];
+  const s=SENTS[Math.floor(Math.random()*SENTS.length)];
+  const dom=s.cls==='pos'?s.pos:s.cls==='neg'?s.neg:s.neu;
+  const num=card.querySelector('.ss-num');
+  if(num)num.dataset.val=dom;
+  const trend=card.querySelector('.ss-trend');
+  if(trend){trend.className='ss-trend '+s.cls;trend.textContent=s.label;}
+  // stash breakdown so the hover popover stays in sync
+  card.dataset.pos=s.pos;card.dataset.neu=s.neu;card.dataset.neg=s.neg;
+  const bar=card.querySelector('.ss-sentbar');
+  if(bar){
+    bar.title=s.pos+'% positive · '+s.neu+'% neutral · '+s.neg+'% negative';
+    const segs={'.ss-sent-pos':s.pos,'.ss-sent-neu':s.neu,'.ss-sent-neg':s.neg};
+    Object.keys(segs).forEach(sel=>{const e=bar.querySelector(sel);if(e)e.style.width=segs[sel]+'%';});
+  }
+}
+function refreshKPIs(){
+  randomizeSentiment();
+  const cards=document.querySelectorAll('.brief-stats .ss');
+  cards.forEach((card,i)=>{
+    setTimeout(()=>{
+      // Reveal card: spring entry (fade + scale)
+      card.classList.remove('kpi-refresh');void card.offsetWidth;card.classList.add('kpi-refresh');
+      // Count-up; scan ring + settle pulse fire on completion
+      card.querySelectorAll('.ss-num').forEach(el=>{
+        const target=parseFloat(el.dataset.val);
+        if(!isNaN(target)){
+          countUp(el,target,700,()=>{
+            // Lock-on: scan ring confirms, number settles
+            const ring=card.querySelector('.ss-scan-ring');
+            if(ring){ring.classList.remove('ping');void ring.offsetWidth;ring.classList.add('ping');}
+            el.classList.remove('settling');void el.offsetWidth;el.classList.add('settling');
+          });
+        }
+      });
+    },i*120);
+  });
+}
+// ── Brief scan intro animation ──
+(function(){
+  const phases=[
+    {pct:15, label:'Scanning coverage...',  sub:'Fetching latest mentions',       count:12},
+    {pct:38, label:'Analysing sources...',  sub:'Cross-referencing publications', count:28},
+    {pct:62, label:'Scoring sentiment...',  sub:'Running tone analysis',          count:39},
+    {pct:84, label:'Ranking stories...',    sub:'Sorting by relevance score',     count:43},
+    {pct:100,label:'3 Tier 1 stories found',sub:'Brief ready',                   count:44},
+  ];
+  const sources=[
+    {src:'Philippine Daily Inquirer', status:'found',    tier:'T1', time:'14h ago'},
+    {src:'ABS-CBN News',              status:'found',    tier:'T1', time:'15h ago'},
+    {src:'Philstar Online',           status:'found',    tier:'T2', time:'15h ago'},
+    {src:'BusinessWorld',             status:'found',    tier:'T2', time:'19h ago'},
+    {src:'Manila Bulletin',           status:'found',    tier:'T2', time:'20h ago'},
+    {src:'Rappler',                   status:'scanning', tier:'',   time:''},
+  ];
+  let phaseIdx=0,srcIdx=0;
+  function addSourceRow(){
+    const feed=document.getElementById('bso-feed');
+    if(!feed||srcIdx>=sources.length)return;
+    const s=sources[srcIdx++];
+    const row=document.createElement('div');
+    row.className='bso-feed-row';
+    row.innerHTML=
+      `<span class="bso-feed-dot ${s.status}"></span>`+
+      `<span class="bso-feed-src">${s.src}</span>`+
+      (s.tier?`<span class="bso-feed-tier">${s.tier}</span>`:'')+
+      (s.time?`<span class="bso-feed-time">${s.time}</span>`:'')+
+      `<span class="bso-feed-status ${s.status}">${s.status==='found'?'found':'scanning...'}</span>`;
+    feed.appendChild(row);
+  }
+  function runPhase(){
+    const bso=document.getElementById('bso');
+    if(!bso)return;
+    const p=phases[phaseIdx];
+    const bar=document.getElementById('bso-bar');
+    const lbl=document.getElementById('bso-label');
+    const sub=document.getElementById('bso-sub');
+    const ctr=document.getElementById('bso-counter');
+    if(bar)bar.style.width=p.pct+'%';
+    if(lbl)lbl.textContent=p.label;
+    if(sub)sub.textContent=p.sub;
+    if(ctr)countUp(ctr,p.count,580);
+    // drip in 1-2 source rows per phase
+    addSourceRow();
+    if(phaseIdx>0)setTimeout(addSourceRow,320);
+    phaseIdx++;
+    if(phaseIdx<phases.length){setTimeout(runPhase,750);}
+    else{
+      setTimeout(()=>{
+        bso.classList.add('hide');
+        setTimeout(()=>{bso.style.display='none';},400);
+        const tr=document.querySelector('.b-title-row');
+        const sr=document.querySelector('.b-spark-row');
+        const ai=document.querySelector('.b-ai-tag');
+        const tf=document.querySelector('.b-trending-flag');
+        if(tr)tr.classList.add('revealed');
+        if(sr)sr.classList.add('revealed');
+        setTimeout(()=>{if(ai)ai.classList.add('chip-in');},120);
+        setTimeout(()=>{if(tf)tf.classList.add('chip-in');},220);
+        setTimeout(refreshKPIs,440);
+      },600);
+    }
+  }
+  window.addEventListener('DOMContentLoaded',()=>{
+    // Zero out stat values so no final number is ever visible before count-up runs
+    document.querySelectorAll('.brief-stats .ss-num').forEach(el=>{el.textContent='0';});
+    setTimeout(runPhase,300);
+  });
+})();
+// ── ⌘K / Ctrl+K → focus filter search ──
+document.addEventListener('keydown',function(e){
+  if((e.metaKey||e.ctrlKey)&&e.key==='k'){
+    const input=document.querySelector('.fc-search input');
+    if(input){e.preventDefault();input.focus();input.select();}
+  }
+});
+// Hide ⌘K badge while input is focused, restore on blur
+(function(){
+  const input=document.querySelector('.fc-search input');
+  const kbd=document.querySelector('.fc-search-kbd');
+  if(!input||!kbd)return;
+  input.addEventListener('focus',()=>kbd.style.opacity='0');
+  input.addEventListener('blur',()=>kbd.style.opacity='1');
+})();
+
+// ── DASHBOARD (Recharts) ──
+const DB_COLORS={positive:'#16a34a',neutral:'#9ca3af',negative:'#dc2626'};
+const DB_PALETTE=['#181d26','#e94f37','#b9a4f7','#86d9a8','#fde2b6','#f9a8b9','#c1e84a','#94a3b8'];
+let dbRoots={};
+const RC=React.createElement;
+
+function dbMount(id,el){
+  const dom=document.getElementById(id);
+  if(!dom)return;
+  function mount(){if(!dbRoots[id])dbRoots[id]=ReactDOM.createRoot(dom);dbRoots[id].render(el);}
+  if(dom.clientWidth>0){mount();return;}
+  const ro=new ResizeObserver(()=>{if(dom.clientWidth>0){ro.disconnect();mount();}});
+  ro.observe(dom);
+}
+
+function initDashboard(){
+  if(!window.Recharts||!window.Recharts.ResponsiveContainer){
+    document.querySelectorAll('.db-chart-wrap').forEach(el=>{
+      el.style.cssText+='display:flex;align-items:center;justify-content:center;';
+      el.innerHTML='<span style="font-size:12px;color:#9ca3af">Chart library unavailable — check network</span>';
+    });
+    return;
+  }
+  const{
+    ResponsiveContainer,ComposedChart,BarChart,ScatterChart,PieChart,
+    Area,Line,Bar,Scatter,Pie,Cell,
+    XAxis,YAxis,CartesianGrid,Tooltip,Legend,LabelList
+  }=window.Recharts;
+  const TT={
+    contentStyle:{background:'#181d26',border:'none',borderRadius:6,padding:'8px 12px'},
+    itemStyle:{color:'#fff',fontSize:12,fontFamily:'Inter'},
+    labelStyle:{color:'#fff',fontSize:12,fontFamily:'Inter'}
+  };
+
+  // Shared factory for single-series horizontal bar charts
+  function hBar(id,data,yKey,cells,opts){
+    const{margin={top:28,right:60,bottom:8,left:100},maxBarSize=20,labelFmt,tooltipFmt}=opts||{};
+    const TickY=({x,y,payload})=>RC('text',{x,y,dy:4,textAnchor:'end',fontSize:11,fill:'#6b7280'},
+      payload.value.length>22?payload.value.slice(0,22)+'…':payload.value);
+    dbMount(id,RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data,layout:'vertical',margin},
+        RC(XAxis,{type:'number',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false}),
+        RC(YAxis,{type:'category',dataKey:yKey,tick:TickY,axisLine:false,tickLine:false,width:margin.left-10}),
+        RC(Tooltip,{...TT,...(tooltipFmt?{formatter:tooltipFmt}:{})}),
+        RC(Bar,{dataKey:'value',maxBarSize,radius:[0,4,4,0]},
+          ...cells,
+          RC(LabelList,{dataKey:'value',position:'right',style:{fontSize:11,fill:'#6b7280'},formatter:labelFmt||undefined})
+        )
+      )
+    ));
+  }
+
+  // Coverage Trend
+  const trendDays=['May 18','May 19','May 20','May 21','May 22','May 23','May 24','May 25'];
+  const trendData=trendDays.map((day,i)=>({day,online:[18,24,31,28,42,38,29,35][i],print:[8,10,12,9,14,11,8,12][i],broadcast:[4,5,7,6,8,9,5,7][i]}));
+  dbMount('db-trend',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+    RC(ComposedChart,{data:trendData,margin:{top:28,right:16,bottom:36,left:48}},
+      RC(CartesianGrid,{strokeDasharray:'',stroke:'#f0f1f3',vertical:false}),
+      RC(XAxis,{dataKey:'day',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
+      RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false}),
+      RC(Tooltip,TT),
+      RC(Legend,{iconSize:10,wrapperStyle:{fontSize:11,color:'#6b7280'},verticalAlign:'top',align:'right'}),
+      RC(Area,{type:'monotone',dataKey:'online',name:'Online',stroke:'#181d26',strokeWidth:2.5,fill:'rgba(24,29,38,0.12)',dot:{r:2.5,fill:'#181d26'},activeDot:{r:4}}),
+      RC(Line,{type:'monotone',dataKey:'print',name:'Print',stroke:'#e94f37',strokeWidth:2,dot:{r:2.5,fill:'#e94f37'},activeDot:{r:4}}),
+      RC(Line,{type:'monotone',dataKey:'broadcast',name:'Broadcast',stroke:'#b9a4f7',strokeWidth:2,dot:{r:2.5,fill:'#b9a4f7'},activeDot:{r:4}})
+    )
+  ));
+
+  // Sentiment Split
+  const sentData=[{name:'Positive',value:184,color:'#16a34a'},{name:'Neutral',value:35,color:'#9ca3af'},{name:'Negative',value:29,color:'#dc2626'}];
+  const sentTotal=sentData.reduce((s,d)=>s+d.value,0);
+  dbMount('db-sentiment',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+    RC(PieChart,{},
+      RC(Pie,{data:sentData,cx:'35%',cy:'50%',innerRadius:'46%',outerRadius:'70%',dataKey:'value',paddingAngle:2},
+        ...sentData.map(d=>RC(Cell,{key:d.name,fill:d.color}))
+      ),
+      RC(Tooltip,{...TT,formatter:(val,name)=>[`${val} (${((val/sentTotal)*100).toFixed(0)}%)`,name]}),
+      RC(Legend,{layout:'vertical',align:'right',verticalAlign:'middle',iconSize:10,wrapperStyle:{fontSize:11,color:'#6b7280'}})
+    )
+  ));
+
+  // Media Breakdown (stacked)
+  const mediaData=[
+    {channel:'Online',positive:110,neutral:14,negative:12},
+    {channel:'Print',positive:34,neutral:10,negative:8},
+    {channel:'Topical',positive:22,neutral:6,negative:4},
+    {channel:'Broadcast',positive:18,neutral:5,negative:5}
+  ];
+  dbMount('db-media',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+    RC(BarChart,{data:mediaData,layout:'vertical',margin:{top:28,right:16,bottom:36,left:56}},
+      RC(CartesianGrid,{strokeDasharray:'',stroke:'#f0f1f3',horizontal:false}),
+      RC(XAxis,{type:'number',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false}),
+      RC(YAxis,{type:'category',dataKey:'channel',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:56}),
+      RC(Tooltip,TT),
+      RC(Legend,{iconSize:10,wrapperStyle:{fontSize:11,color:'#6b7280'},verticalAlign:'top',align:'right'}),
+      RC(Bar,{dataKey:'positive',name:'Positive',stackId:'a',fill:'#16a34a',maxBarSize:28}),
+      RC(Bar,{dataKey:'neutral',name:'Neutral',stackId:'a',fill:'#9ca3af',maxBarSize:28}),
+      RC(Bar,{dataKey:'negative',name:'Negative',stackId:'a',fill:'#dc2626',maxBarSize:28,radius:[0,4,4,0]})
+    )
+  ));
+
+  // Top Topics
+  const topicsData=['5G Expansion','Network Quality','Pricing','Customer Service','Market Share','Partnerships','Executive News','Product Launch'].map((topic,i)=>({topic,value:[58,44,32,27,48,21,38,19][i]}));
+  hBar('db-topics',topicsData,'topic',
+    topicsData.map((_,i)=>RC(Cell,{key:i,fill:DB_PALETTE[i%DB_PALETTE.length]})),
+    {margin:{top:28,right:36,bottom:40,left:108},maxBarSize:20}
+  );
+
+  // Publication Frequency
+  const freqData=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day,i)=>({day,value:[42,38,51,47,62,28,18][i]}));
+  dbMount('db-freq',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+    RC(BarChart,{data:freqData,margin:{top:28,right:16,bottom:32,left:48}},
+      RC(CartesianGrid,{strokeDasharray:'',stroke:'#f0f1f3',vertical:false}),
+      RC(XAxis,{dataKey:'day',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
+      RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false}),
+      RC(Tooltip,TT),
+      RC(Bar,{dataKey:'value',maxBarSize:36,radius:[4,4,0,0]},
+        ...freqData.map((_,i)=>RC(Cell,{key:i,fill:i===4?'#e94f37':'#181d26'})),
+        RC(LabelList,{dataKey:'value',position:'top',style:{fontSize:11,fill:'#6b7280'}})
+      )
+    )
+  ));
+
+  // Top Authors
+  const authorsData=['Daxim L. Lucas','Lawrence Agcaoili','Elijah Tubayan','Bernie C-Magkilat','Ashley Jose','Maria Santos','Ramon Castillo','John Rey Saavedra'].map((author,i)=>({author,value:[14,11,9,8,7,6,5,4][i]})).reverse();
+  hBar('db-authors',authorsData,'author',
+    authorsData.map((_,i)=>RC(Cell,{key:i,fill:i===authorsData.length-1?'#e94f37':'#b9a4f7'})),
+    {margin:{top:28,right:36,bottom:32,left:100},maxBarSize:22}
+  );
+
+  // AVE by Publisher
+  const publishers=[
+    {name:'Philippine Daily Inquirer',value:4200},{name:'Philstar Online',value:3100},
+    {name:'BusinessWorld',value:2600},{name:'Inquirer Online',value:1900},
+    {name:'Manila Bulletin',value:1400},{name:'Yahoo Philippines',value:980},
+    {name:'Inquirer Plus',value:820},{name:'Manila Shaker',value:460},
+    {name:'SunStar Cebu',value:390},{name:'Insider Ph',value:310}
+  ];
+  hBar('db-treemap',publishers,'name',
+    publishers.map((_,i)=>RC(Cell,{key:i,fill:['#181d26','#374151','#e94f37','#b9a4f7','#86d9a8','#fde2b6','#6b7280','#94a3b8','#d1d5db','#9ca3af'][i]})),
+    {margin:{top:8,right:72,bottom:8,left:160},maxBarSize:22,
+     tooltipFmt:(val)=>[`PHP ${val}K`,'AVE'],labelFmt:v=>`PHP ${v}K`}
+  );
+
+  // Publisher Bubble
+  const bubbleData=[
+    {x:8.2,y:38,ave:4200,name:'Philippine Daily Inquirer',color:'#181d26'},
+    {x:7.8,y:22,ave:3100,name:'Philstar Online',color:'#e94f37'},
+    {x:6.5,y:18,ave:2600,name:'BusinessWorld',color:'#b9a4f7'},
+    {x:8.9,y:19,ave:1900,name:'Inquirer Online',color:'#16a34a'},
+    {x:7.1,y:14,ave:1400,name:'Manila Bulletin',color:'#86d9a8'},
+    {x:5.2,y:11,ave:980,name:'Yahoo PH',color:'#fde2b6'},
+    {x:4.8,y:9,ave:820,name:'Inquirer Plus',color:'#d9a441'},
+    {x:6.3,y:8,ave:460,name:'Manila Shaker',color:'#94a3b8'},
+    {x:7.5,y:6,ave:390,name:'SunStar Cebu',color:'#f9a8b9'},
+    {x:3.9,y:5,ave:310,name:'Insider Ph',color:'#dc2626'}
+  ];
+  const BubbleDot=({cx,cy,payload})=>RC('g',{},
+    RC('circle',{cx,cy,r:Math.sqrt(payload.ave/1000)*7,fill:payload.color,opacity:0.85}),
+    RC('text',{x:cx,y:cy,textAnchor:'middle',dominantBaseline:'middle',fontSize:10,fill:'#fff',fontWeight:'600'},payload.name.split(' ')[0])
+  );
+  const BubbleTooltip=({active,payload})=>{
+    if(!active||!payload||!payload.length)return null;
+    const d=payload[0].payload;
+    return RC('div',{style:{background:'#181d26',border:'none',borderRadius:6,padding:'8px 12px',color:'#fff',fontSize:12,fontFamily:'Inter'}},
+      RC('div',{style:{fontWeight:600,marginBottom:4}},d.name),
+      RC('div',{},'Sentiment score: '+d.x),
+      RC('div',{},'Mentions: '+d.y),
+      RC('div',{},'AVE: PHP '+d.ave+'K')
+    );
+  };
+  dbMount('db-bubble',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+    RC(ScatterChart,{margin:{top:28,right:20,bottom:48,left:56}},
+      RC(CartesianGrid,{strokeDasharray:'',stroke:'#f0f1f3'}),
+      RC(XAxis,{type:'number',dataKey:'x',name:'Sentiment Score',domain:[3,10],tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'Sentiment Score',position:'insideBottom',offset:-30,fontSize:11,fill:'#6b7280'}}),
+      RC(YAxis,{type:'number',dataKey:'y',name:'Mentions',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'Mentions',angle:-90,position:'insideLeft',offset:10,fontSize:11,fill:'#6b7280'}}),
+      RC(Tooltip,{content:BubbleTooltip,cursor:{stroke:'rgba(0,0,0,0.1)',strokeDasharray:'3 3'}}),
+      RC(Scatter,{data:bubbleData,shape:BubbleDot})
+    )
+  ));
+}
+(function(){function c(){document.querySelectorAll(".brief-stats .ss").forEach(function(card){var tr=card.querySelector(".ss-trend:not(.neu)");if(!tr)return;var neg=/[↓−-]/.test(tr.textContent);tr.classList.remove("pos","neg");tr.classList.add(neg?"neg":"pos");var v=card.querySelector(".ss-val");if(v){v.classList.remove("tcol-pos","tcol-neg");v.classList.add(neg?"tcol-neg":"tcol-pos");}});}if(document.readyState!=="loading")c();else document.addEventListener("DOMContentLoaded",c);})();
+
+// ── PUBLISHERS PAGE ──
+let pubSort='score',pubPage=0,pubSearch='';
+const PUB_PER_PAGE=16;
+function setPubSearch(v){pubSearch=v;pubPage=0;renderPublishers();}
+const PUB_COLORS=['#2563eb','#7c3aed','#0891b2','#d97706','#db2777','#0d9488','#4f46e5','#e11d8f'];
+function pubColor(name){let h=0;for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))>>>0;return PUB_COLORS[h%PUB_COLORS.length];}
+function buildPublishers(){
+  const map={};
+  mentionData.forEach(d=>{
+    const name=d.sub;if(!name)return;
+    if(!map[name])map[name]={name,count:0,sv:0};
+    map[name].count++;map[name].sv+=(d.sv||0);
+  });
+  const list=Object.values(map).map(p=>({
+    name:p.name,
+    count:p.count,
+    totalSV:+p.sv.toFixed(2),
+    score:+((p.sv/p.count)*2).toFixed(2)   // synthesized Pub Score = avg Story Value ×2
+  }));
+  if(pubSort==='count')list.sort((a,b)=>b.count-a.count);
+  else if(pubSort==='sv')list.sort((a,b)=>b.totalSV-a.totalSV);
+  else if(pubSort==='az')list.sort((a,b)=>a.name.localeCompare(b.name));
+  else list.sort((a,b)=>b.score-a.score);
+  return list;
+}
+function setPubSort(v){pubSort=v;pubPage=0;renderPublishers();}
+function gotoPubPage(n){
+  const pages=Math.max(1,Math.ceil(buildPublishers().length/PUB_PER_PAGE));
+  pubPage=Math.max(0,Math.min(n,pages-1));renderPublishers();
+  const sc=document.querySelector('.app-body');if(sc)sc.scrollTop=0;
+}
+function renderPublishers(){
+  const grid=document.getElementById('pub-grid');if(!grid)return;
+  const q=pubSearch.trim().toLowerCase();
+  const all=buildPublishers().filter(p=>!q||p.name.toLowerCase().includes(q));
+  const total=all.length,pages=Math.max(1,Math.ceil(total/PUB_PER_PAGE));
+  pubPage=Math.max(0,Math.min(pubPage,pages-1));
+  const start=pubPage*PUB_PER_PAGE,end=Math.min(start+PUB_PER_PAGE,total);
+  grid.innerHTML=all.slice(start,end).map((p,i)=>`
+    <div class="pub-card">
+      <div class="pub-card-hd">
+        <div class="pub-name" title="${p.name}">${p.name}</div>
+        <div class="pub-avatar" style="background:${pubColor(p.name)}">${p.name.charAt(0)}<span class="pub-rank">${start+i+1}</span></div>
+      </div>
+      ${renderSocialIcons()}
+      <div class="pub-stats">
+        <div class="pub-stat"><div class="pub-stat-lbl">Pub Score</div><div class="pub-stat-val">${p.score.toFixed(2)}</div></div>
+        <div class="pub-stat"><div class="pub-stat-lbl">Articles</div><div class="pub-stat-val">${p.count}</div></div>
+        <div class="pub-stat"><div class="pub-stat-lbl">Total SValue</div><div class="pub-stat-val">${p.totalSV.toFixed(2)}</div></div>
+      </div>
+    </div>`).join('');
+  const info=`${start+1}–${end} of ${total} items`;
+  const top=document.getElementById('pub-pg-info-top'),bot=document.getElementById('pub-pg-info');
+  if(top)top.textContent=info;if(bot)bot.textContent=info;
+  const btns=document.getElementById('pub-pg-btns');
+  if(btns){
+    let h=`<button class="pgb arrow" onclick="gotoPubPage(pubPage-1)"${pubPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+    for(let p=0;p<pages;p++)h+=`<button class="pgb${p===pubPage?' on':''}" onclick="gotoPubPage(${p})">${p+1}</button>`;
+    h+=`<button class="pgb arrow" onclick="gotoPubPage(pubPage+1)"${pubPage>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+    btns.innerHTML=h;
+  }
+  initIcons();
+}
+// ── ALL FILTERS MODAL ──
+const AF={
+  categories:[
+    {id:'c1',name:'Competitor News'},
+    {id:'c2',name:'DLSU'},
+    {id:'c3',name:'Gena Testing For Additional Category'},
+    {id:'c4',name:'Risk Management'},
+    {id:'c5',name:'Test 1'},
+    {id:'c6',name:'Test 2'},
+    {id:'c7',name:'Yamaha'},
+  ],
+  buckets:{
+    c1:[
+      {id:'b1',name:'Isuzu',     keywords:{main:['Isuzu','Isuzu Philippines'],           additional:['Isuzu D-Max','Isuzu mu-X'],           related:['pickup truck','commercial vehicle'],        excluded:['Isuzu Foods','Isuzu Japan stock']}},
+      {id:'b2',name:'Kawasaki',  keywords:{main:['Kawasaki','Kawasaki Motors'],           additional:['Kawasaki Ninja','Kawasaki Philippines'],related:['motorcycle','motorbike'],                  excluded:['Kawasaki disease','Kawasaki City']}},
+      {id:'b3',name:'Taguig City',keywords:{main:['Taguig City','Taguig'],               additional:['BGC','Bonifacio Global City'],            related:['Metro Manila','NCR'],                      excluded:['Taguig barangay','Taguig court']}},
+      {id:'b4',name:'Test only', keywords:{main:['Test'],                                additional:[],related:[],excluded:[]}},
+    ],
+    c2:[{id:'b5',name:'DLSU Bucket',   keywords:{main:['DLSU','De La Salle University'], additional:['DLSU Manila','Green Archers'],            related:['Lasallian','university'],                  excluded:['DLSU Dasmariñas','DLSU stock']}}],
+    c3:[{id:'b6',name:'Gena Bucket',   keywords:{main:['Gena'],additional:[],related:[],excluded:[]}}],
+    c4:[{id:'b7',name:'Risk Bucket',   keywords:{main:['Risk Management','enterprise risk'],additional:['risk assessment','risk mitigation'],  related:['compliance','governance'],                  excluded:['risk game','at-risk youth']}}],
+    c5:[{id:'b8',name:'Test 1 Bucket', keywords:{main:['Test 1'],additional:[],related:[],excluded:[]}}],
+    c6:[{id:'b9',name:'Test 2 Bucket', keywords:{main:['Test 2'],additional:[],related:[],excluded:[]}}],
+    c7:[{id:'b10',name:'Yamaha Bucket',keywords:{main:['Yamaha','Yamaha Philippines'],    additional:['Yamaha Mio','Yamaha NMAX'],               related:['scooter','motorcycle brand'],              excluded:['Yamaha music','Yamaha piano']}}],
+  },
+  selCat:null,   // selected category id
+  selBkt:null,   // selected bucket id
+  pendCat:null,  // pending (not yet applied) category
+  pendBkt:null,  // pending bucket
+  catSort:'az',
+  bktSort:'az',
+  catPage:0,
+  catPageSize:8,
+};
+
+function openAllFilters(){
+  AF.pendCat=AF.selCat;
+  AF.pendBkt=AF.selBkt;
+  const ov=document.getElementById('af-overlay');
+  ov.style.display='flex';
+  requestAnimationFrame(()=>ov.classList.add('open'));
+  afRenderCats();
+  afRenderBkts(!!AF.pendCat);
+  afRenderKw(!!AF.pendBkt);
+  afRenderChips();
+  initIcons();
+}
+
+function closeAllFilters(){
+  const ov=document.getElementById('af-overlay');
+  ov.style.display='flex';
+  ov.classList.remove('open');
+  ov.classList.add('closing');
+  setTimeout(()=>{ ov.classList.remove('closing'); ov.style.display='none'; },260);
+}
+
+function afSorted(arr,sort){
+  return [...arr].sort((a,b)=>sort==='az'?a.name.localeCompare(b.name):b.name.localeCompare(a.name));
+}
+
+function afRenderCats(){
+  const sorted=afSorted(AF.categories,AF.catSort);
+  const total=sorted.length;
+  const pages=Math.max(1,Math.ceil(total/AF.catPageSize));
+  AF.catPage=Math.min(AF.catPage,pages-1);
+  const slice=sorted.slice(AF.catPage*AF.catPageSize,(AF.catPage+1)*AF.catPageSize);
+  const list=document.getElementById('af-cat-list');
+  list.innerHTML=slice.map(c=>`
+    <div class="af-item${AF.pendCat===c.id?' selected':''}" onclick="afSelectCat('${c.id}')">
+      <i data-lucide="folder" class="af-item-icon"></i>
+      <span class="af-item-name">${c.name}</span>
+    </div>`).join('');
+  const info=document.getElementById('af-cat-page');
+  if(info) info.textContent=`${AF.catPage+1} / ${pages}`;
+  document.getElementById('af-cat-sort-lbl').textContent=AF.catSort==='az'?'Name (A–Z)':'Name (Z–A)';
+  initIcons();
+}
+
+function afRenderBkts(animate){
+  const catId=AF.pendCat;
+  const list=document.getElementById('af-bkt-list');
+  if(!catId){ list.innerHTML='<div style="padding:16px 14px;font-size:12px;color:var(--muted)">Select a category first</div>'; return; }
+  const bkts=AF.buckets[catId]||[];
+  const sorted=afSorted(bkts,AF.bktSort);
+  list.classList.remove('af-list--entering');
+  list.innerHTML=sorted.map(b=>`
+    <div class="af-item${AF.pendBkt===b.id?' selected':''}" data-bkt-id="${b.id}" onclick="afSelectBkt('${b.id}')">
+      <i data-lucide="file-text" class="af-item-icon"></i>
+      <span class="af-item-name">${b.name}</span>
+    </div>`).join('') || '<div style="padding:16px 14px;font-size:12px;color:var(--muted)">No buckets in this category</div>';
+  if(animate){ void list.offsetWidth; list.classList.add('af-list--entering'); }
+  document.getElementById('af-bkt-sort-lbl').textContent=AF.bktSort==='az'?'Name (A–Z)':'Name (Z–A)';
+  initIcons();
+}
+
+function afRenderKw(animate){
+  const kw=document.getElementById('af-kw-body');
+  kw.classList.remove('kw-animate');
+  if(!AF.pendBkt){ kw.innerHTML='<div class="af-kw-empty">Select a bucket to view keywords</div>'; return; }
+  if(animate){ void kw.offsetWidth; kw.classList.add('kw-animate'); }
+  const allBkts=Object.values(AF.buckets).flat();
+  const bkt=allBkts.find(b=>b.id===AF.pendBkt);
+  if(!bkt){ kw.innerHTML='<div class="af-kw-empty">No keywords found</div>'; return; }
+  const kwData=bkt.keywords;
+  const groups=[
+    {label:'Main Keywords',      key:'main',       pill:'af-kw-pill--main'},
+    {label:'Additional Keywords',key:'additional', pill:'af-kw-pill--additional'},
+    {label:'Related Keywords',   key:'related',    pill:'af-kw-pill--related'},
+    {label:'Excluded Keywords',  key:'excluded',   pill:'af-kw-pill--excluded'},
+  ];
+  kw.innerHTML=`
+    <div class="af-kw-bucket-hd" onclick="afToggleKw()">
+      <div class="af-kw-bucket-name"><i data-lucide="file-text" class="af-item-icon"></i>${bkt.name}</div>
+      <i data-lucide="chevron-down" class="af-kw-chev" id="af-kw-chev"></i>
+    </div>
+    <div id="af-kw-groups">
+      ${groups.map(g=>`
+        <div class="af-kw-group">
+          <div class="af-kw-group-label">${g.label}</div>
+          <div class="af-kw-pills">
+            ${kwData[g.key]&&kwData[g.key].length
+              ? kwData[g.key].map(k=>`<span class="af-kw-pill ${g.pill}">${k}</span>`).join('')
+              : `<span class="af-kw-none">No ${g.label.toLowerCase()} added</span>`}
+          </div>
+        </div>`).join('')}
+    </div>`;
+  initIcons();
+}
+
+function afRenderChips(){
+  const area=document.getElementById('af-active-chips');
+  const clearBtn=document.getElementById('af-clear-btn');
+  const chips=[];
+  if(AF.pendCat){
+    const cat=AF.categories.find(c=>c.id===AF.pendCat);
+    if(cat) chips.push({label:cat.name,type:'cat'});
+  }
+  if(AF.pendBkt){
+    const allBkts=Object.values(AF.buckets).flat();
+    const bkt=allBkts.find(b=>b.id===AF.pendBkt);
+    if(bkt) chips.push({label:bkt.name,type:'bkt'});
+  }
+  area.innerHTML=chips.map(ch=>`
+    <span class="af-active-chip">
+      ${ch.label}
+      <span class="af-chip-x" onclick="afRemoveChip('${ch.type}')">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </span>
+    </span>`).join('');
+  if(clearBtn) clearBtn.classList.toggle('visible', chips.length>0);
+}
+
+function afSelectCat(id){
+  AF.pendCat=id;
+  AF.pendBkt=null;
+  afRenderCats();
+  afRenderBkts(true);
+  afRenderKw(false);
+  afRenderChips();
+}
+
+function afSelectBkt(id){
+  AF.pendBkt=id;
+  // update selected state in-place — no full re-render, no repeated animation
+  document.querySelectorAll('#af-bkt-list .af-item').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.bktId===id);
+  });
+  afRenderKw(true);
+  afRenderChips();
+}
+
+function afRemoveChip(type){
+  if(type==='cat'){ AF.pendCat=null; AF.pendBkt=null; }
+  if(type==='bkt'){ AF.pendBkt=null; }
+  afRenderCats();
+  afRenderBkts(false);
+  afRenderKw(false);
+  afRenderChips();
+}
+
+function afClearAll(){
+  AF.pendCat=null;
+  AF.pendBkt=null;
+  afRenderCats();
+  afRenderBkts(false);
+  afRenderKw(false);
+  afRenderChips();
+}
+
+function afApply(){
+  AF.selCat=AF.pendCat;
+  AF.selBkt=AF.pendBkt;
+  // Update filter bar display
+  const badge=document.getElementById('fc-filters-badge');
+  const btn=document.getElementById('fc-filters-btn');
+  let count=0;
+  if(AF.selCat) count++;
+  if(AF.selBkt) count++;
+  if(badge){
+    badge.textContent=count;
+    badge.style.display=count>0?'inline-flex':'none';
+  }
+  if(btn) btn.classList.toggle('active',count>0);
+  // Update category pill in filter bar
+  const fcLabel=document.getElementById('fc-cat-label');
+  if(fcLabel){
+    const cat=AF.categories.find(c=>c.id===AF.selCat);
+    fcLabel.textContent=cat?cat.name:'Company News - DITO Telecommunity';
+  }
+  closeAllFilters();
+}
+
+function afToggleSort(col){
+  const menuId=col==='cat'?'af-cat-sort-menu':'af-bkt-sort-menu';
+  const menu=document.getElementById(menuId);
+  if(!menu) return;
+  const isOpen=menu.classList.contains('open');
+  // close all sort menus first
+  document.querySelectorAll('.af-sort-menu').forEach(m=>m.classList.remove('open'));
+  if(!isOpen) menu.classList.add('open');
+  event.stopPropagation();
+}
+
+function afSetSort(col,val,el){
+  if(col==='cat') AF.catSort=val;
+  else AF.bktSort=val;
+  document.querySelectorAll('.af-sort-menu').forEach(m=>m.classList.remove('open'));
+  if(col==='cat') afRenderCats();
+  else afRenderBkts(true);
+  event.stopPropagation();
+}
+
+function afPage(col,dir){
+  if(col==='cat'){
+    const pages=Math.ceil(AF.categories.length/AF.catPageSize);
+    AF.catPage=Math.max(0,Math.min(AF.catPage+dir,pages-1));
+    afRenderCats();
+  }
+}
+
+function afToggleKw(){
+  const groups=document.getElementById('af-kw-groups');
+  const chev=document.getElementById('af-kw-chev');
+  if(!groups||!chev) return;
+  const isVisible=groups.classList.contains('entering');
+  if(isVisible){
+    groups.classList.remove('entering');
+    groups.classList.add('leaving');
+    chev.classList.remove('open');
+    groups.addEventListener('animationend',()=>{ groups.classList.remove('leaving'); groups.style.display='none'; },{once:true});
+  } else {
+    groups.style.display='';
+    groups.classList.remove('leaving');
+    groups.classList.add('entering');
+    chev.classList.add('open');
+  }
+}
+
+function afRefreshBuckets(){
+  const btn=event.currentTarget;
+  btn.style.transform='rotate(360deg)';
+  btn.style.transition='transform 0.4s ease';
+  setTimeout(()=>{ btn.style.transform=''; btn.style.transition=''; },400);
+  afRenderBkts(true);
+}
+
+// Close sort menus on outside click
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.af-sort-dd')) document.querySelectorAll('.af-sort-menu').forEach(m=>m.classList.remove('open'));
+});
+
+// ── Date Range Picker ──
+const DR={
+  start: new Date(2026,4,18),
+  end:   new Date(2026,4,25),
+  picking: null,
+  leftYear:2026, leftMonth:4,
+  activePreset: null,
+  myOverlay: null, // {calId, year} when month/year overlay is open
+};
+const DR_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DR_MONTHS_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DR_DOWS=['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+function drToggle(){
+  const picker=document.getElementById('dr-picker');
+  if(!picker) return;
+  const btn=document.getElementById('fc-date-btn');
+  if(picker.style.display==='none'||picker.style.display===''){
+    DR.leftYear=DR.start.getFullYear();
+    DR.leftMonth=DR.start.getMonth();
+    DR.myOverlay=null;
+    // position fixed relative to button
+    const rect=btn.getBoundingClientRect();
+    picker.style.display='block';
+    picker.classList.remove('closing');
+    void picker.offsetWidth;
+    // position after display so dimensions are available
+    const pw=picker.offsetWidth||556;
+    let left=rect.left;
+    if(left+pw>window.innerWidth-12) left=window.innerWidth-pw-12;
+    if(left<8) left=8;
+    let top=rect.bottom+6;
+    if(top+420>window.innerHeight) top=rect.top-420-6;
+    picker.style.left=left+'px';
+    picker.style.top=top+'px';
+    btn.classList.add('active');
+    drRender();
+  } else {
+    drClose();
+  }
+}
+
+function drClose(){
+  const picker=document.getElementById('dr-picker');
+  const btn=document.getElementById('fc-date-btn');
+  if(!picker||picker.style.display==='none') return;
+  picker.classList.add('closing');
+  btn.classList.remove('active');
+  picker.addEventListener('animationend',()=>{ picker.style.display='none'; picker.classList.remove('closing'); },{once:true});
+}
+
+function drRender(slideDir){
+  const rightYear=DR.leftMonth===11?DR.leftYear+1:DR.leftYear;
+  const rightMonth=DR.leftMonth===11?0:DR.leftMonth+1;
+  drRenderCal('dr-cal-left', DR.leftYear, DR.leftMonth, slideDir);
+  drRenderCal('dr-cal-right', rightYear, rightMonth, slideDir);
+  // hint
+  const hint=document.getElementById('dr-hint');
+  if(hint) hint.textContent=DR.picking==='end'?'Select end date':'';
+  // presets
+  document.querySelectorAll('.dr-preset').forEach(b=>b.classList.toggle('active', b.textContent===DR.activePreset));
+  // restore month/year overlay if open
+  if(DR.myOverlay) drShowMyOverlay(DR.myOverlay.calId, DR.myOverlay.year);
+}
+
+function drRenderCal(elId, year, month, slideDir){
+  const el=document.getElementById(elId);
+  if(!el) return;
+  const today=new Date(); today.setHours(0,0,0,0);
+  const firstDay=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const isLeft=elId==='dr-cal-left';
+
+  const prevBtn=isLeft
+    ?`<button class="dr-cal-nav" onclick="drNav(-1,event)"><svg viewBox="0 0 13 13" fill="none"><path d="M8 2.5L4.5 6.5L8 10.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`
+    :`<span style="width:26px"></span>`;
+  const nextBtn=!isLeft
+    ?`<button class="dr-cal-nav" onclick="drNav(1,event)"><svg viewBox="0 0 13 13" fill="none"><path d="M5 2.5L8.5 6.5L5 10.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`
+    :`<span style="width:26px"></span>`;
+
+  // build day cells — track column position for row-edge detection
+  let cells='';
+  let col=firstDay;
+  for(let i=0;i<firstDay;i++) cells+=`<div class="dr-day dr-day--empty"><div class="dr-day-inner"></div></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const date=new Date(year,month,d);
+    const ts=date.getTime();
+    const startTs=DR.start?DR.start.getTime():null;
+    const endTs=DR.end?DR.end.getTime():null;
+    const isStart=startTs&&ts===startTs;
+    const isEnd=endTs&&ts===endTs;
+    const inRange=startTs&&endTs&&ts>startTs&&ts<endTs;
+    const isToday=ts===today.getTime();
+    const isOnlyDay=isStart&&isEnd;
+    let cls='dr-day';
+    if(isStart&&!isOnlyDay) cls+=' dr-day--start';
+    if(isEnd&&!isOnlyDay) cls+=' dr-day--end';
+    if(isOnlyDay) cls+=' dr-day--start dr-day--end dr-day--only';
+    if(inRange){
+      cls+=' dr-day--in-range';
+      if(col%7===0) cls+=' dr-day--range-row-start';
+      if(col%7===6||d===daysInMonth) cls+=' dr-day--range-row-end';
+    }
+    if(isToday) cls+=' dr-day--today';
+    cells+=`<div class="${cls}" onclick="drSelect(${year},${month},${d},event)"><div class="dr-day-inner">${d}</div></div>`;
+    col++;
+  }
+
+  const gridSlide=slideDir?` slide-${slideDir}`:'';
+  el.innerHTML=`
+    <div class="dr-cal-hd">
+      ${prevBtn}
+      <span class="dr-cal-title" onclick="drToggleMyOverlay('${elId}',${year},event)">
+        ${DR_MONTHS[month]} ${year}
+        <svg viewBox="0 0 10 10" fill="none"><path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      ${nextBtn}
+    </div>
+    <div class="dr-grid${gridSlide}">
+      ${DR_DOWS.map(d=>`<div class="dr-dow">${d}</div>`).join('')}
+      ${cells}
+    </div>`;
+}
+
+function drNav(dir, e){
+  if(e) e.stopPropagation();
+  DR.myOverlay=null;
+  DR.leftMonth+=dir;
+  if(DR.leftMonth>11){ DR.leftMonth=0; DR.leftYear++; }
+  if(DR.leftMonth<0){  DR.leftMonth=11; DR.leftYear--; }
+  drRender(dir>0?'left':'right');
+}
+
+function drSelect(year,month,day,e){
+  if(e) e.stopPropagation();
+  const date=new Date(year,month,day);
+  if(!DR.picking){
+    DR.start=date; DR.end=null; DR.picking='end'; DR.activePreset=null;
+  } else {
+    if(date.getTime()===DR.start.getTime()){ DR.picking=null; }
+    else if(date<DR.start){ DR.end=DR.start; DR.start=date; DR.picking=null; }
+    else { DR.end=date; DR.picking=null; }
+  }
+  drRender();
+}
+
+function drPreset(days){
+  const end=new Date(2026,5,18);
+  const start=new Date(end); start.setDate(end.getDate()-days+1);
+  DR.start=start; DR.end=end; DR.picking=null;
+  DR.leftYear=start.getFullYear(); DR.leftMonth=start.getMonth();
+  DR.myOverlay=null;
+  const labels={7:'7D',30:'1M',90:'3M',180:'6M',365:'1Y'};
+  DR.activePreset=labels[days]||null;
+  drRender();
+}
+
+function drApply(){
+  const fmt=d=>`${DR_MONTHS_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  if(DR.start) document.getElementById('dr-label-start').textContent=fmt(DR.start);
+  if(DR.end)   document.getElementById('dr-label-end').textContent=fmt(DR.end);
+  drClose();
+}
+
+// Month/year overlay
+function drToggleMyOverlay(calId, year, e){
+  if(e) e.stopPropagation();
+  if(DR.myOverlay&&DR.myOverlay.calId===calId){ DR.myOverlay=null; drRender(); return; }
+  DR.myOverlay={calId, year};
+  drShowMyOverlay(calId, year);
+}
+
+function drShowMyOverlay(calId, year, slideDir){
+  const cal=document.getElementById(calId);
+  if(!cal) return;
+  const existing=cal.querySelector('.dr-my-overlay');
+  const isLeft=calId==='dr-cal-left';
+  const curMonth=isLeft?DR.leftMonth:(DR.leftMonth===11?0:DR.leftMonth+1);
+  const months=DR_MONTHS_SHORT.map((m,i)=>`
+    <button class="dr-month-btn${i===curMonth?' active':''}" onclick="drSelectMonth('${calId}',${year},${i},event)">${m}</button>`).join('');
+
+  if(existing&&slideDir){
+    // animate only year value + month grid in-place — overlay stays
+    const yearEl=existing.querySelector('.dr-my-year-val');
+    const gridEl=existing.querySelector('.dr-month-grid');
+    const animClass=slideDir===1?'slide-up':'slide-down';
+    if(yearEl){
+      yearEl.classList.remove('slide-up','slide-down');
+      void yearEl.offsetWidth;
+      yearEl.textContent=year;
+      yearEl.classList.add(animClass);
+    }
+    if(gridEl){
+      gridEl.classList.remove('slide-up','slide-down');
+      void gridEl.offsetWidth;
+      gridEl.innerHTML=months;
+      gridEl.classList.add(animClass);
+    }
+  } else {
+    existing?.remove();
+    const ov=document.createElement('div');
+    ov.className='dr-my-overlay';
+    ov.innerHTML=`
+      <div class="dr-my-year-row">
+        <button class="dr-my-nav" onclick="drMyNavYear('${calId}',-1,event)"><svg viewBox="0 0 11 11" fill="none"><path d="M7 2L4 5.5L7 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+        <span class="dr-my-year-val">${year}</span>
+        <button class="dr-my-nav" onclick="drMyNavYear('${calId}',1,event)"><svg viewBox="0 0 11 11" fill="none"><path d="M4 2L7 5.5L4 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+      </div>
+      <div class="dr-month-grid">${months}</div>`;
+    cal.appendChild(ov);
+  }
+  DR.myOverlay={calId, year};
+}
+
+function drMyNavYear(calId, dir, e){
+  if(e) e.stopPropagation();
+  DR.myOverlay.year+=dir;
+  drShowMyOverlay(calId, DR.myOverlay.year, dir);
+}
+
+function drSelectMonth(calId, year, month, e){
+  if(e) e.stopPropagation();
+  const isLeft=calId==='dr-cal-left';
+  if(isLeft){ DR.leftYear=year; DR.leftMonth=month; }
+  else {
+    // right cal is always leftMonth+1; adjust left accordingly
+    DR.leftMonth=month-1;
+    if(DR.leftMonth<0){ DR.leftMonth=11; DR.leftYear=year-1; }
+    else { DR.leftYear=year; }
+  }
+  DR.myOverlay=null;
+  drRender();
+}
+
+// Close date picker on outside click
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#fc-date-btn')&&!e.target.closest('#dr-picker')) drClose();
+});
+
+// ── Per-page init (each page is a separate HTML file sharing this script) ──
+if(document.getElementById('page-tracker')){if(acts.length&&trackerSel===null){trackerSel=acts[0].id;trackerTabs[acts[0].id]='matches';}renderTracker();}
+if(document.getElementById('page-dashboard')) initDashboard();
+if(document.getElementById('page-publishers')) renderPublishers();

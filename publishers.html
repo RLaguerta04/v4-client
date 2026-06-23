@@ -1,0 +1,138 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Media Meter — MediaWatch (Study 8)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="css/colors_and_type.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ── SIDEBAR (full-height, left column) ── -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Logo -->
+    <div class="sb-logo">
+      <img class="sb-logo-full" src="mmi-logo-purple.svg" alt="media meter">
+      <img class="sb-logo-mini" src="mmi-logo-purple  minimize.svg" alt="media meter">
+    </div>
+
+    <!-- Workspace selector -->
+    <div class="sb-selector" onclick="if(document.getElementById('sidebar').classList.contains('collapsed'))toggleSidebar()">
+      <i data-lucide="layout-grid" style="width:15px;height:15px;flex-shrink:0"></i>
+      <span class="sb-selector-label">MediaWatch</span>
+      <i data-lucide="chevron-down" class="sb-selector-chev"></i>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="nav-section">
+      <div class="nav-i" id="nav-mentions" data-label="Mentions" onclick="goPage('mentions')"><i data-lucide="message-circle" class="icon-lg"></i><span class="nav-label">Mentions</span></div>
+      <div class="nav-i" id="nav-tracker" data-label="Activity Tracker" onclick="goPage('tracker')"><i data-lucide="megaphone" class="icon-lg"></i><span class="nav-label">Activity Tracker</span><span class="nav-badge-at" id="nb-tracker">2</span></div>
+      <div class="nav-i" id="nav-dashboard" data-label="Dashboard" onclick="goPage('dashboard')"><i data-lucide="layout-dashboard" class="icon-lg"></i><span class="nav-label">Dashboard</span></div>
+      <div class="nav-i act" id="nav-publishers" data-label="Publishers" onclick="goPage('publishers')"><i data-lucide="building-2" class="icon-lg"></i><span class="nav-label">Publishers</span></div>
+      <div class="nav-i" data-label="Authors"><i data-lucide="user" class="icon-lg"></i><span class="nav-label">Authors</span></div>
+      <div class="nav-i" data-label="Categories"><i data-lucide="folder" class="icon-lg"></i><span class="nav-label">Categories</span></div>
+    </nav>
+
+    <!-- User profile -->
+    <div class="sb-profile">
+      <div class="sb-profile-avatar">C</div>
+      <div class="sb-profile-info">
+        <div class="sb-profile-name">Rogie Laguerta</div>
+        <div class="sb-profile-role">rogie.laguerta@seven-gen.com</div>
+      </div>
+    </div>
+
+    <!-- Subscription footer -->
+    <div class="sb-footer">
+      <div class="sb-sub-label">Subscription — Custom Plan</div>
+      <div class="sb-progress-row">
+        <div class="sb-progress"><div class="sb-progress-fill"></div></div>
+        <div class="sb-progress-label">18%</div>
+      </div>
+      <div class="sb-dates">Apr 1, 2026 – Mar 31, 2027</div>
+    </div>
+
+    <!-- Collapse / expand toggle -->
+    <div class="sb-collapse-btn" onclick="toggleSidebar()" title="Toggle navigation" aria-label="Toggle navigation">
+      <i data-lucide="chevrons-left" class="icon-expanded"></i>
+      <i data-lucide="chevrons-right" class="icon-collapsed"></i>
+    </div>
+
+  </aside>
+
+  <!-- ── RIGHT COLUMN (header + content) ── -->
+  <div class="app-right">
+
+  <!-- reader controls (hidden until reader mode) -->
+  <div id="ah-reader-ctrls" style="display:none;background:#fff;padding:8px;z-index:10;position:relative;justify-content:flex-end;align-items:center;gap:6px;width:100%"></div>
+
+  <div class="app-body">
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+
+    <!-- PAGE: PUBLISHERS -->
+    <div class="page" id="page-publishers">
+      <div class="header-card" style="padding:12px 24px">
+        <!-- FILTERS -->
+        <div class="filter-bar">
+          <div class="fc">
+            <span>Company News - DITO Telecommunity</span>
+            <i data-lucide="chevron-down"></i>
+          </div>
+          <div class="fc-date">
+            <span>May 18, 2026</span>
+            <span class="arrow"><i data-lucide="arrow-right" style="width:10px;height:10px"></i></span>
+            <span>May 25, 2026</span>
+            <i data-lucide="calendar" class="icon-lg"></i>
+          </div>
+          <div class="fc-tag no-x">Online News, Bl...</div>
+          <div class="fc-tag">PHILIPPINES <span class="x"><i data-lucide="x" class="icon-lg"></i></span></div>
+          <div class="fc-filters">
+            <i data-lucide="sliders-horizontal" class="icon-lg"></i>
+            <span>All Filters</span>
+          </div>
+          <div class="fc-icon-btn"><i data-lucide="bookmark" class="icon-lg"></i></div>
+          <div class="fc-icon-btn"><i data-lucide="filter" class="icon-lg"></i></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+            <select class="pub-sort" onchange="setPubSort(this.value)" aria-label="Sort publishers">
+              <option value="score">Highest Pub Score</option>
+              <option value="count">Most Articles</option>
+              <option value="sv">Highest Total SValue</option>
+              <option value="az">Name (A&ndash;Z)</option>
+            </select>
+            <button class="btn-primary" onclick="showTrackerToast('Publishers exported as CSV')"><i data-lucide="download" class="icon-lg"></i> Export</button>
+            <div class="fc-search">
+              <i data-lucide="search" class="fc-search-icon"></i>
+              <input type="text" placeholder="Search publishers…" oninput="setPubSearch(this.value)">
+              <div class="fc-search-kbd"><kbd>⌘</kbd><kbd>K</kbd></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="page-inner">
+        <div class="pub-grid" id="pub-grid"></div>
+        <div class="tbl-footer">
+          <div class="pg-info pub-pg-info" id="pub-pg-info"></div>
+          <div class="pg-btns" id="pub-pg-btns"></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /main -->
+  </div><!-- /app-body -->
+  </div><!-- /app-right -->
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,2818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design System — Media Meter v4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root {
+  /* Colors — Core */
+  --ink: #181d26;
+  --muted: #6b7280;
+  --border: #e4e6ea;
+  --canvas: #f5f4f0;
+  --surface: #ffffff;
+
+  /* Colors — Accent Pastels */
+  --pastel-lilac: #b9a4f7;
+  --pastel-mint: #86d9a8;
+  --pastel-coral: #e94f37;
+  --pastel-pink: #f9a8b9;
+  --pastel-cream: #fde2b6;
+  --pastel-lime: #c1e84a;
+
+  /* Colors — Semantic */
+  --positive: #16a34a;
+  --negative: #e94f37;
+  --neutral-sentiment: #9ca3af;
+  --ave-green: #16a34a;
+
+  /* Border Radius */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(24,29,38,0.05);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-xl: 0 12px 28px rgba(24,29,38,0.16);
+
+  /* Z-index */
+  --z-sticky: 50;
+  --z-dropdown: 100;
+  --z-modal: 500;
+  --z-popover: 2000;
+
+  /* Easing */
+  --ease-fast: 0.12s ease;
+  --ease-base: 0.2s ease;
+  --ease-slow: 0.3s cubic-bezier(0.4,0,0.2,1);
+  --ease-emphasis: 0.28s cubic-bezier(.22,1,.36,1);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--canvas);
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Paragraph reading line-height — matches the sitewide --lh-reading token */
+p {
+  line-height: 1.7;
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-brand {
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-brand-name {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.3px;
+}
+
+.sidebar-brand-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.sidebar-nav {
+  padding: 12px 8px;
+  flex: 1;
+}
+
+.sidebar-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  padding: 8px 8px 4px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  transition: background var(--ease-fast), color var(--ease-fast);
+  cursor: pointer;
+  margin-bottom: 1px;
+}
+
+.sidebar-link:hover {
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+.sidebar-link.active {
+  background: #fff0ee;
+  color: var(--pastel-coral);
+}
+
+.sidebar-link .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+.main {
+  margin-left: 220px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ============================================================
+   PAGE HEADER
+   ============================================================ */
+.page-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 28px 48px 24px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.page-header-left h1 {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+
+.page-header-left p {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.page-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge-version {
+  background: var(--ink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.3px;
+}
+
+.badge-date {
+  background: var(--canvas);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+}
+
+/* ============================================================
+   CONTENT SECTIONS
+   ============================================================ */
+.content {
+  padding: 0 48px 80px;
+}
+
+.section {
+  padding-top: 64px;
+}
+
+.section-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: var(--canvas);
+  padding: 12px 0 12px;
+  margin-bottom: 28px;
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.section-title {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.3px;
+}
+
+.section-desc {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.subsection {
+  margin-bottom: 40px;
+}
+
+.subsection-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+/* ============================================================
+   CODE SNIPPET
+   ============================================================ */
+.code {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 11px;
+  background: #f0eef9;
+  color: #5b4fcf;
+  padding: 2px 7px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.code-block {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 11px;
+  background: #1e2230;
+  color: #a9b1d6;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  margin-top: 12px;
+  line-height: 1.7;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.code-block .token-prop { color: #7dcfff; }
+.code-block .token-val  { color: #9ece6a; }
+.code-block .token-cmt  { color: #565f89; }
+
+/* ============================================================
+   COLORS SECTION
+   ============================================================ */
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.swatch-card {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.swatch-color {
+  height: 72px;
+  width: 100%;
+}
+
+.swatch-info {
+  padding: 10px 12px;
+}
+
+.swatch-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.swatch-hex {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.swatch-usage {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* ============================================================
+   TYPOGRAPHY SECTION
+   ============================================================ */
+.type-row {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.type-row:last-child { border-bottom: none; }
+
+.type-meta {
+  min-width: 160px;
+  flex-shrink: 0;
+}
+
+.type-size-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.type-usage-label {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.type-sample {
+  flex: 1;
+  color: var(--ink);
+}
+
+.type-weights {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 120px;
+}
+
+.type-weight-item {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* ============================================================
+   SPACING SECTION
+   ============================================================ */
+.spacing-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.spacing-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.spacing-visual {
+  background: var(--pastel-lilac);
+  height: 32px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.spacing-label {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 40px;
+}
+
+.spacing-desc {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ============================================================
+   RADIUS SECTION
+   ============================================================ */
+.radius-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.radius-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.radius-box {
+  width: 80px;
+  height: 80px;
+  background: var(--surface);
+  border: 2px solid var(--pastel-lilac);
+}
+
+.radius-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+}
+
+.radius-value {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* ============================================================
+   SHADOWS SECTION
+   ============================================================ */
+.shadow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 24px;
+}
+
+.shadow-card {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shadow-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.shadow-value {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ============================================================
+   ICONS SECTION
+   ============================================================ */
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.icon-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: box-shadow var(--ease-fast), border-color var(--ease-fast);
+}
+
+.icon-item:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--pastel-lilac);
+}
+
+.icon-item svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--ink);
+  stroke-width: 1.8;
+}
+
+.icon-name {
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* ============================================================
+   BUTTONS SECTION
+   ============================================================ */
+.btn-showcase {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--ease-fast), color var(--ease-fast), box-shadow var(--ease-fast), opacity var(--ease-fast);
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+/* Sizes */
+.btn-sm { font-size: 12px; padding: 6px 12px; }
+.btn-md { font-size: 13px; padding: 9px 16px; }
+.btn-lg { font-size: 14px; padding: 12px 22px; }
+
+/* Variants */
+.btn-primary {
+  background: var(--ink);
+  color: #fff;
+}
+.btn-primary:hover { background: #2a3244; box-shadow: var(--shadow-md); }
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1.5px solid var(--border);
+}
+.btn-secondary:hover { background: var(--canvas); border-color: #c4c7cd; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border: none;
+}
+.btn-ghost:hover { background: var(--canvas); }
+
+.btn-danger {
+  background: var(--pastel-coral);
+  color: #fff;
+}
+.btn-danger:hover { background: #d44530; box-shadow: var(--shadow-md); }
+
+.btn-success {
+  background: var(--positive);
+  color: #fff;
+}
+.btn-success:hover { background: #158a40; box-shadow: var(--shadow-md); }
+
+.btn-icon {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1.5px solid var(--border);
+  padding: 8px;
+  border-radius: var(--radius-sm);
+}
+.btn-icon:hover { background: var(--canvas); border-color: #c4c7cd; }
+
+.btn-icon svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; }
+
+.btn:disabled, .btn[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 2.2; }
+
+/* ============================================================
+   FORM ELEMENTS
+   ============================================================ */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.form-input {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color var(--ease-fast), box-shadow var(--ease-fast);
+  width: 100%;
+  max-width: 320px;
+}
+
+.form-input:focus {
+  border-color: var(--pastel-lilac);
+  box-shadow: 0 0 0 3px rgba(185,164,247,0.18);
+}
+
+.form-input::placeholder { color: var(--muted); }
+
+.form-input-wrap {
+  position: relative;
+  max-width: 320px;
+}
+
+.form-input-wrap .input-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  stroke: var(--muted);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.form-input-wrap .form-input { padding-left: 34px; }
+
+.form-select {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 32px 9px 12px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  width: 100%;
+  max-width: 320px;
+  transition: border-color var(--ease-fast), box-shadow var(--ease-fast);
+}
+
+.form-select:focus {
+  border-color: var(--pastel-lilac);
+  box-shadow: 0 0 0 3px rgba(185,164,247,0.18);
+}
+
+/* Checkbox */
+.checkbox-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-wrap input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ink);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.checkbox-wrap span {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+/* Radio */
+.radio-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.radio-wrap input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ink);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.radio-wrap span {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+/* Toggle */
+.toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--ease-base);
+}
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform var(--ease-base);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.toggle input:checked + .toggle-track {
+  background: var(--ink);
+}
+
+.toggle input:checked + .toggle-track::after {
+  transform: translateX(18px);
+}
+
+.toggle-label {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+/* ============================================================
+   CARDS SECTION
+   ============================================================ */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.card-basic {
+  padding: 20px;
+}
+
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-header-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.card-body {
+  padding: 20px;
+}
+
+.card-text {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Stat Card */
+.stat-card {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.stat-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.stat-delta.up {
+  background: #dcfce7;
+  color: var(--positive);
+}
+
+.stat-delta.down {
+  background: #fee2e2;
+  color: var(--negative);
+}
+
+.stat-delta svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  stroke-width: 2.5;
+}
+
+/* Article Card */
+.article-card {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.article-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.article-source {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.article-date {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.article-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.article-snippet {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.article-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+/* ============================================================
+   BADGES & TAGS
+   ============================================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.badge-positive {
+  background: #dcfce7;
+  color: var(--positive);
+}
+
+.badge-negative {
+  background: #fee2e2;
+  color: var(--negative);
+}
+
+.badge-neutral {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.badge-count {
+  background: var(--ink);
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 7px;
+}
+
+.badge-muted {
+  background: var(--canvas);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.pill-keyword {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: #ede9fe;
+  color: #5b4fcf;
+  border: 1px solid #ddd6fe;
+}
+
+.pill-entity {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.pill-entity.person {
+  background: #ffe4e6;
+  color: #9f1239;
+  border-color: #fecdd3;
+}
+
+.pill-entity.org {
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #bfdbfe;
+}
+
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+.nav-demo-sidebar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  width: 200px;
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all var(--ease-fast);
+  margin-bottom: 1px;
+}
+
+.nav-item:hover {
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+.nav-item.active {
+  background: #fff0ee;
+  color: var(--pastel-coral);
+  font-weight: 600;
+}
+
+.nav-item svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  flex-shrink: 0;
+}
+
+/* Tab Bar */
+.tab-bar {
+  display: flex;
+  border-bottom: 1.5px solid var(--border);
+  gap: 0;
+}
+
+.tab-item {
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  position: relative;
+  transition: color var(--ease-fast);
+  white-space: nowrap;
+}
+
+.tab-item:hover { color: var(--ink); }
+
+.tab-item.active {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1.5px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--ink);
+  border-radius: 2px 2px 0 0;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.breadcrumb-item {
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--ease-fast);
+}
+
+.breadcrumb-item:hover { color: var(--ink); }
+
+.breadcrumb-item.current {
+  color: var(--ink);
+  font-weight: 600;
+  cursor: default;
+}
+
+.breadcrumb-sep {
+  color: var(--border);
+  font-size: 14px;
+}
+
+/* ============================================================
+   DATA DISPLAY
+   ============================================================ */
+.progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.progress-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.progress-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.progress-pct {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.progress-track {
+  height: 8px;
+  background: var(--border);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width var(--ease-slow);
+}
+
+.progress-fill.positive { background: var(--positive); }
+.progress-fill.negative { background: var(--negative); }
+.progress-fill.neutral  { background: var(--neutral-sentiment); }
+.progress-fill.ink      { background: var(--ink); }
+.progress-fill.lilac    { background: var(--pastel-lilac); }
+
+/* Sentiment Bar */
+.sentiment-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sentiment-bar {
+  height: 12px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  display: flex;
+}
+
+.sentiment-seg {
+  height: 100%;
+  transition: width var(--ease-slow);
+}
+
+.sentiment-seg.pos { background: var(--positive); }
+.sentiment-seg.neu { background: var(--neutral-sentiment); }
+.sentiment-seg.neg { background: var(--negative); }
+
+.sentiment-legend {
+  display: flex;
+  gap: 16px;
+}
+
+.sentiment-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.sentiment-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Trend Indicator */
+.trend-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.trend-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  flex: 1;
+}
+
+.trend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.trend-badge.up    { background: #dcfce7; color: var(--positive); }
+.trend-badge.down  { background: #fee2e2; color: var(--negative); }
+.trend-badge.flat  { background: #f3f4f6; color: #4b5563; }
+
+.trend-badge svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  stroke-width: 2.5;
+}
+
+/* ============================================================
+   MOTION SECTION
+   ============================================================ */
+.easing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.easing-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.easing-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.easing-value {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 16px;
+  word-break: break-all;
+}
+
+.easing-demo-track {
+  height: 6px;
+  background: var(--border);
+  border-radius: var(--radius-pill);
+  position: relative;
+  overflow: visible;
+  margin-bottom: 12px;
+}
+
+.easing-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ink);
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.easing-card:hover .easing-dot {
+  left: calc(100% - 16px);
+}
+
+.easing-card:hover .easing-dot.fast-dot    { transition: left 0.12s ease; }
+.easing-card:hover .easing-dot.base-dot    { transition: left 0.2s ease; }
+.easing-card:hover .easing-dot.slow-dot    { transition: left 0.3s cubic-bezier(0.4,0,0.2,1); }
+.easing-card:hover .easing-dot.emph-dot    { transition: left 0.28s cubic-bezier(.22,1,.36,1); }
+
+.easing-timing {
+  font-size: 22px;
+  font-family: 'Inter Tight', sans-serif;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.5px;
+}
+
+/* ============================================================
+   HELPERS & LAYOUT AIDS
+   ============================================================ */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+.flex-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+.flex-col  { display: flex; flex-direction: column; gap: 12px; }
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 32px 0;
+}
+
+.mt-4  { margin-top: 4px; }
+.mt-8  { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.mt-20 { margin-top: 20px; }
+.mt-24 { margin-top: 24px; }
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #c4c7cd; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SIDEBAR
+     ============================================================ -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-name">Media Meter</div>
+    <div class="sidebar-brand-sub">Design System v1.0</div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="sidebar-label">Foundations</div>
+    <a class="sidebar-link active" href="#overview"><span class="dot"></span>Overview</a>
+    <a class="sidebar-link" href="#colors"><span class="dot"></span>Colors</a>
+    <a class="sidebar-link" href="#typography"><span class="dot"></span>Typography</a>
+    <a class="sidebar-link" href="#spacing"><span class="dot"></span>Spacing</a>
+    <a class="sidebar-link" href="#radius"><span class="dot"></span>Border Radius</a>
+    <a class="sidebar-link" href="#shadows"><span class="dot"></span>Shadows</a>
+    <div class="sidebar-label" style="margin-top:8px;">Components</div>
+    <a class="sidebar-link" href="#icons"><span class="dot"></span>Icons</a>
+    <a class="sidebar-link" href="#buttons"><span class="dot"></span>Buttons</a>
+    <a class="sidebar-link" href="#forms"><span class="dot"></span>Form Elements</a>
+    <a class="sidebar-link" href="#cards"><span class="dot"></span>Cards</a>
+    <a class="sidebar-link" href="#badges"><span class="dot"></span>Badges &amp; Tags</a>
+    <a class="sidebar-link" href="#navigation"><span class="dot"></span>Navigation</a>
+    <div class="sidebar-label" style="margin-top:8px;">Patterns</div>
+    <a class="sidebar-link" href="#data"><span class="dot"></span>Data Display</a>
+    <a class="sidebar-link" href="#motion"><span class="dot"></span>Motion &amp; Easing</a>
+  </div>
+</nav>
+
+<!-- ============================================================
+     MAIN CONTENT
+     ============================================================ -->
+<div class="main">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Design System</h1>
+      <p>Media Meter / MediaWatch — Component &amp; Token Reference</p>
+    </div>
+    <div class="page-header-badges">
+      <span class="badge-version">v1.0</span>
+      <span class="badge-date">June 2026</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ======================================================
+         OVERVIEW
+         ====================================================== -->
+    <div class="section" id="overview">
+      <div class="section-header">
+        <span class="section-title">Overview</span>
+        <span class="section-desc">Principles and token summary for Media Meter v4</span>
+      </div>
+
+      <div class="grid-3" style="margin-bottom:32px;">
+        <div class="card card-basic">
+          <div style="font-size:22px;margin-bottom:8px;">🎨</div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:6px;">Design Tokens</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.6;">Single source of truth for color, spacing, radius, and typography. All tokens are CSS custom properties prefixed with <span class="code">--</span>.</div>
+        </div>
+        <div class="card card-basic">
+          <div style="font-size:22px;margin-bottom:8px;">🔤</div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:6px;">Inter + Inter Tight</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.6;">Inter for body copy and UI labels. Inter Tight for headings, display numbers, and KPI values with tight letter-spacing.</div>
+        </div>
+        <div class="card card-basic">
+          <div style="font-size:22px;margin-bottom:8px;">⚡</div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:6px;">Purposeful Motion</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.6;">Four easing tiers — fast (12ms), base (200ms), slow (300ms), emphasis (280ms) — keep interactions snappy and expressive.</div>
+        </div>
+      </div>
+
+      <div class="subsection-title">Token Summary</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;">
+        <span class="badge badge-muted">14 Color Tokens</span>
+        <span class="badge badge-muted">9 Type Sizes</span>
+        <span class="badge badge-muted">7 Spacing Steps</span>
+        <span class="badge badge-muted">5 Radius Values</span>
+        <span class="badge badge-muted">4 Shadow Levels</span>
+        <span class="badge badge-muted">4 Easing Curves</span>
+      </div>
+
+      <div class="code-block"><span class="token-cmt">/* Import in your CSS */</span>
+<span class="token-prop">@import</span> <span class="token-val">url('design-system.css')</span>;
+
+<span class="token-cmt">/* Usage example */</span>
+.my-card <span class="token-val">{</span>
+  background: <span class="token-prop">var(--surface)</span>;
+  border: 1px solid <span class="token-prop">var(--border)</span>;
+  border-radius: <span class="token-prop">var(--radius-md)</span>;
+  box-shadow: <span class="token-prop">var(--shadow-sm)</span>;
+  padding: <span class="token-val">20px</span>;
+<span class="token-val">}</span></div>
+    </div>
+
+    <!-- ======================================================
+         COLORS
+         ====================================================== -->
+    <div class="section" id="colors">
+      <div class="section-header">
+        <span class="section-title">Colors</span>
+        <span class="section-desc">Full palette with hex values, token names, and usage notes</span>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Core Palette</div>
+        <div class="swatch-grid">
+          <div class="swatch-card">
+            <div class="swatch-color" style="background:#181d26;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Ink</div>
+              <div class="swatch-hex">#181d26</div>
+              <div class="swatch-usage">Primary text, buttons, headings, sidebar</div>
+              <span class="code">--ink</span>
+            </div>
+          </div>
+          <div class="swatch-card">
+            <div class="swatch-color" style="background:#6b7280;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Muted</div>
+              <div class="swatch-hex">#6b7280</div>
+              <div class="swatch-usage">Secondary text, placeholders, labels</div>
+              <span class="code">--muted</span>
+            </div>
+          </div>
+          <div class="swatch-card">
+            <div class="swatch-color" style="background:#e4e6ea;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Border</div>
+              <div class="swatch-hex">#e4e6ea</div>
+              <div class="swatch-usage">Dividers, input borders, card outlines</div>
+              <span class="code">--border</span>
+            </div>
+          </div>
+          <div class="swatch-card">
+            <div class="swatch-color" style="background:#f5f4f0;border:1px solid #e4e6ea;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Canvas</div>
+              <div class="swatch-hex">#f5f4f0</div>
+              <div class="swatch-usage">Page background, sidebar hover, section bg</div>
+              <span class="code">--canvas</span>
+            </div>
+          </div>
+          <div class="swatch-card">
+            <div class="swatch-color" style="background:#ffffff;border:1px solid #e4e6ea;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Surface</div>
+              <div class="swatch-hex">#ffffff</div>
+              <div class="swatch-usage">Cards, panels, modals, inputs</div>
+              <span class="code">--surface</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Accent Pastels</div>
+        <div class="swatch-grid">
+          <div class="swatch-card">
+            <div class="swatch-color" style="background:#b9a4f7;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Pastel Lilac</div>
+              <div class="swatch-hex">#b9a4f7</div>
+              <div class="swatch-usage">Focus rings, keyword pills, accent highlights</div>
+              <span class="code">--pastel-lilac</span>
+            </div>
+          </div>
+          <div class="swatch-card">
+            <div class="swatch-color" style="background:#86d9a8;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Pastel Mint</div>
+              <div class="swatch-hex">#86d9a8</div>
+              <div class="swatch-usage">Entity tags (location), success accents</div>
+              <span class="code">--pastel-mint</span>
+            </div>
+          </div>
+          <div class="swatch-card">
+            <div class="swatch-color" style="background:#e94f37;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Pastel Coral</div>
+              <div class="swatch-hex">#e94f37</div>
+              <div class="swatch-usage">Active nav, danger buttons, critical alerts</div>
+              <span class="code">--pastel-coral</span>
+            </div>
+          </div>
+          <div class="swatch-card">
+            <div class="swatch-color" style="background:#f9a8b9;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Pastel Pink</div>
+              <div class="swatch-hex">#f9a8b9</div>
+              <div class="swatch-usage">Person entity tags, soft accent</div>
+              <span class="code">--pastel-pink</span>
+            </div>
+          </div>
+          <div class="swatch-card">
+            <div class="swatch-color" style="background:#fde2b6;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Pastel Cream</div>
+              <div class="swatch-hex">#fde2b6</div>
+              <div class="swatch-usage">Warning states, neutral sentiment warm</div>
+              <span class="code">--pastel-cream</span>
+            </div>
+          </div>
+          <div class="swatch-card">
+            <div class="swatch-color" style="background:#c1e84a;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Pastel Lime</div>
+              <div class="swatch-hex">#c1e84a</div>
+              <div class="swatch-usage">Chart accents, trending tags</div>
+              <span class="code">--pastel-lime</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Semantic Colors</div>
+        <div class="swatch-grid">
+          <div class="swatch-card">
+            <div class="swatch-color" style="background:#16a34a;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Positive</div>
+              <div class="swatch-hex">#16a34a</div>
+              <div class="swatch-usage">Positive sentiment, success states, AVE</div>
+              <span class="code">--positive</span>
+            </div>
+          </div>
+          <div class="swatch-card">
+            <div class="swatch-color" style="background:#e94f37;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Negative</div>
+              <div class="swatch-hex">#e94f37</div>
+              <div class="swatch-usage">Negative sentiment, error states, danger</div>
+              <span class="code">--negative</span>
+            </div>
+          </div>
+          <div class="swatch-card">
+            <div class="swatch-color" style="background:#9ca3af;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Neutral Sentiment</div>
+              <div class="swatch-hex">#9ca3af</div>
+              <div class="swatch-usage">Neutral/mixed sentiment</div>
+              <span class="code">--neutral-sentiment</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="token-cmt">/* Semantic usage pattern */</span>
+.sentiment-positive <span class="token-val">{</span> color: <span class="token-prop">var(--positive)</span>; background: <span class="token-val">#dcfce7</span>; <span class="token-val">}</span>
+.sentiment-negative <span class="token-val">{</span> color: <span class="token-prop">var(--negative)</span>; background: <span class="token-val">#fee2e2</span>; <span class="token-val">}</span>
+.sentiment-neutral  <span class="token-val">{</span> color: <span class="token-prop">#4b5563</span>; background: <span class="token-val">#f3f4f6</span>; <span class="token-val">}</span></div>
+    </div>
+
+    <!-- ======================================================
+         TYPOGRAPHY
+         ====================================================== -->
+    <div class="section" id="typography">
+      <div class="section-header">
+        <span class="section-title">Typography</span>
+        <span class="section-desc">Inter (body) + Inter Tight (display) — 9-step scale</span>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Display — Inter Tight</div>
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-size-label">30px / Display XL</div>
+            <div class="type-usage-label">Page titles, KPI values</div>
+          </div>
+          <div class="type-sample" style="font-family:'Inter Tight',sans-serif;font-size:30px;font-weight:700;letter-spacing:-1px;line-height:1.1;">The quick brown fox</div>
+          <div class="type-weights">
+            <span class="type-weight-item">700 Bold</span>
+            <span class="type-weight-item" style="font-weight:600;">600 SemiBold</span>
+          </div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-size-label">26px / Display L</div>
+            <div class="type-usage-label">Section headings, large stats</div>
+          </div>
+          <div class="type-sample" style="font-family:'Inter Tight',sans-serif;font-size:26px;font-weight:700;letter-spacing:-0.5px;line-height:1.15;">The quick brown fox</div>
+          <div class="type-weights">
+            <span class="type-weight-item">700 Bold</span>
+            <span class="type-weight-item" style="font-weight:600;">600 SemiBold</span>
+          </div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-size-label">22px / Display M</div>
+            <div class="type-usage-label">Card headings, modal titles</div>
+          </div>
+          <div class="type-sample" style="font-family:'Inter Tight',sans-serif;font-size:22px;font-weight:700;letter-spacing:-0.3px;line-height:1.2;">The quick brown fox</div>
+          <div class="type-weights">
+            <span class="type-weight-item">700 Bold</span>
+            <span class="type-weight-item" style="font-weight:600;">600 SemiBold</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Body — Inter</div>
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-size-label">18px / Body L</div>
+            <div class="type-usage-label">Lead paragraphs, intro text</div>
+          </div>
+          <div class="type-sample" style="font-size:18px;font-weight:400;">The quick brown fox jumps over the lazy dog</div>
+          <div class="type-weights">
+            <span class="type-weight-item">400 Regular</span>
+            <span class="type-weight-item" style="font-weight:500;">500 Medium</span>
+            <span class="type-weight-item" style="font-weight:600;">600 SemiBold</span>
+          </div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-size-label">14px / Body M</div>
+            <div class="type-usage-label">Default body, descriptions</div>
+          </div>
+          <div class="type-sample" style="font-size:14px;font-weight:400;">The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</div>
+          <div class="type-weights">
+            <span class="type-weight-item">400 Regular</span>
+            <span class="type-weight-item" style="font-weight:500;">500 Medium</span>
+            <span class="type-weight-item" style="font-weight:600;">600 SemiBold</span>
+            <span class="type-weight-item" style="font-weight:700;">700 Bold</span>
+          </div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-size-label">13px / Body S</div>
+            <div class="type-usage-label">UI labels, button text</div>
+          </div>
+          <div class="type-sample" style="font-size:13px;font-weight:400;">The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</div>
+          <div class="type-weights">
+            <span class="type-weight-item">400 Regular</span>
+            <span class="type-weight-item" style="font-weight:500;">500 Medium</span>
+            <span class="type-weight-item" style="font-weight:600;">600 SemiBold</span>
+          </div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-size-label">12px / Caption M</div>
+            <div class="type-usage-label">Metadata, timestamps, table cells</div>
+          </div>
+          <div class="type-sample" style="font-size:12px;font-weight:400;">The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</div>
+          <div class="type-weights">
+            <span class="type-weight-item">400 Regular</span>
+            <span class="type-weight-item" style="font-weight:500;">500 Medium</span>
+            <span class="type-weight-item" style="font-weight:600;">600 SemiBold</span>
+          </div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-size-label">11px / Caption S</div>
+            <div class="type-usage-label">Badges, section labels, overlines</div>
+          </div>
+          <div class="type-sample" style="font-size:11px;font-weight:400;">The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</div>
+          <div class="type-weights">
+            <span class="type-weight-item">500 Medium</span>
+            <span class="type-weight-item" style="font-weight:600;">600 SemiBold</span>
+            <span class="type-weight-item" style="font-weight:700;">700 Bold</span>
+          </div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-size-label">10px / Caption XS</div>
+            <div class="type-usage-label">Sub-labels, overline text, tiny tags</div>
+          </div>
+          <div class="type-sample" style="font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.6px;">The quick brown fox jumps over the lazy dog</div>
+          <div class="type-weights">
+            <span class="type-weight-item" style="font-weight:600;">600 SemiBold</span>
+            <span class="type-weight-item" style="font-weight:700;">700 Bold</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="token-cmt">/* Typography token usage */</span>
+.display     <span class="token-val">{</span> font-family: <span class="token-prop">'Inter Tight', sans-serif</span>; font-size: <span class="token-val">30px</span>; font-weight: <span class="token-val">700</span>; letter-spacing: <span class="token-val">-1px</span>; <span class="token-val">}</span>
+.heading     <span class="token-val">{</span> font-family: <span class="token-prop">'Inter Tight', sans-serif</span>; font-size: <span class="token-val">22px</span>; font-weight: <span class="token-val">700</span>; <span class="token-val">}</span>
+.body        <span class="token-val">{</span> font-family: <span class="token-prop">'Inter', sans-serif</span>; font-size: <span class="token-val">14px</span>; font-weight: <span class="token-val">400</span>; <span class="token-val">}</span>
+.label       <span class="token-val">{</span> font-family: <span class="token-prop">'Inter', sans-serif</span>; font-size: <span class="token-val">13px</span>; font-weight: <span class="token-val">600</span>; <span class="token-val">}</span>
+.caption     <span class="token-val">{</span> font-family: <span class="token-prop">'Inter', sans-serif</span>; font-size: <span class="token-val">11px</span>; font-weight: <span class="token-val">500</span>; <span class="token-val">}</span></div>
+    </div>
+
+    <!-- ======================================================
+         SPACING
+         ====================================================== -->
+    <div class="section" id="spacing">
+      <div class="section-header">
+        <span class="section-title">Spacing</span>
+        <span class="section-desc">7-step spacing scale based on 4px grid</span>
+      </div>
+
+      <div class="spacing-grid">
+        <div class="spacing-row">
+          <div class="spacing-visual" style="width:4px;"></div>
+          <span class="spacing-label">4px</span>
+          <span class="spacing-desc">Micro — icon gap, inline nudge, tight pairs</span>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-visual" style="width:8px;"></div>
+          <span class="spacing-label">8px</span>
+          <span class="spacing-desc">XS — badge padding, compact list gap</span>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-visual" style="width:12px;"></div>
+          <span class="spacing-label">12px</span>
+          <span class="spacing-desc">SM — form field gap, inline element spacing</span>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-visual" style="width:16px;"></div>
+          <span class="spacing-label">16px</span>
+          <span class="spacing-desc">MD — card padding base, section gap SM</span>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-visual" style="width:20px;"></div>
+          <span class="spacing-label">20px</span>
+          <span class="spacing-desc">LG — card padding default, vertical rhythm</span>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-visual" style="width:24px;"></div>
+          <span class="spacing-label">24px</span>
+          <span class="spacing-desc">XL — section gap, component breathing room</span>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-visual" style="width:32px;"></div>
+          <span class="spacing-label">32px</span>
+          <span class="spacing-desc">2XL — major section dividers, page padding</span>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="token-cmt">/* Spacing scale — CSS custom property equivalents */</span>
+--space-1: <span class="token-val">4px</span>;   <span class="token-cmt">/* micro */</span>
+--space-2: <span class="token-val">8px</span>;   <span class="token-cmt">/* xs    */</span>
+--space-3: <span class="token-val">12px</span>;  <span class="token-cmt">/* sm    */</span>
+--space-4: <span class="token-val">16px</span>;  <span class="token-cmt">/* md    */</span>
+--space-5: <span class="token-val">20px</span>;  <span class="token-cmt">/* lg    */</span>
+--space-6: <span class="token-val">24px</span>;  <span class="token-cmt">/* xl    */</span>
+--space-8: <span class="token-val">32px</span>;  <span class="token-cmt">/* 2xl   */</span></div>
+    </div>
+
+    <!-- ======================================================
+         BORDER RADIUS
+         ====================================================== -->
+    <div class="section" id="radius">
+      <div class="section-header">
+        <span class="section-title">Border Radius</span>
+        <span class="section-desc">5 radius values from sharp to pill</span>
+      </div>
+
+      <div class="radius-grid">
+        <div class="radius-item">
+          <div class="radius-box" style="border-radius:6px;"></div>
+          <div class="radius-label">radius-xs</div>
+          <div class="radius-value">6px</div>
+          <span class="code">--radius-xs</span>
+        </div>
+        <div class="radius-item">
+          <div class="radius-box" style="border-radius:8px;"></div>
+          <div class="radius-label">radius-sm</div>
+          <div class="radius-value">8px</div>
+          <span class="code">--radius-sm</span>
+        </div>
+        <div class="radius-item">
+          <div class="radius-box" style="border-radius:12px;"></div>
+          <div class="radius-label">radius-md</div>
+          <div class="radius-value">12px</div>
+          <span class="code">--radius-md</span>
+        </div>
+        <div class="radius-item">
+          <div class="radius-box" style="border-radius:16px;"></div>
+          <div class="radius-label">radius-lg</div>
+          <div class="radius-value">16px</div>
+          <span class="code">--radius-lg</span>
+        </div>
+        <div class="radius-item">
+          <div class="radius-box" style="border-radius:9999px;width:140px;height:50px;"></div>
+          <div class="radius-label">radius-pill</div>
+          <div class="radius-value">9999px</div>
+          <span class="code">--radius-pill</span>
+        </div>
+      </div>
+
+      <div class="mt-24">
+        <div class="subsection-title">Usage Guide</div>
+        <div class="flex-row">
+          <div style="font-size:12px;color:var(--muted);max-width:560px;line-height:1.7;">
+            <strong style="color:var(--ink);">xs (6px)</strong> — small badges, code snippets, tight inline elements<br>
+            <strong style="color:var(--ink);">sm (8px)</strong> — buttons, inputs, dropdown items, icon chips<br>
+            <strong style="color:var(--ink);">md (12px)</strong> — cards, panels, modals, popovers<br>
+            <strong style="color:var(--ink);">lg (16px)</strong> — large cards, drawer panels, hero sections<br>
+            <strong style="color:var(--ink);">pill (9999px)</strong> — badges, tags, pills, progress bars, toggles
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="token-cmt">/* Radius tokens */</span>
+--radius-xs:   <span class="token-val">6px</span>;
+--radius-sm:   <span class="token-val">8px</span>;
+--radius-md:   <span class="token-val">12px</span>;
+--radius-lg:   <span class="token-val">16px</span>;
+--radius-pill: <span class="token-val">9999px</span>;</div>
+    </div>
+
+    <!-- ======================================================
+         SHADOWS
+         ====================================================== -->
+    <div class="section" id="shadows">
+      <div class="section-header">
+        <span class="section-title">Shadows</span>
+        <span class="section-desc">4 elevation levels — from subtle to prominent</span>
+      </div>
+
+      <div class="shadow-grid">
+        <div class="shadow-card" style="box-shadow:0 1px 3px rgba(24,29,38,0.05);">
+          <div class="shadow-name">shadow-sm</div>
+          <div class="shadow-value">0 1px 3px rgba(24,29,38,0.05)</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Default cards, subtle containers</div>
+          <span class="code">--shadow-sm</span>
+        </div>
+        <div class="shadow-card" style="box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          <div class="shadow-name">shadow-md</div>
+          <div class="shadow-value">0 2px 8px rgba(0,0,0,0.06)</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Hovered cards, dropdowns</div>
+          <span class="code">--shadow-md</span>
+        </div>
+        <div class="shadow-card" style="box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+          <div class="shadow-name">shadow-lg</div>
+          <div class="shadow-value">0 4px 16px rgba(0,0,0,0.08)</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Floating panels, menus, sidebars</div>
+          <span class="code">--shadow-lg</span>
+        </div>
+        <div class="shadow-card" style="box-shadow:0 12px 28px rgba(24,29,38,0.16);">
+          <div class="shadow-name">shadow-xl</div>
+          <div class="shadow-value">0 12px 28px rgba(24,29,38,0.16)</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Modals, dialogs, command palette</div>
+          <span class="code">--shadow-xl</span>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="token-cmt">/* Shadow tokens */</span>
+--shadow-sm: <span class="token-val">0 1px 3px rgba(24,29,38,0.05)</span>;
+--shadow-md: <span class="token-val">0 2px 8px rgba(0,0,0,0.06)</span>;
+--shadow-lg: <span class="token-val">0 4px 16px rgba(0,0,0,0.08)</span>;
+--shadow-xl: <span class="token-val">0 12px 28px rgba(24,29,38,0.16)</span>;</div>
+    </div>
+
+    <!-- ======================================================
+         ICONS
+         ====================================================== -->
+    <div class="section" id="icons">
+      <div class="section-header">
+        <span class="section-title">Icons</span>
+        <span class="section-desc">Lucide icon set — 20×20px, stroke-width 1.8–2</span>
+      </div>
+
+      <div class="icon-grid">
+        <div class="icon-item"><i data-lucide="message-circle"></i><span class="icon-name">message-circle</span></div>
+        <div class="icon-item"><i data-lucide="megaphone"></i><span class="icon-name">megaphone</span></div>
+        <div class="icon-item"><i data-lucide="layout-dashboard"></i><span class="icon-name">layout-dashboard</span></div>
+        <div class="icon-item"><i data-lucide="newspaper"></i><span class="icon-name">newspaper</span></div>
+        <div class="icon-item"><i data-lucide="users"></i><span class="icon-name">users</span></div>
+        <div class="icon-item"><i data-lucide="folder"></i><span class="icon-name">folder</span></div>
+        <div class="icon-item"><i data-lucide="bookmark"></i><span class="icon-name">bookmark</span></div>
+        <div class="icon-item"><i data-lucide="filter"></i><span class="icon-name">filter</span></div>
+        <div class="icon-item"><i data-lucide="search"></i><span class="icon-name">search</span></div>
+        <div class="icon-item"><i data-lucide="chevron-right"></i><span class="icon-name">chevron-right</span></div>
+        <div class="icon-item"><i data-lucide="chevron-left"></i><span class="icon-name">chevron-left</span></div>
+        <div class="icon-item"><i data-lucide="info"></i><span class="icon-name">info</span></div>
+        <div class="icon-item"><i data-lucide="star"></i><span class="icon-name">star</span></div>
+        <div class="icon-item"><i data-lucide="gauge"></i><span class="icon-name">gauge</span></div>
+        <div class="icon-item"><i data-lucide="circle-dollar-sign"></i><span class="icon-name">circle-dollar-sign</span></div>
+        <div class="icon-item"><i data-lucide="external-link"></i><span class="icon-name">external-link</span></div>
+        <div class="icon-item"><i data-lucide="x"></i><span class="icon-name">x</span></div>
+        <div class="icon-item"><i data-lucide="check"></i><span class="icon-name">check</span></div>
+        <div class="icon-item"><i data-lucide="plus"></i><span class="icon-name">plus</span></div>
+        <div class="icon-item"><i data-lucide="edit"></i><span class="icon-name">edit</span></div>
+        <div class="icon-item"><i data-lucide="trash-2"></i><span class="icon-name">trash-2</span></div>
+        <div class="icon-item"><i data-lucide="download"></i><span class="icon-name">download</span></div>
+        <div class="icon-item"><i data-lucide="upload"></i><span class="icon-name">upload</span></div>
+        <div class="icon-item"><i data-lucide="bell"></i><span class="icon-name">bell</span></div>
+      </div>
+
+      <div class="mt-20">
+        <div class="subsection-title">Icon Sizes</div>
+        <div class="flex-row" style="align-items:center;gap:24px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <i data-lucide="search" style="width:12px;height:12px;stroke:var(--ink);stroke-width:2;"></i>
+            <span style="font-size:10px;color:var(--muted);">12px</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <i data-lucide="search" style="width:14px;height:14px;stroke:var(--ink);stroke-width:2;"></i>
+            <span style="font-size:10px;color:var(--muted);">14px</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <i data-lucide="search" style="width:16px;height:16px;stroke:var(--ink);stroke-width:1.8;"></i>
+            <span style="font-size:10px;color:var(--muted);">16px</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <i data-lucide="search" style="width:20px;height:20px;stroke:var(--ink);stroke-width:1.8;"></i>
+            <span style="font-size:10px;color:var(--muted);">20px</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <i data-lucide="search" style="width:24px;height:24px;stroke:var(--ink);stroke-width:1.6;"></i>
+            <span style="font-size:10px;color:var(--muted);">24px</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <i data-lucide="search" style="width:32px;height:32px;stroke:var(--ink);stroke-width:1.5;"></i>
+            <span style="font-size:10px;color:var(--muted);">32px</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="token-cmt">/* Lucide icon usage */</span>
+&lt;script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"&gt;&lt;/script&gt;
+
+&lt;i data-lucide="search" style="width:16px;height:16px;stroke:var(--ink);stroke-width:1.8;"&gt;&lt;/i&gt;
+
+&lt;script&gt;lucide.createIcons();&lt;/script&gt;</div>
+    </div>
+
+    <!-- ======================================================
+         BUTTONS
+         ====================================================== -->
+    <div class="section" id="buttons">
+      <div class="section-header">
+        <span class="section-title">Buttons</span>
+        <span class="section-desc">5 variants × 3 sizes × multiple states</span>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Variants — Medium Size</div>
+        <div class="btn-showcase">
+          <button class="btn btn-primary btn-md">Primary</button>
+          <button class="btn btn-secondary btn-md">Secondary</button>
+          <button class="btn btn-ghost btn-md">Ghost</button>
+          <button class="btn btn-danger btn-md">Danger</button>
+          <button class="btn btn-success btn-md">Success</button>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Sizes — Primary Variant</div>
+        <div class="btn-showcase">
+          <button class="btn btn-primary btn-sm">Small</button>
+          <button class="btn btn-primary btn-md">Medium</button>
+          <button class="btn btn-primary btn-lg">Large</button>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">With Icons</div>
+        <div class="btn-showcase">
+          <button class="btn btn-primary btn-md">
+            <i data-lucide="plus"></i>
+            New Brief
+          </button>
+          <button class="btn btn-secondary btn-md">
+            <i data-lucide="download"></i>
+            Export
+          </button>
+          <button class="btn btn-ghost btn-md">
+            <i data-lucide="filter"></i>
+            Filter
+          </button>
+          <button class="btn btn-icon btn-md">
+            <i data-lucide="search"></i>
+          </button>
+          <button class="btn btn-icon btn-md">
+            <i data-lucide="bell"></i>
+          </button>
+          <button class="btn btn-icon btn-md">
+            <i data-lucide="edit"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Disabled State</div>
+        <div class="btn-showcase">
+          <button class="btn btn-primary btn-md" disabled>Primary</button>
+          <button class="btn btn-secondary btn-md" disabled>Secondary</button>
+          <button class="btn btn-danger btn-md" disabled>Danger</button>
+          <button class="btn btn-success btn-md" disabled>Success</button>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="token-cmt">/* Button base pattern */</span>
+.btn <span class="token-val">{</span>
+  display: <span class="token-val">inline-flex</span>;
+  align-items: <span class="token-val">center</span>;
+  gap: <span class="token-val">6px</span>;
+  font-weight: <span class="token-val">600</span>;
+  border-radius: <span class="token-prop">var(--radius-sm)</span>;
+  transition: background <span class="token-prop">var(--ease-fast)</span>, box-shadow <span class="token-prop">var(--ease-fast)</span>;
+  cursor: <span class="token-val">pointer</span>;
+<span class="token-val">}</span>
+.btn-primary <span class="token-val">{</span> background: <span class="token-prop">var(--ink)</span>; color: <span class="token-val">#fff</span>; <span class="token-val">}</span>
+.btn-danger  <span class="token-val">{</span> background: <span class="token-prop">var(--negative)</span>; color: <span class="token-val">#fff</span>; <span class="token-val">}</span>
+.btn-success <span class="token-val">{</span> background: <span class="token-prop">var(--positive)</span>; color: <span class="token-val">#fff</span>; <span class="token-val">}</span></div>
+    </div>
+
+    <!-- ======================================================
+         FORM ELEMENTS
+         ====================================================== -->
+    <div class="section" id="forms">
+      <div class="section-header">
+        <span class="section-title">Form Elements</span>
+        <span class="section-desc">Inputs, selects, checkboxes, radios, and toggles</span>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="subsection-title">Text Input</div>
+          <div class="form-group">
+            <label class="form-label">Client Name</label>
+            <input class="form-input" type="text" placeholder="e.g. Acme Corporation">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Search Articles</label>
+            <div class="form-input-wrap">
+              <i data-lucide="search" class="input-icon"></i>
+              <input class="form-input" type="text" placeholder="Search by keyword or publication…">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Disabled Input</label>
+            <input class="form-input" type="text" placeholder="Cannot edit" disabled style="opacity:0.5;cursor:not-allowed;">
+          </div>
+        </div>
+        <div>
+          <div class="subsection-title">Select / Dropdown</div>
+          <div class="form-group">
+            <label class="form-label">Time Period</label>
+            <select class="form-select">
+              <option>Last 7 days</option>
+              <option>Last 30 days</option>
+              <option>Last 3 months</option>
+              <option>Custom range…</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sentiment Filter</label>
+            <select class="form-select">
+              <option>All sentiments</option>
+              <option>Positive only</option>
+              <option>Negative only</option>
+              <option>Neutral only</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Media Type</label>
+            <select class="form-select">
+              <option>All media</option>
+              <option>Print</option>
+              <option>Online</option>
+              <option>Broadcast</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="grid-2">
+        <div>
+          <div class="subsection-title">Checkboxes</div>
+          <div class="flex-col" style="gap:10px;">
+            <label class="checkbox-wrap">
+              <input type="checkbox" checked>
+              <span>Include online articles</span>
+            </label>
+            <label class="checkbox-wrap">
+              <input type="checkbox" checked>
+              <span>Include print media</span>
+            </label>
+            <label class="checkbox-wrap">
+              <input type="checkbox">
+              <span>Include broadcast</span>
+            </label>
+            <label class="checkbox-wrap">
+              <input type="checkbox" disabled>
+              <span style="opacity:0.5;">Social media (unavailable)</span>
+            </label>
+          </div>
+        </div>
+        <div>
+          <div class="subsection-title">Radio Buttons</div>
+          <div class="flex-col" style="gap:10px;">
+            <label class="radio-wrap">
+              <input type="radio" name="view" checked>
+              <span>Summary view</span>
+            </label>
+            <label class="radio-wrap">
+              <input type="radio" name="view">
+              <span>Detailed view</span>
+            </label>
+            <label class="radio-wrap">
+              <input type="radio" name="view">
+              <span>Compact view</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="subsection">
+        <div class="subsection-title">Toggle Switches</div>
+        <div class="flex-col" style="gap:12px;">
+          <div class="toggle-wrap">
+            <label class="toggle">
+              <input type="checkbox" checked>
+              <span class="toggle-track"></span>
+            </label>
+            <span class="toggle-label">Enable notifications</span>
+          </div>
+          <div class="toggle-wrap">
+            <label class="toggle">
+              <input type="checkbox">
+              <span class="toggle-track"></span>
+            </label>
+            <span class="toggle-label">Auto-generate brief</span>
+          </div>
+          <div class="toggle-wrap">
+            <label class="toggle">
+              <input type="checkbox" checked>
+              <span class="toggle-track"></span>
+            </label>
+            <span class="toggle-label">Include AVE calculations</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="token-cmt">/* Input focus ring */</span>
+.form-input:focus <span class="token-val">{</span>
+  border-color: <span class="token-prop">var(--pastel-lilac)</span>;
+  box-shadow: 0 0 0 3px <span class="token-val">rgba(185,164,247,0.18)</span>;
+  outline: <span class="token-val">none</span>;
+<span class="token-val">}</span></div>
+    </div>
+
+    <!-- ======================================================
+         CARDS
+         ====================================================== -->
+    <div class="section" id="cards">
+      <div class="section-header">
+        <span class="section-title">Cards</span>
+        <span class="section-desc">Basic, header, stat (KPI), and article card patterns</span>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Basic Card</div>
+        <div style="max-width:400px;">
+          <div class="card card-basic">
+            <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px;">Card Title</div>
+            <div class="card-text">This is a basic card component used for general content grouping. It sits on the canvas background and provides a clean white surface with subtle shadow.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Card with Header</div>
+        <div style="max-width:400px;">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-header-title">Media Mentions</span>
+              <button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:12px;">View all</button>
+            </div>
+            <div class="card-body">
+              <div class="card-text">Card body content goes here. This pattern is used for dashboards, data tables, and any panel that needs a clear header with an optional action.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Stat Cards (KPI Style)</div>
+        <div class="grid-4">
+          <div class="stat-card">
+            <div class="stat-label">Total Mentions</div>
+            <div class="stat-value">2,847</div>
+            <div class="stat-delta up">
+              <i data-lucide="trending-up" style="width:12px;height:12px;stroke:currentColor;stroke-width:2.5;"></i>
+              +12.4%
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Reach</div>
+            <div class="stat-value">1.2M</div>
+            <div class="stat-delta up">
+              <i data-lucide="trending-up" style="width:12px;height:12px;stroke:currentColor;stroke-width:2.5;"></i>
+              +8.1%
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Negative Coverage</div>
+            <div class="stat-value">143</div>
+            <div class="stat-delta down">
+              <i data-lucide="trending-down" style="width:12px;height:12px;stroke:currentColor;stroke-width:2.5;"></i>
+              +3.2%
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">AVE</div>
+            <div class="stat-value" style="font-size:22px;">₱4.8M</div>
+            <div class="stat-delta up">
+              <i data-lucide="trending-up" style="width:12px;height:12px;stroke:currentColor;stroke-width:2.5;"></i>
+              +21.7%
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Article Card Preview</div>
+        <div style="max-width:520px;">
+          <div class="article-card">
+            <div class="article-meta">
+              <span class="article-source">Philippine Daily Inquirer</span>
+              <span class="article-date">·</span>
+              <span class="article-date">June 14, 2026</span>
+            </div>
+            <div class="article-title">Government launches new digital infrastructure program to boost connectivity in rural areas</div>
+            <div class="article-snippet">The Department of Information and Communications Technology announced a ₱2.4 billion investment package aimed at extending broadband access to over 2,000 barangays by end of 2027.</div>
+            <div class="article-footer">
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span class="badge badge-positive"><span class="badge-dot"></span>Positive</span>
+                <span class="badge badge-muted">Print</span>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-icon btn-sm"><i data-lucide="bookmark" style="width:13px;height:13px;stroke:var(--ink);stroke-width:2;"></i></button>
+                <button class="btn btn-icon btn-sm"><i data-lucide="external-link" style="width:13px;height:13px;stroke:var(--ink);stroke-width:2;"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="token-cmt">/* Card base */</span>
+.card <span class="token-val">{</span>
+  background: <span class="token-prop">var(--surface)</span>;
+  border-radius: <span class="token-prop">var(--radius-md)</span>;
+  border: 1px solid <span class="token-prop">var(--border)</span>;
+  box-shadow: <span class="token-prop">var(--shadow-sm)</span>;
+<span class="token-val">}</span>
+
+<span class="token-cmt">/* Stat card KPI value */</span>
+.stat-value <span class="token-val">{</span>
+  font-family: <span class="token-prop">'Inter Tight', sans-serif</span>;
+  font-size: <span class="token-val">30px</span>;
+  font-weight: <span class="token-val">700</span>;
+  letter-spacing: <span class="token-val">-1px</span>;
+<span class="token-val">}</span></div>
+    </div>
+
+    <!-- ======================================================
+         BADGES & TAGS
+         ====================================================== -->
+    <div class="section" id="badges">
+      <div class="section-header">
+        <span class="section-title">Badges &amp; Tags</span>
+        <span class="section-desc">Sentiment badges, count badges, keyword pills, entity pills</span>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Sentiment Badges</div>
+        <div class="flex-row">
+          <span class="badge badge-positive"><span class="badge-dot"></span>Positive</span>
+          <span class="badge badge-negative"><span class="badge-dot"></span>Negative</span>
+          <span class="badge badge-neutral"><span class="badge-dot"></span>Neutral</span>
+          <span class="badge badge-positive">Positive · 1,842</span>
+          <span class="badge badge-negative">Negative · 143</span>
+          <span class="badge badge-neutral">Neutral · 862</span>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Count Badges</div>
+        <div class="flex-row">
+          <span class="badge badge-count">42</span>
+          <span class="badge badge-count">128</span>
+          <span class="badge badge-count">1.2K</span>
+          <span class="badge badge-muted">Unread</span>
+          <span class="badge badge-muted">Draft</span>
+          <span class="badge badge-muted">Print</span>
+          <span class="badge badge-muted">Online</span>
+          <span class="badge badge-muted">Broadcast</span>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Keyword Pills</div>
+        <div class="flex-row">
+          <span class="pill-keyword">digital transformation</span>
+          <span class="pill-keyword">infrastructure</span>
+          <span class="pill-keyword">media monitoring</span>
+          <span class="pill-keyword">press release</span>
+          <span class="pill-keyword">policy reform</span>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Entity Pills</div>
+        <div class="flex-row">
+          <span class="pill-entity person">Sara Duterte</span>
+          <span class="pill-entity person">Bongbong Marcos</span>
+          <span class="pill-entity org">Department of ICT</span>
+          <span class="pill-entity org">Bangko Sentral ng Pilipinas</span>
+          <span class="pill-entity">Metro Manila</span>
+          <span class="pill-entity">Cebu</span>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="token-cmt">/* Badge / pill pattern */</span>
+.badge <span class="token-val">{</span>
+  display: <span class="token-val">inline-flex</span>;
+  align-items: <span class="token-val">center</span>;
+  gap: <span class="token-val">4px</span>;
+  font-size: <span class="token-val">11px</span>;
+  font-weight: <span class="token-val">600</span>;
+  padding: <span class="token-val">3px 9px</span>;
+  border-radius: <span class="token-prop">var(--radius-pill)</span>;
+<span class="token-val">}</span>
+.badge-positive <span class="token-val">{</span> background: <span class="token-val">#dcfce7</span>; color: <span class="token-prop">var(--positive)</span>; <span class="token-val">}</span>
+.badge-negative <span class="token-val">{</span> background: <span class="token-val">#fee2e2</span>; color: <span class="token-prop">var(--negative)</span>; <span class="token-val">}</span>
+.badge-neutral  <span class="token-val">{</span> background: <span class="token-val">#f3f4f6</span>; color: <span class="token-prop">#4b5563</span>; <span class="token-val">}</span></div>
+    </div>
+
+    <!-- ======================================================
+         NAVIGATION
+         ====================================================== -->
+    <div class="section" id="navigation">
+      <div class="section-header">
+        <span class="section-title">Navigation</span>
+        <span class="section-desc">Sidebar nav, tab bar, breadcrumb</span>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="subsection-title">Sidebar Nav Items</div>
+          <div class="nav-demo-sidebar">
+            <div class="nav-item active">
+              <i data-lucide="layout-dashboard"></i>
+              Dashboard
+            </div>
+            <div class="nav-item">
+              <i data-lucide="newspaper"></i>
+              Media Briefs
+            </div>
+            <div class="nav-item">
+              <i data-lucide="gauge"></i>
+              Analytics
+            </div>
+            <div class="nav-item">
+              <i data-lucide="folder"></i>
+              Campaigns
+            </div>
+            <div class="nav-item">
+              <i data-lucide="users"></i>
+              Clients
+            </div>
+            <div class="nav-item">
+              <i data-lucide="bookmark"></i>
+              Saved Searches
+            </div>
+          </div>
+          <div class="mt-12" style="font-size:12px;color:var(--muted);">Active state uses <span class="code">--pastel-coral</span> with a <span class="code">#fff0ee</span> background.</div>
+        </div>
+
+        <div>
+          <div class="subsection-title">Tab Bar</div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;">
+            <div class="tab-bar" style="padding: 0 16px;">
+              <div class="tab-item active">Overview</div>
+              <div class="tab-item">Mentions</div>
+              <div class="tab-item">Sentiment</div>
+              <div class="tab-item">Reach</div>
+              <div class="tab-item">AVE</div>
+            </div>
+            <div style="padding:20px;font-size:13px;color:var(--muted);">Tab panel content area</div>
+          </div>
+
+          <div class="subsection-title" style="margin-top:24px;">Breadcrumb</div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px 20px;">
+            <div class="breadcrumb">
+              <span class="breadcrumb-item">Dashboard</span>
+              <span class="breadcrumb-sep">›</span>
+              <span class="breadcrumb-item">Clients</span>
+              <span class="breadcrumb-sep">›</span>
+              <span class="breadcrumb-item">Acme Corp</span>
+              <span class="breadcrumb-sep">›</span>
+              <span class="breadcrumb-item current">June 2026 Brief</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="token-cmt">/* Nav active state */</span>
+.nav-item.active <span class="token-val">{</span>
+  background: <span class="token-val">#fff0ee</span>;
+  color: <span class="token-prop">var(--pastel-coral)</span>;
+  font-weight: <span class="token-val">600</span>;
+<span class="token-val">}</span>
+
+<span class="token-cmt">/* Tab active indicator */</span>
+.tab-item.active::after <span class="token-val">{</span>
+  content: <span class="token-val">''</span>;
+  position: <span class="token-val">absolute</span>;
+  bottom: <span class="token-val">-1.5px</span>;
+  left: <span class="token-val">0</span>; right: <span class="token-val">0</span>;
+  height: <span class="token-val">2px</span>;
+  background: <span class="token-prop">var(--ink)</span>;
+<span class="token-val">}</span></div>
+    </div>
+
+    <!-- ======================================================
+         DATA DISPLAY
+         ====================================================== -->
+    <div class="section" id="data">
+      <div class="section-header">
+        <span class="section-title">Data Display</span>
+        <span class="section-desc">Progress bars, sentiment bar, trend indicators</span>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="subsection-title">Progress Bars</div>
+          <div class="flex-col" style="gap:16px;">
+            <div class="progress-wrap">
+              <div class="progress-label-row">
+                <span class="progress-label">Online Coverage</span>
+                <span class="progress-pct">74%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill ink" style="width:74%;"></div>
+              </div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-label-row">
+                <span class="progress-label">Positive Sentiment</span>
+                <span class="progress-pct" style="color:var(--positive);">61%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill positive" style="width:61%;"></div>
+              </div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-label-row">
+                <span class="progress-label">Negative Mentions</span>
+                <span class="progress-pct" style="color:var(--negative);">15%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill negative" style="width:15%;"></div>
+              </div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-label-row">
+                <span class="progress-label">Brief Completion</span>
+                <span class="progress-pct" style="color:var(--pastel-lilac);">88%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill lilac" style="width:88%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="subsection-title">Sentiment Bar (3-Segment)</div>
+          <div class="sentiment-bar-wrap">
+            <div class="sentiment-bar">
+              <div class="sentiment-seg pos" style="width:62%;"></div>
+              <div class="sentiment-seg neu" style="width:23%;"></div>
+              <div class="sentiment-seg neg" style="width:15%;"></div>
+            </div>
+            <div class="sentiment-legend">
+              <div class="sentiment-legend-item">
+                <div class="sentiment-legend-dot" style="background:var(--positive);"></div>
+                Positive 62%
+              </div>
+              <div class="sentiment-legend-item">
+                <div class="sentiment-legend-dot" style="background:var(--neutral-sentiment);"></div>
+                Neutral 23%
+              </div>
+              <div class="sentiment-legend-item">
+                <div class="sentiment-legend-dot" style="background:var(--negative);"></div>
+                Negative 15%
+              </div>
+            </div>
+          </div>
+
+          <div class="subsection-title" style="margin-top:24px;">Trend Indicators</div>
+          <div class="flex-col" style="gap:8px;">
+            <div class="trend-row">
+              <span class="trend-label">Total Mentions</span>
+              <span class="trend-badge up">
+                <i data-lucide="trending-up" style="width:12px;height:12px;stroke:currentColor;stroke-width:2.5;"></i>
+                +12.4%
+              </span>
+            </div>
+            <div class="trend-row">
+              <span class="trend-label">Negative Coverage</span>
+              <span class="trend-badge down">
+                <i data-lucide="trending-down" style="width:12px;height:12px;stroke:currentColor;stroke-width:2.5;"></i>
+                -3.1%
+              </span>
+            </div>
+            <div class="trend-row">
+              <span class="trend-label">Print Reach</span>
+              <span class="trend-badge flat">
+                <i data-lucide="minus" style="width:12px;height:12px;stroke:currentColor;stroke-width:2.5;"></i>
+                0.0%
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="token-cmt">/* Sentiment bar — 3-segment */</span>
+.sentiment-bar <span class="token-val">{</span>
+  height: <span class="token-val">12px</span>;
+  border-radius: <span class="token-prop">var(--radius-pill)</span>;
+  overflow: <span class="token-val">hidden</span>;
+  display: <span class="token-val">flex</span>;
+<span class="token-val">}</span>
+.seg-positive <span class="token-val">{</span> background: <span class="token-prop">var(--positive)</span>; <span class="token-val">}</span>
+.seg-neutral  <span class="token-val">{</span> background: <span class="token-prop">var(--neutral-sentiment)</span>; <span class="token-val">}</span>
+.seg-negative <span class="token-val">{</span> background: <span class="token-prop">var(--negative)</span>; <span class="token-val">}</span></div>
+    </div>
+
+    <!-- ======================================================
+         MOTION & EASING
+         ====================================================== -->
+    <div class="section" id="motion">
+      <div class="section-header">
+        <span class="section-title">Motion &amp; Easing</span>
+        <span class="section-desc">4 easing tiers — hover each card to see the animation</span>
+      </div>
+
+      <div class="easing-grid">
+        <div class="easing-card">
+          <div class="easing-name">Fast</div>
+          <div class="easing-value">0.12s ease</div>
+          <div class="easing-demo-track">
+            <div class="easing-dot fast-dot"></div>
+          </div>
+          <div class="easing-timing">120ms</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Micro-interactions: button hover, focus ring, icon swap</div>
+          <span class="code">--ease-fast</span>
+        </div>
+        <div class="easing-card">
+          <div class="easing-name">Base</div>
+          <div class="easing-value">0.2s ease</div>
+          <div class="easing-demo-track">
+            <div class="easing-dot base-dot"></div>
+          </div>
+          <div class="easing-timing">200ms</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Standard transitions: sidebar items, toggles, tabs</div>
+          <span class="code">--ease-base</span>
+        </div>
+        <div class="easing-card">
+          <div class="easing-name">Slow</div>
+          <div class="easing-value">0.3s cubic-bezier(0.4,0,0.2,1)</div>
+          <div class="easing-demo-track">
+            <div class="easing-dot slow-dot"></div>
+          </div>
+          <div class="easing-timing">300ms</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Panel slides, modal open/close, drawer transitions</div>
+          <span class="code">--ease-slow</span>
+        </div>
+        <div class="easing-card">
+          <div class="easing-name">Emphasis</div>
+          <div class="easing-value">0.28s cubic-bezier(.22,1,.36,1)</div>
+          <div class="easing-demo-track">
+            <div class="easing-dot emph-dot" style="background:var(--pastel-coral);"></div>
+          </div>
+          <div class="easing-timing">280ms</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Expressive entrances, toast notifications, hero reveals</div>
+          <span class="code">--ease-emphasis</span>
+        </div>
+      </div>
+
+      <div class="mt-24">
+        <div class="subsection-title">Z-Index Scale</div>
+        <div class="flex-row">
+          <div class="card card-basic" style="min-width:160px;">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;">STICKY</div>
+            <div style="font-family:'SF Mono','Fira Code',monospace;font-size:22px;font-weight:700;color:var(--ink);">50</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Section headers, sidebar</div>
+            <span class="code">--z-sticky</span>
+          </div>
+          <div class="card card-basic" style="min-width:160px;">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;">DROPDOWN</div>
+            <div style="font-family:'SF Mono','Fira Code',monospace;font-size:22px;font-weight:700;color:var(--ink);">100</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Menus, select panels</div>
+            <span class="code">--z-dropdown</span>
+          </div>
+          <div class="card card-basic" style="min-width:160px;">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;">MODAL</div>
+            <div style="font-family:'SF Mono','Fira Code',monospace;font-size:22px;font-weight:700;color:var(--ink);">500</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Dialogs, drawers, sheets</div>
+            <span class="code">--z-modal</span>
+          </div>
+          <div class="card card-basic" style="min-width:160px;">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;">POPOVER</div>
+            <div style="font-family:'SF Mono','Fira Code',monospace;font-size:22px;font-weight:700;color:var(--ink);">2000</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Tooltips, toasts, command palette</div>
+            <span class="code">--z-popover</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="token-cmt">/* Easing tokens */</span>
+--ease-fast:     <span class="token-val">0.12s ease</span>;
+--ease-base:     <span class="token-val">0.2s ease</span>;
+--ease-slow:     <span class="token-val">0.3s cubic-bezier(0.4, 0, 0.2, 1)</span>;
+--ease-emphasis: <span class="token-val">0.28s cubic-bezier(.22, 1, .36, 1)</span>;
+
+<span class="token-cmt">/* Z-index tokens */</span>
+--z-sticky:   <span class="token-val">50</span>;
+--z-dropdown: <span class="token-val">100</span>;
+--z-modal:    <span class="token-val">500</span>;
+--z-popover:  <span class="token-val">2000</span>;</div>
+
+      <!-- Tooltips section -->
+      <div class="section" id="tooltips">
+        <h2>Tooltips</h2>
+        <p class="section-desc">All hover tooltips use a single site-wide system via <code>#md-tooltip</code>. This is the source of truth — do not create new CSS pseudo-element tooltips or separate tooltip divs.</p>
+
+        <div class="subsection">
+          <div class="subsection-title">The Rule</div>
+          <div style="background:var(--canvas);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px 20px;font-size:13px;line-height:1.7;color:var(--ink-2)">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+              <div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:8px">✅ Use <code>#md-tooltip</code></div>
+                <div style="font-size:12px">Two modes via <code>_makeTip()</code>:<br><b>Cursor-following</b> (no arrow) — bar charts, entity pills, rich data.<br><b>Anchored</b> (arrow below element) — set <code>label</code> field; tooltip centers below the element with an upward arrow. Use for icon labels.</div>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:8px">✅ Keep <code>#ss-pop</code></div>
+                <div style="font-size:12px">Anchored popovers on KPI cards only. Has arrow because it's fixed to a specific element. Do not use for new cases.</div>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:8px">✅ Keep <code>.b-tip</code></div>
+                <div style="font-size:12px">Inline rich tooltip on Story Value KPI only. Has arrow. Scoped to one element. Do not use for new cases.</div>
+              </div>
+            </div>
+            <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--negative);font-weight:600">❌ Never add new CSS <code>[data-tip]::after</code> or pseudo-element tooltips — they cannot be styled consistently, overflow the viewport, and can't render rich content.</div>
+          </div>
+        </div>
+        <div class="subsection">
+          <div class="subsection-title">Variants</div>
+          <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start;padding:24px 0">
+            <!-- Chart bar tooltip preview -->
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Chart Bar</div>
+              <div style="background:var(--ink);color:#fff;border-radius:8px;padding:8px 11px;font-size:11.5px;line-height:1.55;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.18);display:inline-block">
+                <div style="font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:4px">MAY 18</div>
+                <div style="display:flex;justify-content:space-between;gap:16px"><span style="color:rgba(255,255,255,0.65)">Coverage</span><span style="font-weight:600">18 mentions</span></div>
+                <div style="display:flex;justify-content:space-between;gap:16px"><span style="color:rgba(255,255,255,0.65)">AVE</span><span style="font-weight:600">PHP 72K</span></div>
+                <div style="display:flex;justify-content:space-between;gap:16px"><span style="color:rgba(255,255,255,0.65)">Story Value</span><span style="font-weight:600">4.33</span></div>
+              </div>
+            </div>
+            <!-- Entity pill tooltip preview -->
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Entity Pill</div>
+              <div style="background:var(--ink);color:#fff;border-radius:8px;padding:8px 11px;font-size:11.5px;line-height:1.55;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.18);display:inline-block">
+                <div style="font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:4px">PLDT</div>
+                <div style="display:flex;justify-content:space-between;gap:16px"><span style="color:rgba(255,255,255,0.65)">Type</span><span style="font-weight:600">Organisation</span></div>
+                <div style="display:flex;justify-content:space-between;gap:16px"><span style="color:rgba(255,255,255,0.65)">Mentions</span><span style="font-weight:600">2</span></div>
+                <div style="display:flex;gap:10px;margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,0.12)">
+                  <span style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.75)">Wikipedia ↗</span>
+                  <span style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.75)">Wikidata ↗</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="subsection">
+          <div class="subsection-title">Usage</div>
+          <div class="code-block">
+<span class="token-cmt">// Register a tooltip value in the Map</span>
+const id = _makeTip({ date: 'May 18', coverage: 18, ave: '72K', sv: 4.33 });
+
+<span class="token-cmt">// Attach to any element</span>
+&lt;div data-btip="${id}"&gt;…&lt;/div&gt;
+
+<span class="token-cmt">// Entity variant</span>
+const id = _makeTip({ entityName: 'PLDT', entityType: 'Organisation', entityCount: 2, wikiSlug: 'PLDT' });
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer spacer -->
+      <div style="height:40px;"></div>
+      <div style="border-top:1px solid var(--border);padding-top:24px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:12px;color:var(--muted);">Media Meter Design System — maintained by the M2 Comms product team</div>
+        <div style="display:flex;gap:8px;">
+          <span class="badge badge-version">v1.0</span>
+          <span class="badge badge-date">June 2026</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+  // Initialize Lucide icons
+  lucide.createIcons();
+
+  // Active sidebar link on scroll
+  const sections = document.querySelectorAll('.section[id]');
+  const navLinks = document.querySelectorAll('.sidebar-link');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.getAttribute('id');
+        navLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

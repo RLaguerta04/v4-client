@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Media Meter — New Features Presentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root{
+  --pur:#6059A6; --pur-d:#4e4990; --pur-l:#ece9f8; --pur-xl:#f5f4ff;
+  --ink:#1a1a2e; --muted:#9090a0; --line:#ececf2;
+  --grn:#276627; --grn-l:#e8f5e8; --amb:#854f0b; --amb-l:#faeeda;
+  --blu:#0c447c; --blu-l:#e6f1fb; --red:#a32d2d; --red-l:#fce8e8;
+  --bg:#F0F2F5;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',sans-serif;color:var(--ink);background:#fff;overflow:hidden}
+
+/* ── DECK SHELL ── */
+.deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;padding:36px 60px 74px;opacity:0;transition:opacity 0.35s ease}
+.slide.active{display:flex;opacity:1;animation:slideUp 0.45s cubic-bezier(0.4,0,0.2,1)}
+@keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* all slides flat white */
+.slide{background:#fff}
+.slide.dark{background:#fff;color:var(--ink)}
+
+/* ── KICKER / HEADINGS ── */
+.kicker{font-size:13px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--pur);margin-bottom:14px;display:flex;align-items:center;gap:9px}
+.kicker .k-dot{width:8px;height:8px;border-radius:50%;background:var(--pur);display:inline-block}
+h1{font-size:54px;font-weight:800;line-height:1.05;letter-spacing:-0.02em;margin-bottom:18px}
+h2{font-size:36px;font-weight:800;line-height:1.1;letter-spacing:-0.02em;margin-bottom:10px}
+.lead{font-size:18px;line-height:1.6;color:#54546a;max-width:940px}
+.slide-body{display:flex;flex-direction:column;margin-top:26px}
+
+/* ── TITLE SLIDE ── */
+.title-wrap{display:flex;flex-direction:column;justify-content:center;flex:1}
+.brandmark{display:inline-flex;align-items:center;gap:12px;margin-bottom:40px}
+.mm-logo{display:block;width:181px;height:auto}
+.mm-logo.sm{width:108px}
+.title-pills{display:flex;gap:10px;margin-top:30px;flex-wrap:wrap}
+.t-pill{background:var(--pur-l);border:1px solid #c5c0e8;color:var(--pur);font-size:14px;font-weight:600;padding:9px 16px;border-radius:30px;display:inline-flex;align-items:center;gap:8px}
+
+/* ── GENERIC LAYOUT HELPERS ── */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:stretch}
+.cols-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px 26px;box-shadow:0 2px 10px rgba(28,25,68,0.05);display:flex;flex-direction:column}
+.card.tint{background:var(--pur-xl);border-color:#e0ddf5}
+.card-ic{width:46px;height:46px;border-radius:12px;background:var(--pur-l);color:var(--pur);display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:16px;flex-shrink:0}
+.card h3{font-size:19px;font-weight:700;margin-bottom:8px;letter-spacing:-0.01em}
+.card p{font-size:14.5px;line-height:1.6;color:#5a5a6c}
+.card .tag{font-size:12px;font-weight:700;color:var(--pur);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:7px}
+
+/* bullets */
+.blist{list-style:none;display:flex;flex-direction:column;gap:14px;margin-top:6px}
+.blist li{display:flex;gap:13px;font-size:16px;line-height:1.5;color:#3a3a4c}
+.blist li i{color:var(--pur);font-size:15px;margin-top:3px;flex-shrink:0}
+.blist.lg li{font-size:17px}
+
+/* pain points (problem slide) */
+.pains{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:8px}
+.pain{display:flex;gap:14px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.pain i{color:var(--red);font-size:18px;margin-top:2px}
+.pain b{font-size:16px;display:block;margin-bottom:3px}
+.pain span{font-size:14px;color:#777;line-height:1.5}
+
+/* ── WORKFLOW STEPS ── */
+.flow{display:flex;flex-direction:column;gap:0;margin-top:6px}
+.step{display:flex;gap:18px;position:relative;padding-bottom:22px}
+.step:last-child{padding-bottom:0}
+.step::before{content:'';position:absolute;left:18px;top:38px;bottom:0;width:2px;background:#dcd8f0}
+.step:last-child::before{display:none}
+.step-n{width:38px;height:38px;border-radius:50%;background:var(--pur);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;z-index:1}
+.step-c b{font-size:17px;font-weight:700;display:block;margin-bottom:3px}
+.step-c p{font-size:14.5px;color:#5a5a6c;line-height:1.55}
+
+/* horizontal end-to-end flow */
+.hflow{display:flex;align-items:stretch;gap:0;margin-top:20px}
+.hnode{flex:1;background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative}
+.hnode .hn-ic{width:48px;height:48px;border-radius:12px;background:var(--pur-l);color:var(--pur);display:flex;align-items:center;justify-content:center;font-size:20px}
+.hnode b{font-size:15px;font-weight:700}
+.hnode span{font-size:12.5px;color:#888;line-height:1.45}
+.harrow{display:flex;align-items:center;justify-content:center;color:var(--pur);font-size:20px;padding:0 6px;flex-shrink:0}
+.hnode.accent{background:var(--pur);border-color:var(--pur)}
+.hnode.accent .hn-ic{background:rgba(255,255,255,0.2);color:#fff}
+.hnode.accent b{color:#fff}.hnode.accent span{color:#e3e0f7}
+
+/* ── MOCKUP COMPONENTS (mirror the real app) ── */
+.mock{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 6px 24px rgba(28,25,68,0.10)}
+.mk-top{display:flex;align-items:center;gap:13px;padding:16px 20px}
+.mk-dot{width:11px;height:11px;border-radius:50%;background:#3da53d;align-self:flex-start;margin-top:5px;flex-shrink:0;box-shadow:0 0 0 0 rgba(61,165,61,0.45);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(61,165,61,0.45)}50%{box-shadow:0 0 0 6px rgba(61,165,61,0)}}
+.mk-title{font-size:17px;font-weight:700}
+.mk-ai{font-size:11px;background:var(--pur-l);color:var(--pur);font-weight:600;padding:3px 9px;border-radius:10px;display:inline-flex;align-items:center;gap:4px}
+.mk-meta{display:flex;align-items:center;gap:10px;font-size:12.5px;margin-top:5px;flex-wrap:wrap}
+.mk-meta .up{color:var(--muted);display:inline-flex;gap:4px;align-items:center}
+.mk-meta .grn{color:var(--grn);font-weight:700}
+.mk-meta .trend{color:var(--amb);font-weight:600;background:var(--amb-l);padding:2px 9px;border-radius:11px;display:inline-flex;gap:5px;align-items:center}
+.mk-cta{margin-left:auto;border:1px solid var(--pur);color:var(--pur);font-weight:600;font-size:12.5px;padding:8px 15px;border-radius:5px;display:inline-flex;gap:7px;align-items:center;align-self:flex-start;white-space:nowrap}
+.mk-stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
+.mk-ss{padding:16px 20px;position:relative}
+.mk-ss+.mk-ss::before{content:'';position:absolute;left:0;top:20%;height:60%;width:1px;background:var(--line)}
+.mk-ss .v{font-size:22px;font-weight:700;line-height:1;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.mk-ss .v.hero{font-size:27px;color:var(--grn)}
+.mk-ss .v .chip-up{font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:#d6efd6;color:#1c5e1c}
+.mk-ss .v .chip-neu{font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:#f0f0f6;color:#5a5a6c}
+.mk-ss .l{font-size:11.5px;color:var(--muted)}
+.mk-sent{display:flex;height:4px;border-radius:2px;overflow:hidden;margin-top:8px;max-width:120px}
+.mk-sent span{display:block;height:100%}
+
+.mk-tabs{display:flex;gap:0;border-top:1px solid var(--line);padding:0 20px}
+.mk-tab{font-size:13px;padding:12px 14px;color:#888;font-weight:500;border-bottom:2px solid transparent}
+.mk-tab.on{color:var(--pur);border-bottom-color:var(--pur);font-weight:700}
+.mk-tab .b{font-size:10px;font-weight:700;background:#ececf2;color:#666;padding:1px 6px;border-radius:8px;margin-left:5px}
+
+/* annotation callouts */
+.annot{display:flex;flex-direction:column;gap:13px;justify-content:center}
+.an{display:flex;gap:12px;align-items:flex-start}
+.an-n{width:26px;height:26px;border-radius:7px;background:var(--pur);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.an b{font-size:15px;display:block;margin-bottom:2px}
+.an span{font-size:13.5px;color:#666;line-height:1.5}
+
+/* media badges + chips */
+.badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center}
+.b-online{background:var(--pur-l);color:var(--pur)}.b-tv{background:var(--red-l);color:var(--red)}
+.b-print{background:var(--blu-l);color:var(--blu)}.b-radio{background:var(--amb-l);color:var(--amb)}
+.chip{font-size:12px;padding:4px 10px;border-radius:3px;font-weight:500;display:inline-flex;align-items:center;gap:5px}
+.c-neu{background:var(--blu-l);color:var(--blu)}.c-vel{background:var(--pur-xl);color:#5046a6}.c-ch{background:#f2f2f2;color:#555}
+
+/* tracker split mock */
+.split{display:flex;gap:12px;height:100%}
+.sp-list{width:38%;display:flex;flex-direction:column;gap:10px}
+.ac{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:13px;display:flex;gap:10px}
+.ac.sel{border-color:var(--pur);background:#faf9fd;box-shadow:0 0 0 3px rgba(96,89,166,0.1)}
+.ac-ic{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.ac b{font-size:13.5px;display:block;margin-bottom:3px;line-height:1.3}
+.ac .actype{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:2px 6px;border-radius:3px}
+.ac .acmeta{font-size:11.5px;color:#999;margin-top:6px}
+.sp-detail{flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:10px;display:flex;flex-direction:column;overflow:hidden}
+.sp-dhead{padding:13px 16px;background:#F5F5F7;border-bottom:1px solid var(--line)}
+.sp-dhead b{font-size:15px}
+.sp-kpis{display:flex;padding:12px 16px;border-bottom:1px solid #f4f4f8}
+.sp-kpi{flex:1}
+.sp-kpi .v{font-size:16px;font-weight:700}.sp-kpi .v.hero{font-size:21px;color:var(--grn)}
+.sp-kpi .l{font-size:11px;color:#aaa}
+.sp-chs{padding:11px 16px;display:flex;gap:7px;flex-wrap:wrap}
+.sp-ch{display:inline-flex;align-items:center;gap:6px;background:#f8f8fc;border:1px solid #eeedf6;border-radius:6px;padding:5px 9px;font-size:12px;color:#777}
+.sp-ch .grn{color:var(--grn);font-weight:600}
+
+/* type colors */
+.t-pr{background:var(--pur-l);color:var(--pur)}.t-cr{background:var(--red-l);color:var(--red)}.t-tr{background:var(--amb-l);color:var(--amb)}
+.i-pr{background:var(--pur-l);color:var(--pur)}.i-cr{background:var(--red-l);color:var(--red)}.i-tr{background:var(--amb-l);color:var(--amb)}
+
+/* radar mini */
+.radar{position:relative;width:74px;height:74px;flex-shrink:0}
+.rr{position:absolute;border-radius:50%;border:1.5px solid rgba(96,89,166,0.2)}
+.rr1{inset:0}.rr2{inset:12px}.rr3{inset:24px}
+.rc{position:absolute;width:6px;height:6px;background:var(--pur);border-radius:50%;top:34px;left:34px}
+.rp{position:absolute;width:10px;height:10px;background:rgba(96,89,166,0.35);border-radius:50%;top:32px;left:32px;animation:ping 2s ease-out infinite}
+@keyframes ping{0%{transform:scale(0.3);opacity:1}100%{transform:scale(2.4);opacity:0}}
+
+/* outcomes / stat highlights */
+.outs{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:10px}
+.out{background:var(--pur-xl);border:1px solid #e0ddf5;border-radius:14px;padding:24px 20px}
+.out .big{font-size:38px;font-weight:800;line-height:1;margin-bottom:8px;color:var(--pur)}
+.out .lbl{font-size:14px;color:#5a5a6c;line-height:1.45}
+
+.note{font-size:13px;color:#999;margin-top:18px;display:flex;align-items:center;gap:7px}
+
+/* ── NAV BAR ── */
+.nav{position:fixed;left:0;right:0;bottom:0;height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;z-index:50}
+.slide.active~.nav{}
+.nav-dots{display:flex;gap:8px;align-items:center}
+.dot{width:9px;height:9px;border-radius:50%;background:rgba(96,89,166,0.28);cursor:pointer;transition:all 0.2s;border:none;padding:0}
+.dot.on{background:var(--pur);width:26px;border-radius:5px}
+.nav-side{display:flex;align-items:center;gap:8px}
+.nav-btn{width:38px;height:38px;border-radius:9px;border:1px solid #d8d6e0;background:#fff;color:var(--pur);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.nav-btn:hover{background:var(--pur);color:#fff;border-color:var(--pur)}
+.nav-count{font-size:13px;font-weight:600;color:#7a7a8c;min-width:64px;text-align:center}
+/* keep nav readable over slide content */
+.nav{background:linear-gradient(to top,rgba(255,255,255,0.97),rgba(255,255,255,0))}
+.brand-foot{display:flex;align-items:center;gap:7px}
+
+.progress{position:fixed;top:0;left:0;height:3px;background:var(--pur);z-index:60;transition:width 0.35s ease}
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 — TITLE -->
+  <section class="slide dark active">
+    <div class="title-wrap">
+      <div class="brandmark">
+        <img class="mm-logo" src="mmi-logo-purple.svg" alt="Media Meter">
+      </div>
+      <div class="kicker"><span class="k-dot"></span> Product Release</div>
+      <h1>From mention overload<br>to managed intelligence.</h1>
+      <p class="lead">Two new capabilities that turn a firehose of coverage into a prioritized morning briefing — and a workflow to act on every story that matters.</p>
+      <div class="title-pills">
+        <span class="t-pill"><i class="fa-solid fa-wand-magic-sparkles"></i> Today's Brief</span>
+        <span class="t-pill"><i class="fa-solid fa-bullhorn"></i> Activity Tracker</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 — THE PROBLEM -->
+  <section class="slide">
+    <div class="kicker"><span class="k-dot"></span> The challenge</div>
+    <h2>Your team is drowning in mentions.</h2>
+    <p class="lead">Comms teams monitor dozens of outlets across print, online, TV and radio. The volume is the easy part — knowing <i>what changed</i> and <i>what to do about it</i> is where hours disappear.</p>
+    <div class="slide-body">
+      <div class="pains">
+        <div class="pain"><i class="fa-solid fa-layer-group"></i><div><b>Volume without priority</b><span>Hundreds of daily mentions, no signal on which 3 stories actually move the needle.</span></div></div>
+        <div class="pain"><i class="fa-solid fa-hourglass-half"></i><div><b>Manual morning triage</b><span>Analysts spend the first hour of every day reading and ranking by hand.</span></div></div>
+        <div class="pain"><i class="fa-solid fa-clock-rotate-left"></i><div><b>Slow, ad-hoc reporting</b><span>Client-ready summaries and AVE breakdowns are rebuilt from scratch each time.</span></div></div>
+        <div class="pain"><i class="fa-solid fa-arrows-split-up-and-left"></i><div><b>Stories fall through cracks</b><span>A breaking narrative gets noticed late — after it has already escalated.</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 — THE SOLUTION / AGENDA -->
+  <section class="slide">
+    <div class="kicker"><span class="k-dot"></span> The solution</div>
+    <h2>Two features. One connected workflow.</h2>
+    <p class="lead">Detection and action, finally joined up — the platform does the triage, you make the decisions.</p>
+    <div class="slide-body">
+      <div class="cols">
+        <div class="card tint">
+          <div class="card-ic"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+          <div class="tag">Detect</div>
+          <h3>Today's Brief</h3>
+          <p>An AI-curated daily briefing that surfaces the day's most important stories, the numbers behind them, and what's trending — the moment you log in.</p>
+        </div>
+        <div class="card tint">
+          <div class="card-ic"><i class="fa-solid fa-bullhorn"></i></div>
+          <div class="tag">Act</div>
+          <h3>Activity Tracker</h3>
+          <p>Turn any flagged story into a tracked activity — scan for coverage, manage the article set, and generate client-ready reports in one place.</p>
+        </div>
+      </div>
+      <div class="note"><i class="fa-solid fa-arrow-right-arrow-left"></i> One click promotes a story from the Brief straight into the Tracker — no copy-paste, no lost context.</div>
+    </div>
+  </section>
+
+  <!-- 4 — TODAY'S BRIEF OVERVIEW -->
+  <section class="slide">
+    <div class="kicker"><span class="k-dot"></span> Feature 1 · Today's Brief</div>
+    <h2>Your AI daily stand-up.</h2>
+    <p class="lead">Every morning the Brief reads the last 24 hours of coverage and tells you, in one glance, what changed and what deserves attention — before you've opened a single article.</p>
+    <div class="slide-body">
+      <ul class="blist lg">
+        <li><i class="fa-solid fa-circle-check"></i><span><b>Always-on summary.</b> Headline call-out (“3 Tier 1 stories flagged”), a live freshness stamp, and momentum signals like “+22% mentions vs yesterday.”</span></li>
+        <li><i class="fa-solid fa-circle-check"></i><span><b>Numbers up front.</b> A persistent stat strip — mentions, combined AVE, sentiment split and Tier 1 count — visible without expanding anything.</span></li>
+        <li><i class="fa-solid fa-circle-check"></i><span><b>Explains itself.</b> A “Why this was picked” rationale on every spotlighted story, so the AI's choice is transparent and defensible.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 5 — ANATOMY (MOCKUP) -->
+  <section class="slide">
+    <div class="kicker"><span class="k-dot"></span> Today's Brief · Anatomy</div>
+    <h2>Everything that matters, above the fold.</h2>
+    <div class="slide-body">
+      <div class="cols" style="grid-template-columns:1.4fr 1fr;align-items:center">
+        <!-- live mock of the brief panel -->
+        <div class="mock">
+          <div class="mk-top">
+            <div class="mk-dot"></div>
+            <div>
+              <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap"><span class="mk-title">Today's brief — 3 Tier 1 stories flagged</span> <span class="mk-ai"><i class="fa-solid fa-wand-magic-sparkles"></i> Smart Brief</span></div>
+              <div class="mk-meta">
+                <span class="up"><i class="fa-regular fa-clock"></i> Updated 2 min ago</span>
+                <span style="color:#d0d0dc">·</span>
+                <span class="grn">↑ +22% mentions</span>
+                <span style="color:#d0d0dc">·</span>
+                <span class="trend"><i class="fa-solid fa-fire"></i> DITO 5G expansion trending</span>
+              </div>
+            </div>
+            <span class="mk-cta">View full brief <i class="fa-solid fa-chevron-down" style="font-size:11px"></i></span>
+          </div>
+          <div class="mk-stats">
+            <div class="mk-ss"><div class="v">44 <span class="chip-up">↑ 22%</span></div><div class="l">mentions today</div></div>
+            <div class="mk-ss"><div class="v hero">PHP 2.78M</div><div class="l">combined AVE</div></div>
+            <div class="mk-ss"><div class="v">68% <span class="chip-neu">neutral</span></div><div class="l">sentiment today</div><div class="mk-sent"><span style="width:22%;background:#3da53d"></span><span style="width:68%;background:#bfbfcc"></span><span style="width:10%;background:#d46a6a"></span></div></div>
+            <div class="mk-ss"><div class="v">3</div><div class="l">Tier 1 articles</div></div>
+          </div>
+          <div class="mk-tabs">
+            <span class="mk-tab on">Today's spotlight<span class="b">1</span></span>
+            <span class="mk-tab">Trending now<span class="b">4</span></span>
+            <span class="mk-tab">AI analysis</span>
+          </div>
+        </div>
+        <!-- annotations -->
+        <div class="annot">
+          <div class="an"><div class="an-n">1</div><div><b>Live status &amp; momentum</b><span>Green pulse = fresh data. Trend chips flag spikes and emerging narratives.</span></div></div>
+          <div class="an"><div class="an-n">2</div><div><b>Hero metrics</b><span>Combined AVE is emphasised; sentiment shows a positive / neutral / negative micro-bar.</span></div></div>
+          <div class="an"><div class="an-n">3</div><div><b>One-click expand</b><span>“View full brief” opens the detail; the Tier 1 count is itself a shortcut in.</span></div></div>
+          <div class="an"><div class="an-n">4</div><div><b>Three working views</b><span>Spotlight, Trending now and AI analysis — each one tab away.</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 — THE THREE TABS -->
+  <section class="slide">
+    <div class="kicker"><span class="k-dot"></span> Today's Brief · The three views</div>
+    <h2>Read it your way.</h2>
+    <div class="slide-body">
+      <div class="cols-3">
+        <div class="card">
+          <div class="card-ic"><i class="fa-solid fa-star"></i></div>
+          <div class="tag">Tab 1</div>
+          <h3>Today's Spotlight</h3>
+          <p>The single highest-impact story, fully unpacked: headline, publisher, total AVE, sentiment &amp; velocity chips, the channels it spans, and the full list of related coverage — sortable, filterable by media type, and paginated.</p>
+        </div>
+        <div class="card">
+          <div class="card-ic"><i class="fa-solid fa-fire"></i></div>
+          <div class="tag">Tab 2</div>
+          <h3>Trending Now</h3>
+          <p>A ranked leaderboard of story clusters by momentum. Each row shows tier, sentiment, article count and AVE — click any cluster to expand and explore every piece of coverage feeding it.</p>
+        </div>
+        <div class="card">
+          <div class="card-ic"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+          <div class="tag">Tab 3</div>
+          <h3>AI Analysis</h3>
+          <p>One click generates a written synthesis of the day's coverage patterns — the narrative arc, what's driving it, and what to watch next — in plain, ready-to-share language.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 — BRIEF ACTIONS + WORKFLOW -->
+  <section class="slide">
+    <div class="kicker"><span class="k-dot"></span> Today's Brief · Workflow</div>
+    <h2>From insight to action in seconds.</h2>
+    <div class="slide-body">
+      <div class="cols" style="grid-template-columns:1fr 1fr;gap:40px">
+        <div class="flow">
+          <div class="step"><div class="step-n">1</div><div class="step-c"><b>Open the brief</b><p>Log in — the stat strip already shows today's mentions, AVE and sentiment. Expand for detail.</p></div></div>
+          <div class="step"><div class="step-n">2</div><div class="step-c"><b>Review the spotlight</b><p>Read the flagged Tier 1 story and the “Why this was picked” rationale to understand the call.</p></div></div>
+          <div class="step"><div class="step-n">3</div><div class="step-c"><b>Scan related coverage</b><p>Sort and filter the article list by channel to gauge spread and value across outlets.</p></div></div>
+          <div class="step"><div class="step-n">4</div><div class="step-c"><b>Act</b><p>Choose your next move — three buttons, no context switch.</p></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px;justify-content:center">
+          <div class="card" style="padding:18px 20px;flex-direction:row;gap:15px;align-items:center"><div class="card-ic" style="margin:0"><i class="fa-regular fa-envelope"></i></div><div><h3 style="font-size:16px;margin-bottom:3px">Send as newsletter</h3><p style="font-size:13.5px">Compose and dispatch a branded coverage email in a slide-over — recipients, subject, live preview.</p></div></div>
+          <div class="card" style="padding:18px 20px;flex-direction:row;gap:15px;align-items:center"><div class="card-ic" style="margin:0"><i class="fa-regular fa-file-lines"></i></div><div><h3 style="font-size:16px;margin-bottom:3px">Generate AI report</h3><p style="font-size:13.5px">An executive summary, key stories, channel &amp; AVE breakdowns and recommendations — instantly.</p></div></div>
+          <div class="card" style="padding:18px 20px;flex-direction:row;gap:15px;align-items:center;border-color:#c5c0e8;background:var(--pur-xl)"><div class="card-ic" style="margin:0"><i class="fa-solid fa-bullhorn"></i></div><div><h3 style="font-size:16px;margin-bottom:3px">Track this story</h3><p style="font-size:13.5px">Promote it into the Activity Tracker to manage it as an ongoing campaign. <b style="color:var(--pur)">→ Feature 2</b></p></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 — ACTIVITY TRACKER OVERVIEW -->
+  <section class="slide">
+    <div class="kicker"><span class="k-dot"></span> Feature 2 · Activity Tracker</div>
+    <h2>Where a story becomes a campaign.</h2>
+    <p class="lead">The Tracker is the home for every initiative you're monitoring — press releases, events, crises, product launches and trending narratives — each with its own live coverage and reporting.</p>
+    <div class="slide-body">
+      <ul class="blist lg">
+        <li><i class="fa-solid fa-circle-check"></i><span><b>Fed by the Brief.</b> Stories tracked from Today's Spotlight arrive pre-loaded and ready to scan.</span></li>
+        <li><i class="fa-solid fa-circle-check"></i><span><b>Organised by type.</b> Colour-coded activities (PR, Event, Crisis, Trend, Product) with search and filtering.</span></li>
+        <li><i class="fa-solid fa-circle-check"></i><span><b>Living coverage.</b> Each activity keeps its own article set, coverage snapshot and on-demand AI report.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 9 — TRACKER LAYOUT (MOCKUP) -->
+  <section class="slide">
+    <div class="kicker"><span class="k-dot"></span> Activity Tracker · Layout</div>
+    <h2>List on the left, the full picture on the right.</h2>
+    <div class="slide-body">
+      <div class="split">
+        <div class="sp-list">
+          <div class="ac sel"><div class="ac-ic i-tr"><i class="fa-solid fa-fire"></i></div><div><span class="actype t-tr">Trend</span><b style="margin-top:5px">DITO 5G expansion to Visayas</b><div class="acmeta">12 articles · PHP 4.41M</div></div></div>
+          <div class="ac"><div class="ac-ic i-pr"><i class="fa-solid fa-bullhorn"></i></div><div><span class="actype t-pr">PR</span><b style="margin-top:5px">Q2 network milestone release</b><div class="acmeta">6 articles · PHP 820K</div></div></div>
+          <div class="ac"><div class="ac-ic i-cr"><i class="fa-solid fa-triangle-exclamation"></i></div><div><span class="actype t-cr">Crisis</span><b style="margin-top:5px">Service outage response</b><div class="acmeta">3 articles · PHP 210K</div></div></div>
+        </div>
+        <div class="sp-detail">
+          <div class="sp-dhead"><b>DITO 5G expansion to Visayas — coverage push</b></div>
+          <div class="sp-kpis">
+            <div class="sp-kpi"><div class="v hero">PHP 4.41M</div><div class="l">total AVE</div></div>
+            <div class="sp-kpi"><div class="v">12</div><div class="l">articles</div></div>
+            <div class="sp-kpi"><div class="v" style="color:var(--pur)">68%</div><div class="l">neutral</div></div>
+            <div class="sp-kpi"><div class="v" style="color:var(--amb)">4</div><div class="l">channels</div></div>
+          </div>
+          <div class="sp-chs">
+            <span class="sp-ch"><span class="badge b-online">Online</span> 7 articles · <span class="grn">PHP 524K</span></span>
+            <span class="sp-ch"><span class="badge b-print">Print</span> 1 article · <span class="grn">PHP 397K</span></span>
+            <span class="sp-ch"><span class="badge b-tv">TV</span> 2 articles · <span class="grn">PHP 890K</span></span>
+            <span class="sp-ch"><span class="badge b-radio">Radio</span> 1 article · <span class="grn">PHP 75K</span></span>
+          </div>
+          <div style="padding:11px 16px;border-top:1px solid #f0f0f6;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <span class="chip c-ch" style="border-radius:20px;border:1px solid #9b96cc;background:var(--pur-l);color:var(--pur);font-weight:600"><i class="fa-solid fa-check" style="font-size:10px"></i> Online</span>
+            <span class="chip c-ch" style="border-radius:20px">Print</span>
+            <span class="chip c-ch" style="border-radius:20px">TV</span>
+            <span style="font-size:12px;color:#aaa;margin-left:auto">Sort: Similarity ▾ · multi-select filters</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 — SCAN WORKFLOW -->
+  <section class="slide">
+    <div class="kicker"><span class="k-dot"></span> Activity Tracker · Scan workflow</div>
+    <h2>Find the coverage. Curate the set.</h2>
+    <div class="slide-body">
+      <div class="cols" style="grid-template-columns:1fr 1.1fr;gap:44px;align-items:center">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:18px">
+          <div class="radar"><div class="rr rr1"></div><div class="rr rr2"></div><div class="rr rr3"></div><div class="rc"></div><div class="rp"></div></div>
+          <div style="text-align:center"><b style="font-size:16px">Scanning coverage…</b><p style="font-size:13px;color:#888;margin-top:4px">Matching keywords across all monitored outlets</p></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+            <span class="chip c-vel" style="border-radius:20px;border:1px solid #c5c0e8">DITO</span>
+            <span class="chip c-vel" style="border-radius:20px;border:1px solid #c5c0e8">5G expansion</span>
+            <span class="chip c-vel" style="border-radius:20px;border:1px solid #c5c0e8">Visayas</span>
+            <span class="chip c-vel" style="border-radius:20px;border:1px solid #c5c0e8">Jimenez</span>
+          </div>
+        </div>
+        <div class="flow">
+          <div class="step"><div class="step-n">1</div><div class="step-c"><b>Track &amp; arrive ready</b><p>A story tracked from the Brief lands in a “ready to scan” state with keywords auto-extracted.</p></div></div>
+          <div class="step"><div class="step-n">2</div><div class="step-c"><b>Tune the keywords</b><p>Toggle suggested keywords on or off to widen or tighten the search before scanning.</p></div></div>
+          <div class="step"><div class="step-n">3</div><div class="step-c"><b>Run the scan</b><p>The radar sweep matches coverage across every monitored channel and pulls it into the activity.</p></div></div>
+          <div class="step"><div class="step-n">4</div><div class="step-c"><b>Curate</b><p>Add articles via inline search, remove off-topic hits, sort and filter by media type (multi-select).</p></div></div>
+          <div class="step"><div class="step-n">5</div><div class="step-c"><b>Report &amp; export</b><p>Generate an AI report or export to CSV — the coverage snapshot updates automatically.</p></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 — END TO END -->
+  <section class="slide">
+    <div class="kicker"><span class="k-dot"></span> The connected workflow</div>
+    <h2>Detection to distribution — one path.</h2>
+    <p class="lead">The two features aren't islands. A story flows from automatic detection all the way to a client-ready deliverable without ever leaving the platform.</p>
+    <div class="slide-body">
+      <div class="hflow">
+        <div class="hnode"><div class="hn-ic"><i class="fa-solid fa-wand-magic-sparkles"></i></div><b>Brief flags it</b><span>AI spotlights a Tier 1 story at login</span></div>
+        <div class="harrow"><i class="fa-solid fa-arrow-right"></i></div>
+        <div class="hnode accent"><div class="hn-ic"><i class="fa-solid fa-bullhorn"></i></div><b>Track this story</b><span>One click promotes it to the Tracker</span></div>
+        <div class="harrow"><i class="fa-solid fa-arrow-right"></i></div>
+        <div class="hnode"><div class="hn-ic"><i class="fa-solid fa-satellite-dish"></i></div><b>Scan &amp; curate</b><span>Pull and refine all related coverage</span></div>
+        <div class="harrow"><i class="fa-solid fa-arrow-right"></i></div>
+        <div class="hnode"><div class="hn-ic"><i class="fa-solid fa-chart-pie"></i></div><b>Coverage snapshot</b><span>AVE, sentiment &amp; channel split, live</span></div>
+        <div class="harrow"><i class="fa-solid fa-arrow-right"></i></div>
+        <div class="hnode"><div class="hn-ic"><i class="fa-regular fa-paper-plane"></i></div><b>Report / newsletter</b><span>Client-ready output in seconds</span></div>
+      </div>
+      <div class="note"><i class="fa-solid fa-bolt"></i> No exports between tools. No re-keying. No lost context between detecting a story and delivering on it.</div>
+    </div>
+  </section>
+
+  <!-- 12 — OUTCOMES / CLOSE -->
+  <section class="slide dark">
+    <div class="kicker"><span class="k-dot"></span> The payoff</div>
+    <h2>Less searching. More strategy.</h2>
+    <p class="lead">The platform handles the triage and the busywork — your team spends its time where it counts.</p>
+    <div class="slide-body">
+      <div class="outs">
+        <div class="out"><div class="big">~1 hr</div><div class="lbl">of daily manual triage, eliminated</div></div>
+        <div class="out"><div class="big">0</div><div class="lbl">Tier 1 stories missed at login</div></div>
+        <div class="out"><div class="big">Seconds</div><div class="lbl">to a client-ready AI report</div></div>
+        <div class="out"><div class="big">1</div><div class="lbl">connected flow, detection to delivery</div></div>
+      </div>
+      <div class="note" style="margin-top:34px;font-size:15px"><i class="fa-solid fa-wand-magic-sparkles"></i> Today's Brief &amp; Activity Tracker — available now in Media Meter.</div>
+    </div>
+  </section>
+
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="brand-foot"><img class="mm-logo sm" src="mmi-logo-purple.svg" alt="Media Meter"></div>
+  <div class="nav-dots" id="dots"></div>
+  <div class="nav-side">
+    <button class="nav-btn" id="prev" aria-label="Previous slide"><i class="fa-solid fa-chevron-left"></i></button>
+    <div class="nav-count" id="count">1 / 12</div>
+    <button class="nav-btn" id="next" aria-label="Next slide"><i class="fa-solid fa-chevron-right"></i></button>
+  </div>
+</div>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+const dotsWrap=document.getElementById('dots');
+const countEl=document.getElementById('count');
+const progress=document.getElementById('progress');
+let cur=0;
+
+// build dots
+slides.forEach((_,i)=>{
+  const b=document.createElement('button');
+  b.className='dot'+(i===0?' on':'');
+  b.setAttribute('aria-label','Go to slide '+(i+1));
+  b.addEventListener('click',()=>show(i));
+  dotsWrap.appendChild(b);
+});
+const dots=[...dotsWrap.children];
+
+function show(i){
+  cur=(i+slides.length)%slides.length;
+  slides.forEach((s,n)=>s.classList.toggle('active',n===cur));
+  dots.forEach((d,n)=>d.classList.toggle('on',n===cur));
+  countEl.textContent=(cur+1)+' / '+slides.length;
+  progress.style.width=((cur+1)/slides.length*100)+'%';
+}
+
+document.getElementById('prev').addEventListener('click',()=>show(cur-1));
+document.getElementById('next').addEventListener('click',()=>show(cur+1));
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();show(cur+1);}
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();show(cur-1);}
+  else if(e.key==='Home'){show(0);}
+  else if(e.key==='End'){show(slides.length-1);}
+});
+
+// basic swipe support
+let tx=null;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+document.addEventListener('touchend',e=>{
+  if(tx===null)return;
+  const dx=e.changedTouches[0].clientX-tx;
+  if(Math.abs(dx)>50) show(cur+(dx<0?1:-1));
+  tx=null;
+});
+
+show(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+/* =========================================================
+   Airtable Design System — colors_and_type.css
+   Tokens for the marketing editorial system + pricing sub-system.
+   ========================================================= */
+
+/* ---------- Web fonts (substitutes for Haas Grotesk / Haas Groot Disp) ---------- */
+/* Inter is the closest open-source substitute for Haas. The pricing sub-system
+   uses Inter Display directly; the editorial system uses Inter as a Haas swap. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@400;500;600&display=swap");
+
+:root {
+  /* ---------- Color · Brand & Accent ---------- */
+  --color-primary: #181d26;          /* near-black — the actual brand action */
+  --color-primary-active: #0d1218;
+
+  /* ---------- Color · Surface ---------- */
+  --color-canvas: #ffffff;
+  --color-surface-soft: #f8fafc;
+  --color-surface-strong: #e0e2e6;
+  --color-surface-dark: #181d26;
+  --color-surface-dark-elevated: #1d1f25;
+  --color-hairline: #dddddd;
+
+  /* ---------- Color · Text ---------- */
+  --color-ink: #181d26;
+  --color-body: #333840;
+  --color-muted: #41454d;
+  --color-border-strong: #9297a0;
+  --color-on-primary: #ffffff;
+  --color-on-dark: #ffffff;
+
+  /* ---------- Color · Signature surfaces (brand voltage) ---------- */
+  --color-signature-coral: #aa2d00;
+  --color-signature-navy: #0a2e0e;
+  --color-signature-cream: #f5e9d4;
+  --color-signature-lilac: #fcab79;
+  --color-signature-mint: #a8d8c4;
+  --color-signature-lime: #f4d35e;
+  --color-signature-pink: #d9a441;
+
+  /* ---------- Color · Semantic ---------- */
+  --color-link: #1b61c9;
+  --color-link-active: #1a3866;
+  --color-info: #254fad;
+  --color-info-border: #458fff;
+  --color-success: #006400;
+  --color-success-border: #39bf45;
+
+  /* ---------- Type · Families ---------- */
+  /* Editorial: Haas Groot Disp / Haas Grotesk → Inter substitute */
+  --font-display: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI",
+                  Roboto, "Helvetica Neue", sans-serif;
+  --font-text:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+                  Roboto, "Helvetica Neue", sans-serif;
+  /* Pricing sub-system: Inter Display (variable, mid-weights) */
+  --font-pricing: "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* ---------- Type · Tokens (size · weight · line-height · tracking) ---------- */
+  --type-display-xl: 500 48px/1.1 var(--font-display);
+  --type-display-lg: 400 40px/1.2 var(--font-display);
+  --type-display-md: 400 32px/1.2 var(--font-display);
+  --type-title-lg:   400 24px/1.35 var(--font-display);
+  --type-title-md:   400 20px/1.5 var(--font-text);
+  --type-title-sm:   500 18px/1.4 var(--font-text);
+  --type-label-md:   500 16px/1.4 var(--font-text);
+  --type-button:     500 16px/1.4 var(--font-text);
+  --type-body-md:    400 14px/1.25 var(--font-text);
+  --type-caption:    500 14px/1.35 var(--font-text);
+  --type-legal:      600 13.12px/1.2 var(--font-text);
+
+  /* Reading line-height for long-form body copy (transcripts, article excerpts) */
+  --lh-reading: 1.7;
+
+  --type-pricing-display:    475 44.8px/1.1 var(--font-pricing);
+  --type-pricing-section:    475 28px/1.2  var(--font-pricing);
+  --type-pricing-card-title: 475 20px/1.3  var(--font-pricing);
+
+  /* ---------- Spacing · Base 4px scale ---------- */
+  --space-xxs: 4px;
+  --space-xs:  8px;
+  --space-sm:  12px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  32px;
+  --space-xxl: 48px;
+  --space-section: 96px;
+
+  /* ---------- Radii ---------- */
+  --radius-xs:   2px;   /* legal / cookie */
+  --radius-sm:   6px;   /* inputs */
+  --radius-md:   10px;  /* content cards */
+  --radius-lg:   12px;  /* primary CTA, signature cards */
+  --radius-pill: 9999px;
+  --radius-full: 9999px;
+
+  /* ---------- Elevation (color-block first, shadow second) ---------- */
+  --shadow-button-rest:  0 1px 2px rgba(27, 97, 201, 0.10);
+  --shadow-button-focus: 0 0 0 2px rgba(27, 97, 201, 0.45);
+
+  /* ---------- Layout constants ---------- */
+  --container-max: 1280px;
+  --container-pad: 48px;
+  --nav-height:    64px;
+}
+
+/* =========================================================
+   Semantic element styles
+   ========================================================= */
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+body {
+  font: var(--type-body-md);
+  color: var(--color-body);
+  background: var(--color-canvas);
+  margin: 0;
+}
+
+h1 { font: var(--type-display-lg); color: var(--color-ink); margin: 0; letter-spacing: -0.01em; }
+h2 { font: var(--type-display-md); color: var(--color-ink); margin: 0; letter-spacing: -0.005em; }
+h3 { font: var(--type-title-lg);   color: var(--color-ink); margin: 0; letter-spacing: 0.12px; }
+h4 { font: var(--type-title-md);   color: var(--color-ink); margin: 0; }
+h5 { font: var(--type-title-sm);   color: var(--color-ink); margin: 0; }
+h6 { font: var(--type-label-md);   color: var(--color-ink); margin: 0; }
+
+p     { font: var(--type-body-md); color: var(--color-body); margin: 0; line-height: 1.7; }
+small { font: var(--type-caption); color: var(--color-muted); }
+
+a { color: var(--color-link); text-decoration: none; }
+a:active { color: var(--color-link-active); }
+
+/* =========================================================
+   Component primitives — utility classes
+   ========================================================= */
+.at-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  font: var(--type-button);
+  padding: 16px 24px;
+  border-radius: var(--radius-lg);
+  border: 0; cursor: pointer; user-select: none;
+  transition: background-color 80ms ease;
+}
+.at-btn--primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: var(--shadow-button-rest);
+}
+.at-btn--primary:active { background: var(--color-primary-active); }
+
+.at-btn--secondary {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+}
+
+.at-btn--pill {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  border-radius: var(--radius-pill);
+  padding: 12px 24px;
+  border: 1px solid var(--color-hairline);
+}
+
+.at-input {
+  font: var(--type-body-md);
+  height: 44px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  outline: none;
+}
+.at-input:focus { border-color: var(--color-info-border); box-shadow: 0 0 0 2px rgba(69,143,255,0.25); }
+
+.at-card { border-radius: var(--radius-md); padding: var(--space-md); background: var(--color-canvas); }
+.at-card--signature-coral  { background: var(--color-signature-coral);  color: var(--color-on-dark);   border-radius: var(--radius-lg); padding: var(--space-xxl); }
+.at-card--signature-forest { background: var(--color-signature-navy); color: var(--color-on-dark);   border-radius: var(--radius-lg); padding: var(--space-xxl); }
+.at-card--dark             { background: var(--color-surface-dark);     color: var(--color-on-dark);   border-radius: var(--radius-lg); padding: var(--space-xxl); }
+.at-card--cream            { background: var(--color-signature-cream);  color: var(--color-ink);       border-radius: var(--radius-md); padding: var(--space-lg); }
+.at-card--soft             { background: var(--color-surface-soft);     color: var(--color-ink);       border-radius: var(--radius-lg); padding: var(--space-xl); }

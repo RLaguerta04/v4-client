@@ -1,0 +1,570 @@
+/* =========================================================
+   Figma-palette variant — colors_and_type_figma.css
+   Same token names as colors_and_type.css; values remapped to
+   the Figma marketing design system documented in design.md.
+   Monochrome chrome (pure black / white) + pastel color blocks.
+   ========================================================= */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@400;500;600&display=swap");
+
+:root {
+  /* ---------- Color · Brand & Accent ----------
+     Figma: monochrome primary. Black on white carries every CTA. */
+  --color-primary: #000000;
+  --color-primary-active: #2a2a2a;
+
+  /* ---------- Color · Surface ---------- */
+  --color-canvas: #ffffff;
+  --color-surface-soft: #f5f4f0;          /* warm-tinted off-white tile */
+  --color-surface-strong: #e7e5df;
+  --color-surface-dark: #000000;          /* inverse-canvas / marquee / footer */
+  --color-surface-dark-elevated: #111111;
+  --color-hairline: #e5e5e5;
+
+  /* ---------- Color · Text ----------
+     Figma rule: body hierarchy comes from weight, not opacity.
+     All body text is near-black; no mid-gray role. */
+  --color-ink: #000000;
+  --color-body: #000000;
+  --color-muted: #6b6b6b;                 /* retained for taxonomy / captions only */
+  --color-border-strong: #8a8a8a;
+  --color-on-primary: #ffffff;
+  --color-on-dark: #ffffff;
+
+  /* ---------- Color · Signature surfaces ----------
+     Remapped to Figma's pastel color-block family.
+     Deeper saturation chosen so white text + dark UI read with strong contrast. */
+  --color-signature-coral:   #e94f37;     /* block-coral  — deep enough to carry white type */
+  --color-signature-navy:  #15123d;     /* block-navy   — deeper indigo, more contrast vs. lilac */
+  --color-signature-cream:   #fde2b6;     /* block-cream  — warmer, more saturated */
+  --color-signature-lilac:   #b9a4f7;     /* block-lilac  — deeper lavender for hero block */
+  --color-signature-mint:    #86d9a8;     /* block-mint   — true mint, not wash */
+  --color-signature-lime:  #c1e84a;     /* block-lime   — Figma signature lime */
+  --color-signature-pink: #f9a8b9;     /* block-pink   — deeper rose-pink */
+
+  /* ---------- Color · Semantic ---------- */
+  --color-link: #000000;                  /* links are ink — weight, not color */
+  --color-link-active: #000000;
+  --color-info: #1e1b4b;
+  --color-info-border: #6c5ce7;
+  --color-success: #1d7d3a;
+  --color-success-border: #22c55e;
+  --color-accent-magenta: #e62a8b;        /* single-shot promo CTA color */
+
+  /* ---------- Type · Families ----------
+     Inter / Inter Tight as documented substitutes for figmaSans. */
+  --font-display: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI",
+                  Roboto, "Helvetica Neue", sans-serif;
+  --font-text:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+                  Roboto, "Helvetica Neue", sans-serif;
+  --font-pricing: "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* ---------- Type · Tokens ---------- */
+  --type-display-xxl: 500 64px/1.05 var(--font-display);
+  --type-display-xl: 500 48px/1.1 var(--font-display);
+  --type-display-lg: 400 40px/1.15 var(--font-display);
+  --type-display-md: 400 32px/1.2 var(--font-display);
+  --type-title-lg:   400 24px/1.3 var(--font-display);
+  --type-title-md:   500 20px/1.4 var(--font-text);
+  --type-title-sm:   500 18px/1.4 var(--font-text);
+  --type-label-md:   500 16px/1.4 var(--font-text);
+  --type-button:     500 16px/1.4 var(--font-text);
+  --type-body-lg:    400 16px/1.6 var(--font-text);
+  --type-body-md:    400 15px/1.6 var(--font-text);
+  --type-body-sm:    400 14px/1.55 var(--font-text);
+  --type-caption:    500 13px/1.4 var(--font-text);
+  --type-legal:      400 12px/1.4 var(--font-text);
+  --type-eyebrow:    500 12px/1 var(--font-text);
+
+  --type-pricing-display:    475 44.8px/1.1 var(--font-pricing);
+  --type-pricing-section:    475 28px/1.2  var(--font-pricing);
+  --type-pricing-card-title: 475 20px/1.3  var(--font-pricing);
+
+  /* ---------- Spacing ---------- */
+  --space-xxs: 4px;
+  --space-xs:  8px;
+  --space-sm:  12px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  32px;
+  --space-xxl: 48px;
+  --space-section: 96px;
+
+  /* ---------- Radii ---------- */
+  --radius-xs:   2px;
+  --radius-sm:   6px;
+  --radius-md:   8px;          /* Figma image / input frames */
+  --radius-lg:   24px;         /* Figma color-block / large containers */
+  --radius-pill: 9999px;       /* every CTA */
+  --radius-full: 9999px;
+
+  /* ---------- Elevation ---------- */
+  --shadow-button-rest:  none;                         /* Figma: shadow-light */
+  --shadow-button-focus: 0 0 0 3px rgba(0,0,0,0.18);
+
+  /* ---------- Layout ---------- */
+  --container-max: 1280px;
+  --container-pad: 48px;
+  --nav-height:    64px;
+}
+
+/* =========================================================
+   Semantic element styles
+   ========================================================= */
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+body {
+  font: var(--type-body-md);
+  color: var(--color-body);
+  background: var(--color-canvas);
+  margin: 0;
+}
+
+h1 { font: var(--type-display-lg); color: var(--color-ink); margin: 0; letter-spacing: -0.01em; }
+h2 { font: var(--type-display-md); color: var(--color-ink); margin: 0; letter-spacing: -0.005em; }
+h3 { font: var(--type-title-lg);   color: var(--color-ink); margin: 0; letter-spacing: 0.12px; }
+h4 { font: var(--type-title-md);   color: var(--color-ink); margin: 0; }
+h5 { font: var(--type-title-sm);   color: var(--color-ink); margin: 0; }
+h6 { font: var(--type-label-md);   color: var(--color-ink); margin: 0; }
+
+p     { font: var(--type-body-md); color: var(--color-body); margin: 0; }
+small { font: var(--type-caption); color: var(--color-muted); }
+
+a { color: var(--color-link); text-decoration: none; }
+a:active { color: var(--color-link-active); }
+
+/* =========================================================
+   Component primitives — utility classes
+   ========================================================= */
+.at-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  font: var(--type-button);
+  padding: 12px 24px;
+  border-radius: var(--radius-pill);     /* Figma: every CTA is a pill */
+  border: 0; cursor: pointer; user-select: none;
+  transition: background-color 80ms ease, transform 120ms ease;
+}
+.at-btn--primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: var(--shadow-button-rest);
+}
+.at-btn--primary:active { background: var(--color-primary-active); transform: scale(0.98); }
+
+.at-btn--secondary {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-pill);
+}
+
+.at-btn--pill {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  border-radius: var(--radius-pill);
+  padding: 12px 24px;
+  border: 1px solid var(--color-hairline);
+}
+
+.at-input {
+  font: var(--type-body-md);
+  height: 44px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  outline: none;
+}
+.at-input:focus { border-color: var(--color-ink); box-shadow: 0 0 0 2px rgba(0,0,0,0.12); }
+
+.at-card { border-radius: var(--radius-md); padding: var(--space-md); background: var(--color-canvas); }
+.at-card--signature-coral  { background: var(--color-signature-coral);  color: var(--color-ink);     border-radius: var(--radius-lg); padding: var(--space-xxl); }
+.at-card--signature-forest { background: var(--color-signature-navy); color: var(--color-on-dark); border-radius: var(--radius-lg); padding: var(--space-xxl); }
+.at-card--dark             { background: var(--color-surface-dark);     color: var(--color-on-dark); border-radius: var(--radius-lg); padding: var(--space-xxl); }
+.at-card--cream            { background: var(--color-signature-cream);  color: var(--color-ink);     border-radius: var(--radius-lg); padding: var(--space-lg); }
+.at-card--soft             { background: var(--color-surface-soft);     color: var(--color-ink);     border-radius: var(--radius-lg); padding: var(--space-xl); }
+
+/* =========================================================
+   Figma-palette overrides for inline styles in Website 1.html
+   that hardcode the old coral as literal rgba(170,45,0,…).
+   These need !important to win over the page's inline <style>.
+   ========================================================= */
+.mm-app-tier--1 { background: var(--color-signature-coral) !important; color: #fff !important; }
+.mm-app-tier--2 { background: rgba(233, 79, 55, 0.78) !important; color: #fff !important; }
+.mm-app-tier--3 { background: rgba(233, 79, 55, 0.55) !important; color: #fff !important; }
+.mm-app-tier--4 { background: rgba(233, 79, 55, 0.32) !important; color: #fff !important; }
+
+/* Search-pulse dot — keep aligned with new coral */
+.mm-app-search { color: var(--color-signature-coral) !important; }
+.mm-app-search::before { background: var(--color-signature-coral) !important; }
+
+/* Lift the table shell visually off the deeper lilac/mint blocks */
+.mm-app-stage,
+.mm-app-shell {
+  box-shadow:
+    0 2px 4px rgba(15, 12, 41, 0.04),
+    0 24px 48px rgba(15, 12, 41, 0.18),
+    0 48px 96px rgba(15, 12, 41, 0.12) !important;
+}
+
+/* AI capabilities — Card 2 (mini dashboard) — muted neutral that recedes
+   so the warm Card 1 and multi-line Card 3 carry the visual weight. */
+.mm-mock--dash { --accent: #6b6973 !important; }
+
+/* Trending narratives — dividers inside the cream side-card need a tonally
+   darker line than the universal --color-hairline (#e5e5e5), which gets lost
+   against the cream surface. */
+.mm-sb-card--cream .mm-trending-item {
+  border-top-color: rgba(0, 0, 0, 0.16) !important;
+}
+
+/* Story cards — replace the heavy black-border hover with a subtle lift:
+   soft shadow + small scale. Border stays as the resting hairline. */
+.mm-story {
+  transition:
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform  220ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 160ms ease !important;
+  will-change: transform;
+}
+.mm-story:hover {
+  border-color: var(--color-hairline) !important;
+  transform: scale(1.008);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.02),
+    0 6px 14px rgba(0, 0, 0, 0.04),
+    0 14px 32px rgba(0, 0, 0, 0.03);
+}
+
+/* =========================================================
+   Platform isometric cards — staggered float-in on scroll.
+   Cards rise from below + fade in the first time .mm-illo-stack
+   enters the viewport. Parent stack keeps its 3D perspective;
+   we only translate the children, so the isometric tilt is preserved.
+   ========================================================= */
+.mm-illo-card {
+  opacity: 0;
+  transform: translateY(60px);
+  transition:
+    opacity   800ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 800ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.mm-illo-stack.is-visible .mm-illo-card {
+  opacity: 1;
+  transform: translateY(0);
+}
+.mm-illo-stack.is-visible .mm-illo-card:nth-child(1) { transition-delay:   0ms; }
+.mm-illo-stack.is-visible .mm-illo-card:nth-child(2) { transition-delay: 120ms; }
+.mm-illo-stack.is-visible .mm-illo-card:nth-child(3) { transition-delay: 240ms; }
+.mm-illo-stack.is-visible .mm-illo-card:nth-child(4) { transition-delay: 360ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-illo-card { opacity: 1; transform: none; transition: none; }
+}
+
+/* =========================================================
+   Reports & Analytics table — row reveal + bar fill on scroll.
+   Phase 1: rows fade & slide in (70ms stagger).
+   Phase 2: share-of-voice bars fill from 0 to inline width
+            (kicks in ~300ms after each row, so each row gets
+            "drawn in" then "populated").
+   All animation CSS is gated behind prefers-reduced-motion:no-preference
+   so reduced-motion users get the table in its rest state immediately.
+   ========================================================= */
+@media (prefers-reduced-motion: no-preference) {
+  .mm-plat-tbl__tbl tbody tr {
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+      opacity   520ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+  }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(1) { transition-delay:   0ms; }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(2) { transition-delay:  70ms; }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(3) { transition-delay: 140ms; }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(4) { transition-delay: 210ms; }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(5) { transition-delay: 280ms; }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(6) { transition-delay: 350ms; }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(7) { transition-delay: 420ms; }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(8) { transition-delay: 490ms; }
+
+  /* Bars: held at width:0 until parent is visible, then animate to inline width */
+  .mm-plat-tbl__tbl .bar span {
+    transition: width 900ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .mm-plat-tbl:not(.is-visible) .mm-plat-tbl__tbl .bar span {
+    width: 0 !important;
+  }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(1) .bar span { transition-delay: 300ms; }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(2) .bar span { transition-delay: 370ms; }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(3) .bar span { transition-delay: 440ms; }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(4) .bar span { transition-delay: 510ms; }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(5) .bar span { transition-delay: 580ms; }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(6) .bar span { transition-delay: 650ms; }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(7) .bar span { transition-delay: 720ms; }
+  .mm-plat-tbl.is-visible .mm-plat-tbl__tbl tbody tr:nth-child(8) .bar span { transition-delay: 790ms; }
+
+  /* =========================================================
+     Briefings panel — AI-surfacing reveal for the moodboard.
+     Each insight card fades + slides into place (220ms stagger),
+     and its green "AI-surfaced" dot pulses on arrival.
+     ========================================================= */
+  .mm-plat-mood__card {
+    opacity: 0;
+    transform: translateY(16px);
+    transition:
+      opacity   600ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+  }
+  .mm-plat-mood.is-visible .mm-plat-mood__card {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .mm-plat-mood.is-visible .mm-plat-mood__card:nth-child(1) { transition-delay:   0ms; }
+  .mm-plat-mood.is-visible .mm-plat-mood__card:nth-child(2) { transition-delay: 220ms; }
+  .mm-plat-mood.is-visible .mm-plat-mood__card:nth-child(3) { transition-delay: 440ms; }
+  .mm-plat-mood.is-visible .mm-plat-mood__card:nth-child(4) { transition-delay: 660ms; }
+
+  /* Green "AI-surfaced" dot ripples on arrival — runs 2 cycles, then settles */
+  @keyframes mood-dot-ping {
+      0% { box-shadow: 0 0 0 2px rgba(57, 191, 69, 0.16); }
+     50% { box-shadow: 0 0 0 7px rgba(57, 191, 69, 0.42); }
+    100% { box-shadow: 0 0 0 2px rgba(57, 191, 69, 0.16); }
+  }
+  .mm-plat-mood.is-visible .mm-plat-mood__card-tag::before {
+    animation: mood-dot-ping 900ms cubic-bezier(0.4, 0, 0.6, 1) 2;
+  }
+  .mm-plat-mood.is-visible .mm-plat-mood__card:nth-child(1) .mm-plat-mood__card-tag::before { animation-delay: 250ms; }
+  .mm-plat-mood.is-visible .mm-plat-mood__card:nth-child(2) .mm-plat-mood__card-tag::before { animation-delay: 470ms; }
+  .mm-plat-mood.is-visible .mm-plat-mood__card:nth-child(3) .mm-plat-mood__card-tag::before { animation-delay: 690ms; }
+  .mm-plat-mood.is-visible .mm-plat-mood__card:nth-child(4) .mm-plat-mood__card-tag::before { animation-delay: 910ms; }
+
+  /* =========================================================
+     Hero slide rotator — content cascade on each activation.
+     Plays every time a slide becomes .is-active. Resets when
+     the slide moves to .is-below or .is-exiting (CSS transitions
+     re-fire on class change, so no JS needed).
+     ========================================================= */
+
+  /* Shared keyframes for hero-slide content reveal.
+     Using @keyframes (not transitions) because slide 1 starts with
+     .is-active already in the HTML — transitions need a state change
+     to fire, but animations play every time the rule is applied. */
+  @keyframes hero-row-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes hero-card-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes hero-bar-fill {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+
+  /* ----- Slide 1 (Top brands table, data-bg="peach") -----
+     Rows slide up + fade in, 40ms stagger across 12 rows. */
+  .mm-app-slide[data-bg="peach"] .mm-app-tbl tbody tr {
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+  .mm-app-slide[data-bg="peach"].is-active .mm-app-tbl tbody tr {
+    animation: hero-row-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .mm-app-slide[data-bg="peach"].is-active .mm-app-tbl tbody tr:nth-child(1)  { animation-delay: 350ms; }
+  .mm-app-slide[data-bg="peach"].is-active .mm-app-tbl tbody tr:nth-child(2)  { animation-delay: 390ms; }
+  .mm-app-slide[data-bg="peach"].is-active .mm-app-tbl tbody tr:nth-child(3)  { animation-delay: 430ms; }
+  .mm-app-slide[data-bg="peach"].is-active .mm-app-tbl tbody tr:nth-child(4)  { animation-delay: 470ms; }
+  .mm-app-slide[data-bg="peach"].is-active .mm-app-tbl tbody tr:nth-child(5)  { animation-delay: 510ms; }
+  .mm-app-slide[data-bg="peach"].is-active .mm-app-tbl tbody tr:nth-child(6)  { animation-delay: 550ms; }
+  .mm-app-slide[data-bg="peach"].is-active .mm-app-tbl tbody tr:nth-child(7)  { animation-delay: 590ms; }
+  .mm-app-slide[data-bg="peach"].is-active .mm-app-tbl tbody tr:nth-child(8)  { animation-delay: 630ms; }
+  .mm-app-slide[data-bg="peach"].is-active .mm-app-tbl tbody tr:nth-child(9)  { animation-delay: 670ms; }
+  .mm-app-slide[data-bg="peach"].is-active .mm-app-tbl tbody tr:nth-child(10) { animation-delay: 710ms; }
+  .mm-app-slide[data-bg="peach"].is-active .mm-app-tbl tbody tr:nth-child(11) { animation-delay: 750ms; }
+  .mm-app-slide[data-bg="peach"].is-active .mm-app-tbl tbody tr:nth-child(12) { animation-delay: 790ms; }
+
+  /* ----- Slide 2 (Moodboard, data-bg="cream") -----
+     4 insight cards stamp in. Green AI-surfaced dots pulse on arrival. */
+  .mm-app-slide[data-bg="cream"] .mm-mood__grid .mm-card {
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+  .mm-app-slide[data-bg="cream"].is-active .mm-mood__grid .mm-card {
+    animation: hero-card-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .mm-app-slide[data-bg="cream"].is-active .mm-mood__grid .mm-card:nth-child(1) { animation-delay: 400ms; }
+  .mm-app-slide[data-bg="cream"].is-active .mm-mood__grid .mm-card:nth-child(2) { animation-delay: 550ms; }
+  .mm-app-slide[data-bg="cream"].is-active .mm-mood__grid .mm-card:nth-child(3) { animation-delay: 700ms; }
+  .mm-app-slide[data-bg="cream"].is-active .mm-mood__grid .mm-card:nth-child(4) { animation-delay: 850ms; }
+
+  /* Slide 2 green-dot pulse on arrival (the .mm-card__tag-dot has
+     a 3px ring at rest; we ripple it out to 8px and back, twice). */
+  @keyframes hero-dot-ping {
+      0% { box-shadow: 0 0 0 3px rgba(57, 191, 69, 0.16); }
+     50% { box-shadow: 0 0 0 8px rgba(57, 191, 69, 0.42); }
+    100% { box-shadow: 0 0 0 3px rgba(57, 191, 69, 0.16); }
+  }
+  .mm-app-slide[data-bg="cream"].is-active .mm-card__tag-dot {
+    animation: hero-dot-ping 900ms cubic-bezier(0.4, 0, 0.6, 1) 2;
+  }
+  .mm-app-slide[data-bg="cream"].is-active .mm-mood__grid .mm-card:nth-child(1) .mm-card__tag-dot { animation-delay: 500ms; }
+  .mm-app-slide[data-bg="cream"].is-active .mm-mood__grid .mm-card:nth-child(2) .mm-card__tag-dot { animation-delay: 650ms; }
+  .mm-app-slide[data-bg="cream"].is-active .mm-mood__grid .mm-card:nth-child(3) .mm-card__tag-dot { animation-delay: 800ms; }
+  .mm-app-slide[data-bg="cream"].is-active .mm-mood__grid .mm-card:nth-child(4) .mm-card__tag-dot { animation-delay: 950ms; }
+
+  /* ----- Slide 3 (Share of voice, data-bg="mint") -----
+     Rows fade + slide in (50ms stagger), then share-of-voice bars
+     fill from scaleX(0) to scaleX(1) of their inline width. */
+  .mm-app-slide[data-bg="mint"] .mm-app-tbl tbody tr {
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr {
+    animation: hero-row-in 440ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(1) { animation-delay: 350ms; }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(2) { animation-delay: 400ms; }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(3) { animation-delay: 450ms; }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(4) { animation-delay: 500ms; }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(5) { animation-delay: 550ms; }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(6) { animation-delay: 600ms; }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(7) { animation-delay: 650ms; }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(8) { animation-delay: 700ms; }
+
+  /* Bars: scaleX(0)→scaleX(1) on activation. The inline width stays put;
+     we just visually clamp the fill to nothing at rest, then grow it.
+     transform-origin: left = bar grows from left edge. */
+  .mm-app-slide[data-bg="mint"] .mm-sovbar > span {
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+  .mm-app-slide[data-bg="mint"].is-active .mm-sovbar > span {
+    animation: hero-bar-fill 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(1) .mm-sovbar > span { animation-delay: 600ms; }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(2) .mm-sovbar > span { animation-delay: 650ms; }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(3) .mm-sovbar > span { animation-delay: 700ms; }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(4) .mm-sovbar > span { animation-delay: 750ms; }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(5) .mm-sovbar > span { animation-delay: 800ms; }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(6) .mm-sovbar > span { animation-delay: 850ms; }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(7) .mm-sovbar > span { animation-delay: 900ms; }
+  .mm-app-slide[data-bg="mint"].is-active .mm-app-tbl tbody tr:nth-child(8) .mm-sovbar > span { animation-delay: 950ms; }
+
+  /* =========================================================
+     Brand Rankings (standalone "Who owns the conversation" table)
+     Same row cascade as the hero, fired by IntersectionObserver
+     when the table scrolls into view. One-shot.
+     ========================================================= */
+  .mm-rankings-shell .mm-app-tbl tbody tr {
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+  .mm-rankings-shell.is-visible .mm-app-tbl tbody tr {
+    animation: hero-row-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .mm-rankings-shell.is-visible .mm-app-tbl tbody tr:nth-child(1)  { animation-delay:   0ms; }
+  .mm-rankings-shell.is-visible .mm-app-tbl tbody tr:nth-child(2)  { animation-delay:  40ms; }
+  .mm-rankings-shell.is-visible .mm-app-tbl tbody tr:nth-child(3)  { animation-delay:  80ms; }
+  .mm-rankings-shell.is-visible .mm-app-tbl tbody tr:nth-child(4)  { animation-delay: 120ms; }
+  .mm-rankings-shell.is-visible .mm-app-tbl tbody tr:nth-child(5)  { animation-delay: 160ms; }
+  .mm-rankings-shell.is-visible .mm-app-tbl tbody tr:nth-child(6)  { animation-delay: 200ms; }
+  .mm-rankings-shell.is-visible .mm-app-tbl tbody tr:nth-child(7)  { animation-delay: 240ms; }
+  .mm-rankings-shell.is-visible .mm-app-tbl tbody tr:nth-child(8)  { animation-delay: 280ms; }
+  .mm-rankings-shell.is-visible .mm-app-tbl tbody tr:nth-child(9)  { animation-delay: 320ms; }
+  .mm-rankings-shell.is-visible .mm-app-tbl tbody tr:nth-child(10) { animation-delay: 360ms; }
+  .mm-rankings-shell.is-visible .mm-app-tbl tbody tr:nth-child(11) { animation-delay: 400ms; }
+  .mm-rankings-shell.is-visible .mm-app-tbl tbody tr:nth-child(12) { animation-delay: 440ms; }
+}
+
+/* =========================================================
+   Audience cards (Solutions by team) — reverse hover behavior
+   for all cards EXCEPT the first (coral / Client portfolio).
+   Default for non-coral cards:  content visible, mock hidden.
+   On hover for non-coral cards: mock revealed, content hides.
+   First card (.mm-aud--coral) keeps the original default
+   (mock visible, content on hover) — no rules needed.
+   ========================================================= */
+.mm-aud:not(.mm-aud--coral) .mm-aud__mock {
+  opacity: 0;
+  transform: scale(0.96);
+  pointer-events: none;
+}
+.mm-aud:not(.mm-aud--coral) .mm-aud__content {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.mm-aud:not(.mm-aud--coral):hover .mm-aud__mock {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+.mm-aud:not(.mm-aud--coral):hover .mm-aud__content {
+  opacity: 0;
+  transform: translateY(16px);
+  pointer-events: none;
+}
+
+/* =========================================================
+   Typography — prevent orphaned trailing words on platform
+   panel titles ("The real-time monitoring engine." breaking
+   to leave "engine." alone on line 2). text-wrap: balance
+   redistributes line breaks so each line has comparable length.
+   ========================================================= */
+.mm-plat-panel__title {
+  text-wrap: balance;
+}
+
+/* =========================================================
+   Competitor comparison table — contrast fix.
+   Original CSS uses --color-muted (#6b6b6b) for headers and
+   sub-labels, and --color-signature-coral for emphasis text.
+   Both fail or barely pass AA on the table's light surface.
+   Following design.md's "weight, not opacity" principle, use
+   ink for all text and let font-weight carry hierarchy.
+   ========================================================= */
+.mm-cmp th {
+  color: var(--color-ink) !important;
+  font-weight: 600 !important;
+  opacity: 0.72;            /* slight tone-down but still ~6:1 vs canvas */
+}
+.mm-cmp td {
+  color: var(--color-ink) !important;
+}
+.mm-cmp .cmp-vs {
+  color: var(--color-ink) !important;
+  font-weight: 600 !important;
+}
+.mm-cmp .cmp-vs span {
+  color: var(--color-ink) !important;
+  opacity: 0.6;             /* sub-label muted via opacity, ~6:1 */
+  font-weight: 400 !important;
+}
+.mm-cmp .cmp-mmi strong {
+  /* Deeper coral that passes AA on white. The native
+     --color-signature-coral (#e94f37) hits ~4.04:1 — borderline.
+     This shade hits ~6.1:1. */
+  color: #a8331f !important;
+  font-weight: 700 !important;
+}
+
+/* Audience-card CTA (Solutions by team) — remove the hairline above
+   "Explore X tools" and bump the weight so the link reads as a bold
+   confident anchor rather than a footnote. */
+.mm-aud__cta {
+  border-top: 0 !important;
+  padding-top: 0 !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+
