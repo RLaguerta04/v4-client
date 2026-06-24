@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -38,8 +38,8 @@
       <div class="nav-i" id="nav-mentions" data-label="Mentions" onclick="goPage('mentions')"><i data-lucide="message-circle" class="icon-lg"></i><span class="nav-label">Mentions</span></div>
       <div class="nav-i" id="nav-tracker" data-label="Activity Tracker" onclick="goPage('tracker')"><i data-lucide="megaphone" class="icon-lg"></i><span class="nav-label">Activity Tracker</span><span class="nav-badge-at" id="nb-tracker">2</span></div>
       <div class="nav-i" id="nav-dashboard" data-label="Dashboard" onclick="goPage('dashboard')"><i data-lucide="layout-dashboard" class="icon-lg"></i><span class="nav-label">Dashboard</span></div>
-      <div class="nav-i act" id="nav-publishers" data-label="Publishers" onclick="goPage('publishers')"><i data-lucide="building-2" class="icon-lg"></i><span class="nav-label">Publishers</span></div>
-      <div class="nav-i" id="nav-authors" data-label="Authors" onclick="goPage('authors')"><i data-lucide="user" class="icon-lg"></i><span class="nav-label">Authors</span></div>
+      <div class="nav-i" id="nav-publishers" data-label="Publishers" onclick="goPage('publishers')"><i data-lucide="building-2" class="icon-lg"></i><span class="nav-label">Publishers</span></div>
+      <div class="nav-i act" id="nav-authors" data-label="Authors" onclick="goPage('authors')"><i data-lucide="user" class="icon-lg"></i><span class="nav-label">Authors</span></div>
       <div class="nav-i" id="nav-categories" data-label="Categories" onclick="goPage('categories')"><i data-lucide="folder" class="icon-lg"></i><span class="nav-label">Categories</span></div>
     </nav>
 
@@ -81,8 +81,8 @@
   <!-- ── MAIN ── -->
   <div class="main">
 
-    <!-- PAGE: PUBLISHERS -->
-    <div class="page" id="page-publishers">
+    <!-- PAGE: AUTHORS -->
+    <div class="page" id="page-authors">
       <div class="header-card" style="padding:12px 24px">
         <!-- FILTERS -->
         <div class="filter-bar">
@@ -105,26 +105,26 @@
           <div class="fc-icon-btn"><i data-lucide="bookmark" class="icon-lg"></i></div>
           <div class="fc-icon-btn"><i data-lucide="filter" class="icon-lg"></i></div>
           <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
-            <select class="pub-sort" onchange="setPubSort(this.value)" aria-label="Sort publishers">
-              <option value="score">Highest Pub Score</option>
+            <select class="pub-sort" onchange="setAuthorSort(this.value)" aria-label="Sort authors">
+              <option value="score">Highest Author Score</option>
               <option value="count">Most Articles</option>
               <option value="sv">Highest Total SValue</option>
               <option value="az">Name (A&ndash;Z)</option>
             </select>
-            <button class="btn-primary" onclick="showTrackerToast('Publishers exported as CSV')"><i data-lucide="download" class="icon-lg"></i> Export</button>
+            <button class="btn-primary" onclick="showTrackerToast('Authors exported as CSV')"><i data-lucide="download" class="icon-lg"></i> Export</button>
             <div class="fc-search">
               <i data-lucide="search" class="fc-search-icon"></i>
-              <input type="text" placeholder="Search publishers…" oninput="setPubSearch(this.value)">
+              <input type="text" placeholder="Search authors…" oninput="setAuthorSearch(this.value)">
               <div class="fc-search-kbd"><kbd>⌘</kbd><kbd>K</kbd></div>
             </div>
           </div>
         </div>
       </div>
       <div class="page-inner">
-        <div class="pub-grid" id="pub-grid"></div>
+        <div class="pub-grid" id="author-grid"></div>
         <div class="tbl-footer">
-          <div class="pg-info pub-pg-info" id="pub-pg-info"></div>
-          <div class="pg-btns" id="pub-pg-btns"></div>
+          <div class="pg-info pub-pg-info" id="author-pg-info"></div>
+          <div class="pg-btns" id="author-pg-btns"></div>
         </div>
       </div>
     </div>

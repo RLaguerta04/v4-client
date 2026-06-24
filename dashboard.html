@@ -39,8 +39,8 @@
       <div class="nav-i" id="nav-tracker" data-label="Activity Tracker" onclick="goPage('tracker')"><i data-lucide="megaphone" class="icon-lg"></i><span class="nav-label">Activity Tracker</span><span class="nav-badge-at" id="nb-tracker">2</span></div>
       <div class="nav-i act" id="nav-dashboard" data-label="Dashboard" onclick="goPage('dashboard')"><i data-lucide="layout-dashboard" class="icon-lg"></i><span class="nav-label">Dashboard</span></div>
       <div class="nav-i" id="nav-publishers" data-label="Publishers" onclick="goPage('publishers')"><i data-lucide="building-2" class="icon-lg"></i><span class="nav-label">Publishers</span></div>
-      <div class="nav-i" data-label="Authors"><i data-lucide="user" class="icon-lg"></i><span class="nav-label">Authors</span></div>
-      <div class="nav-i" data-label="Categories"><i data-lucide="folder" class="icon-lg"></i><span class="nav-label">Categories</span></div>
+      <div class="nav-i" id="nav-authors" data-label="Authors" onclick="goPage('authors')"><i data-lucide="user" class="icon-lg"></i><span class="nav-label">Authors</span></div>
+      <div class="nav-i" id="nav-categories" data-label="Categories" onclick="goPage('categories')"><i data-lucide="folder" class="icon-lg"></i><span class="nav-label">Categories</span></div>
     </nav>
 
     <!-- User profile -->
@@ -82,15 +82,6 @@
   <div class="main">
     <!-- PAGE: DASHBOARD -->
     <div class="page db-page" id="page-dashboard">
-      <!-- Top bar -->
-      <div class="db-topbar">
-        <div class="db-topbar-left">
-          <div class="db-topbar-brand">MediaWatch <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></div>
-          <button class="db-compare-btn">Compare Categories/Buckets</button>
-        </div>
-        <button class="db-export-pdf-btn"><i data-lucide="file-text" class="icon-sm"></i> Export to PDF</button>
-      </div>
-
       <!-- Filter bar -->
       <div class="db-filterbar">
         <div class="db-fb-pill db-fb-dropdown">
@@ -116,13 +107,17 @@
         </div>
         <div class="db-fb-icon-btn" title="Saved views"><i data-lucide="bookmark" class="icon-sm"></i></div>
         <div class="db-fb-icon-btn" title="Advanced filter"><i data-lucide="filter" class="icon-sm"></i></div>
-        <div class="db-fb-search">
-          <i data-lucide="search" class="icon-sm" style="color:var(--muted)"></i>
-          <input type="text" placeholder="Search Articles" />
+        <div class="fc-search">
+          <i data-lucide="search" class="fc-search-icon"></i>
+          <input type="text" placeholder="Search articles, topics, sources…">
+          <div class="fc-search-kbd"><kbd>⌘</kbd><kbd>K</kbd></div>
         </div>
+        <button class="db-compare-btn" title="Compare Categories/Buckets">Compare Categories/Buckets</button>
+        <button class="db-export-pdf-btn" title="Export to PDF"><i data-lucide="file-text" class="icon-sm"></i> <span class="db-btn-label">Export to PDF</span></button>
       </div>
 
       <div class="db-content">
+      <div class="db-content-inner">
       <!-- KPI Cards — 2 rows × 4 columns -->
       <div class="db-kpi-grid">
         <!-- Row 1 -->
@@ -185,63 +180,163 @@
         </div>
       </div>
 
-      <!-- Row 1: Trend + Sentiment Donut -->
-      <div class="db-row db-row-7-3">
-        <div class="db-card">
-          <div class="db-card-hd"><span class="db-card-title">Coverage Trend</span><span class="db-card-sub">Daily mention volume · May 18–25</span></div>
-          <div class="db-chart-wrap" id="db-trend" style="height:240px"></div>
-        </div>
-        <div class="db-card">
-          <div class="db-card-hd"><span class="db-card-title">Sentiment Split</span><span class="db-card-sub">By article count</span></div>
-          <div class="db-chart-wrap" id="db-sentiment" style="height:240px"></div>
+      <!-- Timeline (composed chart) -->
+      <div class="db-row db-tl-row">
+        <div class="db-card" id="db-timeline-card">
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Timeline <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore db-tl-insights" onclick="openTimelineInsights()"><i data-lucide="sparkles"></i> Insights</button>
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-tl-ranges" id="db-tl-ranges">
+            <button class="db-tl-range" data-r="3" onclick="setTimelineRange(3)">3D</button>
+            <button class="db-tl-range on" data-r="7" onclick="setTimelineRange(7)">7D</button>
+            <button class="db-tl-range" data-r="15" onclick="setTimelineRange(15)">15D</button>
+            <button class="db-tl-range" data-r="30" onclick="setTimelineRange(30)">1M</button>
+          </div>
+          <div class="db-chart-wrap" id="db-timeline" style="height:420px"></div>
         </div>
       </div>
 
-      <!-- Row 2: Media Breakdown Bar + Topic Breakdown -->
+      <!-- Media Exposure + Topic Emphasis (paired share bars) -->
+      <div class="db-row db-row-5-5">
+        <div class="db-card" id="db-exposure-card">
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Media Exposure (Article Count) <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore db-tl-insights" onclick="openExposureInsights()"><i data-lucide="sparkles"></i> Insights</button>
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-chart-wrap" id="db-exposure" style="height:110px"></div>
+        </div>
+        <div class="db-card" id="db-emphasis-card">
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Topic Emphasis <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore db-tl-insights" onclick="openEmphasisInsights()"><i data-lucide="sparkles"></i> Insights</button>
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-chart-wrap" id="db-emphasis" style="height:110px"></div>
+        </div>
+      </div>
+
+      <!-- Channel summary cards (populated by initDashboard) -->
+      <div class="db-row"><div class="db-ch-grid" id="db-channels"></div></div>
+
+      <!-- Tonality Distribution (donut + stacked time-bar) -->
+      <div class="db-row">
+        <div class="db-card">
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Tonality Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-ton-legend" id="db-ton-legend"></div>
+          <div class="db-tonality">
+            <div class="db-chart-wrap db-ton-donut" id="db-tonality-donut" style="height:280px"></div>
+            <div class="db-chart-wrap db-ton-bar" id="db-tonality-bar" style="height:280px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Frequency Distribution (story-value histogram) -->
+      <div class="db-row">
+        <div class="db-card">
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Frequency Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-chart-wrap" id="db-frequency" style="height:360px"></div>
+        </div>
+      </div>
+
+      <!-- Publisher Score + Author Story Value (paired distributions) -->
       <div class="db-row db-row-5-5">
         <div class="db-card">
-          <div class="db-card-hd"><span class="db-card-title">Media Breakdown</span><span class="db-card-sub">Mentions by channel</span></div>
-          <div class="db-chart-wrap" id="db-media" style="height:260px"></div>
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Publisher Score Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <!-- invisible spacer matches the Author card's tab row so both charts align -->
+          <div class="db-tabs2" aria-hidden="true" style="visibility:hidden"><div class="db-tab2">Bubble Plot</div></div>
+          <div class="db-chart-wrap" id="db-pubscore" style="height:440px"></div>
         </div>
         <div class="db-card">
-          <div class="db-card-hd"><span class="db-card-title">Top Topics</span><span class="db-card-sub">Mention frequency by topic</span></div>
-          <div class="db-chart-wrap" id="db-topics" style="height:260px"></div>
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Author Story Value Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-tabs2" id="db-author-tabs">
+            <div class="db-tab2 on" data-t="bubble" onclick="setAuthorTab('bubble')">Bubble Plot</div>
+            <div class="db-tab2" data-t="bar" onclick="setAuthorTab('bar')">Bar Chart</div>
+          </div>
+          <div class="db-chart-wrap" id="db-author-bubble" style="height:440px"></div>
+          <div class="db-chart-wrap" id="db-author-bar" style="height:380px;display:none"></div>
         </div>
       </div>
 
-      <!-- Row 3: Frequency Heatmap + Top Authors -->
-      <div class="db-row db-row-6-4">
-        <div class="db-card">
-          <div class="db-card-hd"><span class="db-card-title">Publication Frequency</span><span class="db-card-sub">Mentions by day of week</span></div>
-          <div class="db-chart-wrap" id="db-freq" style="height:220px"></div>
-        </div>
-        <div class="db-card">
-          <div class="db-card-hd"><span class="db-card-title">Top Authors</span><span class="db-card-sub">By mention count</span></div>
-          <div class="db-chart-wrap" id="db-authors" style="height:220px"></div>
-        </div>
-      </div>
-
-      <!-- Row 4: AVE by Publisher Treemap -->
+      <!-- Top Publishers (timeline swimlane) -->
       <div class="db-row">
         <div class="db-card">
-          <div class="db-card-hd"><span class="db-card-title">AVE by Publisher</span><span class="db-card-sub">Proportional share of earned media value</span></div>
-          <div class="db-chart-wrap" id="db-treemap" style="height:280px"></div>
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Top Publishers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-chart-wrap" id="db-toppub" style="height:380px"></div>
+          <div class="db-tp-foot" id="db-tp-foot"></div>
         </div>
       </div>
 
-      <!-- Row 5: Bubble — Publisher × Sentiment × AVE -->
+      <!-- Entities Map (flexbox treemap) -->
       <div class="db-row">
         <div class="db-card">
-          <div class="db-card-hd"><span class="db-card-title">Publisher Sentiment Distribution</span><span class="db-card-sub">Bubble size = AVE · Position = sentiment score</span></div>
-          <div class="db-chart-wrap" id="db-bubble" style="height:360px"></div>
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Entities Map <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-entmap" id="db-entities"></div>
+          <div class="db-ent-legend" id="db-ent-legend"></div>
         </div>
       </div>
 
+      </div><!-- /db-content-inner -->
       </div><!-- /db-content -->
     </div><!-- /page-dashboard -->
   </div><!-- /main -->
   </div><!-- /app-body -->
   </div><!-- /app-right -->
+</div>
+
+<!-- Timeline Insights slide-over (reuses .nl-panel shell, push mode) -->
+<div class="nl-overlay ti-overlay" id="ti-overlay">
+  <div class="nl-panel">
+    <div class="ti-head" id="ti-head"></div>
+    <div class="ti-body" id="ti-body"></div>
+  </div>
 </div>
 
 <script src="js/app.js"></script>

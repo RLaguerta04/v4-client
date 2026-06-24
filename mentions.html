@@ -39,8 +39,8 @@
       <div class="nav-i" id="nav-tracker" data-label="Activity Tracker" onclick="goPage('tracker')"><i data-lucide="megaphone" class="icon-lg"></i><span class="nav-label">Activity Tracker</span><span class="nav-badge-at" id="nb-tracker">2</span></div>
       <div class="nav-i" id="nav-dashboard" data-label="Dashboard" onclick="goPage('dashboard')"><i data-lucide="layout-dashboard" class="icon-lg"></i><span class="nav-label">Dashboard</span></div>
       <div class="nav-i" id="nav-publishers" data-label="Publishers" onclick="goPage('publishers')"><i data-lucide="building-2" class="icon-lg"></i><span class="nav-label">Publishers</span></div>
-      <div class="nav-i" data-label="Authors"><i data-lucide="user" class="icon-lg"></i><span class="nav-label">Authors</span></div>
-      <div class="nav-i" data-label="Categories"><i data-lucide="folder" class="icon-lg"></i><span class="nav-label">Categories</span></div>
+      <div class="nav-i" id="nav-authors" data-label="Authors" onclick="goPage('authors')"><i data-lucide="user" class="icon-lg"></i><span class="nav-label">Authors</span></div>
+      <div class="nav-i" id="nav-categories" data-label="Categories" onclick="goPage('categories')"><i data-lucide="folder" class="icon-lg"></i><span class="nav-label">Categories</span></div>
     </nav>
 
     <!-- User profile -->
@@ -114,9 +114,72 @@
             <button class="dr-apply" onclick="drApply()">Apply</button>
           </div>
         </div>
-        <div class="fc-tag no-x">Online News, Bl...</div>
+        <div class="fc-ms-wrap" style="position:relative">
+          <div class="fc-tag fc-ms" id="ms-btn" onclick="msToggle(event)">
+            <span id="ms-label">All media</span>
+            <i data-lucide="chevron-down" style="width:13px;height:13px"></i>
+          </div>
+          <div id="ms-menu" class="ms-menu" style="display:none"></div>
+        </div>
         <div class="fc-tag">PHILIPPINES <span class="x"><i data-lucide="x" class="icon-lg"></i></span></div>
-        <div class="fc-icon-btn"><i data-lucide="bookmark" class="icon-lg"></i></div>
+        <div class="afx-wrap" style="position:relative">
+          <div class="fc-tag afx-trigger" id="afx-btn" onclick="afxToggle(event)">
+            <i data-lucide="sliders-horizontal" style="width:13px;height:13px"></i>
+            <span>All Filters</span>
+            <span class="afx-badge" id="afx-badge" style="display:none"></span>
+            <i data-lucide="chevron-down" style="width:13px;height:13px"></i>
+          </div>
+          <div id="afx-menu" class="afx-menu" style="display:none">
+            <div class="afx-sec">
+              <div class="afx-sec-title">Emphasis</div>
+              <div class="afx-radios">
+                <label class="afx-radio"><input type="radio" name="afx-emphasis" value="All" checked><span>All</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-emphasis" value="Main"><span>Main</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-emphasis" value="Mention"><span>Mention</span></label>
+              </div>
+            </div>
+            <div class="afx-sec">
+              <div class="afx-sec-title">Tonality</div>
+              <div class="afx-radios">
+                <label class="afx-radio"><input type="radio" name="afx-tonality" value="All" checked><span>All</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-tonality" value="Positive"><span>Positive</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-tonality" value="Negative"><span>Negative</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-tonality" value="Neutral"><span>Neutral</span></label>
+              </div>
+            </div>
+            <div class="afx-sec">
+              <div class="afx-sec-title">Sentiment</div>
+              <div class="afx-radios">
+                <label class="afx-radio"><input type="radio" name="afx-sentiment" value="All" checked><span>All</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-sentiment" value="Positive"><span>Positive</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-sentiment" value="Negative"><span>Negative</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-sentiment" value="Neutral"><span>Neutral</span></label>
+              </div>
+            </div>
+            <div class="afx-sec">
+              <div class="afx-sec-title">Story Value</div>
+              <div class="afx-slider">
+                <div class="afx-slider-track"></div>
+                <div class="afx-slider-fill" id="afx-fill"></div>
+                <input type="range" min="0" max="10" step="1" value="0" id="afx-min-range" class="afx-range" oninput="afxRange('min')">
+                <input type="range" min="0" max="10" step="1" value="10" id="afx-max-range" class="afx-range" oninput="afxRange('max')">
+              </div>
+              <div class="afx-minmax">
+                <div class="afx-field"><label>min</label><input type="number" min="0" max="10" value="0" id="afx-min-num" oninput="afxNum('min')"></div>
+                <span class="afx-dash">–</span>
+                <div class="afx-field"><label>max</label><input type="number" min="0" max="10" value="10" id="afx-max-num" oninput="afxNum('max')"></div>
+              </div>
+            </div>
+            <div class="afx-foot"><button class="afx-apply" onclick="afxApply()">Apply Filters</button></div>
+          </div>
+        </div>
+        <div class="sf-wrap" style="position:relative">
+          <div class="fc-icon-btn sf-trigger" id="sf-btn" onclick="sfToggle(event)" title="Saved filters">
+            <i data-lucide="bookmark" class="icon-lg"></i>
+            <span class="sf-badge" id="sf-badge" style="display:none"></span>
+          </div>
+          <div id="sf-menu" class="sf-menu" style="display:none"></div>
+        </div>
         <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
           <button id="fc-detail-return" class="ah-return-btn" style="display:none" onclick="closeMention()"><i data-lucide="arrow-left"></i> Mentions feed</button>
           <div class="fc-search">
@@ -615,14 +678,14 @@
       <div class="rpt-modal">
         <div style="padding:18px 24px;border-bottom:1px solid #ececf2;display:flex;align-items:center;gap:10px;flex-shrink:0">
           <i data-lucide="file-text" style="color:#181d26;width:16px;height:16px"></i>
-          <span style="font-weight:600;font-size:14px;flex:1" id="rpt-title">AI Report</span>
+          <span style="font-weight:600;font-size:14px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="rpt-title">AI Report</span>
           <button onclick="closeAIReport()" style="background:none;border:none;cursor:pointer;color:#888;padding:4px"><i data-lucide="x"></i></button>
         </div>
         <div id="rpt-body" style="flex:1;overflow-y:auto"></div>
         <div class="rpt-send-bar" id="rpt-send-bar" style="display:none">
           <input id="rpt-to" type="text" placeholder="Send to: recipients@company.com" style="flex:1;border:1px solid #ddd;border-radius:6px;padding:8px 12px;font-size:12px;font-family:inherit;outline:none">
-          <button class="btn-primary" onclick="sendAIReport()"><i data-lucide="send"></i> Send</button>
-          <button onclick="downloadAIReport()" style="padding:8px 14px;border:1px solid #ddd;border-radius:6px;background:#fff;font-size:12px;cursor:pointer;color:#666"><i data-lucide="download"></i> Download</button>
+          <button class="btn-filled" onclick="sendAIReport()"><i data-lucide="send"></i> Send</button>
+          <button class="btn-ghost" onclick="downloadAIReport()"><i data-lucide="download"></i> Download</button>
         </div>
       </div>
     </div>

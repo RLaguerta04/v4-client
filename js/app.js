@@ -130,22 +130,25 @@ function renderArticleList(articles,listId){
   const start=(page-1)*PER_PAGE;
   const visible=filtered.slice(start,start+PER_PAGE);
 
+  const sortLabels={sim:'Similarity',date:'Most recent',ave:'Highest AVE'};
   const controls=showControls?`
-    <div class="al-controls">
-      <div class="al-sort"><select onchange="setSort('${listId}',this.value)">
-        <option value="sim"${state.sort==='sim'?' selected':''}>Sort: Similarity</option>
-        <option value="date"${state.sort==='date'?' selected':''}>Sort: Most recent</option>
-        <option value="ave"${state.sort==='ave'?' selected':''}>Sort: Highest AVE</option>
-      </select></div>
-      <span class="article-list-label">All coverage — ${articles.length} article${articles.length!==1?'s':''}</span>
-      <div class="al-filters">
-        <span class="al-f${sel.length===0?' on':''}" onclick="clearFilters('${listId}')">All</span>
-        ${mediaTypes.map(m=>`<span class="al-f${sel.includes(m)?' on':''}" onclick="toggleFilter('${listId}','${m}')">${sel.includes(m)?'<i data-lucide="check"></i> ':''}${m}</span>`).join('')}
+    <div class="art-filter-bar">
+      <div class="at-type-dd al-sort-dd" id="al-sort-dd-${listId}">
+        <div class="fc" onclick="toggleAlSort('${listId}',event)">
+          <span>Sort: ${sortLabels[state.sort]||'Similarity'}</span>
+          <i data-lucide="chevron-down"></i>
+        </div>
+        <div class="at-type-menu al-sort-menu" id="al-sort-menu-${listId}">
+          ${[['sim','Similarity'],['date','Most recent'],['ave','Highest AVE']].map(([v,l])=>`<div class="at-type-opt${state.sort===v?' active':''}" onclick="setSort('${listId}','${v}')"><span>Sort: ${l}</span></div>`).join('')}
+        </div>
+      </div>
+      <span class="art-count">All coverage — ${articles.length} article${articles.length!==1?'s':''}</span>
+      <div class="art-media-pills">
+        <span class="art-pill${sel.length===0?' on':''}" onclick="clearFilters('${listId}')">All</span>
+        ${mediaTypes.map(m=>`<span class="art-pill${sel.includes(m)?' on':''}" onclick="toggleFilter('${listId}','${m}')">${sel.includes(m)?'<i data-lucide="check"></i> ':''}${m}</span>`).join('')}
       </div>
     </div>`:`
-    <div class="al-controls">
-      <span class="article-list-label">All coverage — ${articles.length} article${articles.length!==1?'s':''}</span>
-    </div>`;
+    <div class="art-filter-bar"><span class="art-count">All coverage — ${articles.length} article${articles.length!==1?'s':''}</span></div>`;
 
   let pager='';
   if(totalPages>1){
@@ -163,17 +166,30 @@ function renderArticleList(articles,listId){
 
   const empty=filtered.length===0?`<div class="al-empty">No articles match this filter.</div>`:'';
 
+  const rows=visible.map((a,i)=>{
+    const ic=ATicn[a.media]||{cls:'type-online',icon:'newspaper'};
+    const sc=a.score>=85?'sc-hi':a.score>=70?'sc-mid':'sc-lo';
+    const barColor=a.score>=85?'#16a34a':a.score>=70?'#d97706':'#9ca3af';
+    return`<tr class="match-tbl-row" style="animation-delay:${i*0.03}s;cursor:pointer" onclick="previewArticle('${listId}','${encodeURIComponent(a.hl)}')">
+      <td><div class="hl-cell"><span class="hl-icon ${ic.cls}" data-btip="${_makeTip({label:a.media})}"><i data-lucide="${ic.icon}"></i></span><div><div class="match-hl">${a.hl}</div></div></div></td>
+      <td style="width:150px"><div class="pub-name">${a.source}</div><div class="pub-cat">${a.media}</div></td>
+      <td style="width:110px"><span class="match-ave">${a.ave}</span></td>
+      <td style="width:130px"><span class="art-score-val ${sc}">${a.score}% match</span><div class="match-score-track" style="margin-top:4px"><div class="match-score-fill" style="width:${a.score}%;background:${barColor}"></div></div></td>
+      <td style="width:110px;white-space:nowrap"><div class="date-main">${a.date}</div></td>
+    </tr>`;
+  }).join('');
+  const table=filtered.length===0?'':`<table class="tbl match-tbl"><thead><tr>
+    <th style="width:40%">Headline</th>
+    <th style="width:17%">Outlet</th>
+    <th style="width:13%">AVE</th>
+    <th style="width:16%">Match</th>
+    <th style="width:14%">Date</th>
+  </tr></thead><tbody>${rows}</tbody></table>`;
+
   return `<div class="article-list">
     ${controls}
     ${empty}
-    ${visible.map((a,i)=>`<div class="art-row" style="animation-delay:${i*0.03}s">
-      <span class="media-badge ${MC[a.media]||'media-online'}">${a.media}</span>
-      <div class="art-body">
-        <div class="art-hl">${a.hl}</div>
-        <div class="art-meta"><span class="art-source">${a.source}</span><span class="art-meta-sep">·</span><span class="art-date">${a.date}</span><span class="art-meta-sep">·</span><span class="art-ave">${a.ave}</span></div>
-        <div class="art-score"><div class="art-score-track"><div class="art-score-track-fill ${a.score>=85?'sc-hi':a.score>=70?'sc-mid':'sc-lo'}" style="width:${a.score}%"></div></div><span class="art-score-val ${a.score>=85?'sc-hi':a.score>=70?'sc-mid':'sc-lo'}">${a.score}% match</span></div>
-      </div>
-    </div>`).join('')}
+    ${table}
     ${pager}
   </div>`;
 }
@@ -184,9 +200,222 @@ function rerenderList(listId){
 }
 function alStateFor(listId){return alState[listId]||(alState[listId]={sort:'sim',filters:[],page:1});}
 function setSort(listId,val){const s=alStateFor(listId);s.sort=val;s.page=1;rerenderList(listId);}
+// Custom sort dropdown (tracker-style) — per-list menu id; selecting re-renders the list (closes it)
+function toggleAlSort(listId,e){e.stopPropagation();document.getElementById('al-sort-menu-'+listId)?.classList.toggle('open');}
+document.addEventListener('click',function(){document.querySelectorAll('.al-sort-menu.open').forEach(m=>m.classList.remove('open'));});
 function clearFilters(listId){const s=alStateFor(listId);s.filters=[];s.page=1;rerenderList(listId);}
 function toggleFilter(listId,val){const s=alStateFor(listId);s.filters=s.filters||[];const i=s.filters.indexOf(val);if(i>=0)s.filters.splice(i,1);else s.filters.push(val);s.page=1;rerenderList(listId);}
 function setArtPage(listId,page){const s=alStateFor(listId);s.page=page;rerenderList(listId);}
+
+// ── Media Source dropdown (mentions filter bar) ──
+// Labels mirror the design mockup; `val` maps each to the feed's media field
+// (Blogs/Provincial/Tabloid/Magazine have no articles → selecting only those empties the feed).
+const MS_OPTIONS=[
+  {label:'Online News',val:'Online'},
+  {label:'Blogs',val:'Blogs'},
+  {label:'Broadsheet',val:'Print'},
+  {label:'Provincial',val:'Provincial'},
+  {label:'Tabloid',val:'Tabloid'},
+  {label:'Magazine',val:'Magazine'},
+  {label:'TV',val:'TV'},
+  {label:'Radio',val:'Radio'},
+];
+let msSel=new Set(MS_OPTIONS.map(o=>o.label));   // default: all selected
+function msRender(){
+  const menu=document.getElementById('ms-menu');if(!menu)return;
+  const allOn=msSel.size===MS_OPTIONS.length;
+  menu.innerHTML=`<div class="ms-title">Media Source</div><div class="ms-divider"></div>
+    <label class="ms-opt"><input type="checkbox" ${allOn?'checked':''} onchange="msToggleAll(this.checked)"><span>Select All</span></label>
+    ${MS_OPTIONS.map(o=>`<label class="ms-opt"><input type="checkbox" ${msSel.has(o.label)?'checked':''} onchange="msToggleOne('${o.label}',this.checked)"><span>${o.label}</span></label>`).join('')}
+    <button class="ms-apply" onclick="msApply()">Apply</button>`;
+}
+function msClose(){
+  const m=document.getElementById('ms-menu');
+  if(!m||m.style.display==='none'||m.classList.contains('closing'))return;
+  m.classList.add('closing');
+  setTimeout(()=>{m.style.display='none';m.classList.remove('closing');},180);
+}
+function msToggle(e){
+  e.stopPropagation();
+  const m=document.getElementById('ms-menu');if(!m)return;
+  const open=m.style.display!=='none'&&!m.classList.contains('closing');
+  if(open){msClose();return;}
+  m.classList.remove('closing');msRender();m.style.display='block';
+}
+function msToggleAll(on){msSel=on?new Set(MS_OPTIONS.map(o=>o.label)):new Set();msRender();}
+function msToggleOne(label,on){if(on)msSel.add(label);else msSel.delete(label);msRender();}
+function msLabel(){
+  if(msSel.size===MS_OPTIONS.length)return'All media';
+  if(msSel.size===0)return'No media';
+  const arr=MS_OPTIONS.filter(o=>msSel.has(o.label)).map(o=>o.label);
+  return arr.length===1?arr[0]:`${arr[0]}, +${arr.length-1}`;
+}
+function msApply(){
+  const lbl=document.getElementById('ms-label');if(lbl)lbl.textContent=msLabel();
+  const allOn=msSel.size===MS_OPTIONS.length;
+  const vals=allOn?[]:[...new Set(MS_OPTIONS.filter(o=>msSel.has(o.label)).map(o=>o.val))];
+  const s=alStateFor('spot');s.filters=vals;s.page=1;rerenderList('spot');
+  msClose();
+}
+document.addEventListener('click',function(e){
+  const menu=document.getElementById('ms-menu'),btn=document.getElementById('ms-btn');
+  if(menu&&menu.style.display!=='none'&&!menu.contains(e.target)&&btn&&!btn.contains(e.target))msClose();
+});
+
+// ── All Filters dropdown (mentions) — UI control, applied state remembered ──
+const afxState={emphasis:'All',tonality:'All',sentiment:'All',min:0,max:10};
+function afxFill(lo,hi){const f=document.getElementById('afx-fill');if(f){f.style.left=(lo/10*100)+'%';f.style.width=((hi-lo)/10*100)+'%';}}
+function afxSyncFromRange(){
+  const lo=+document.getElementById('afx-min-range').value,hi=+document.getElementById('afx-max-range').value;
+  document.getElementById('afx-min-num').value=lo;document.getElementById('afx-max-num').value=hi;afxFill(lo,hi);
+}
+function afxRange(which){
+  const lo=document.getElementById('afx-min-range'),hi=document.getElementById('afx-max-range');
+  if(+lo.value>+hi.value){if(which==='min')lo.value=hi.value;else hi.value=lo.value;}
+  afxSyncFromRange();
+}
+function afxNum(which){
+  const lo=document.getElementById('afx-min-range'),hi=document.getElementById('afx-max-range');
+  const nl=document.getElementById('afx-min-num'),nh=document.getElementById('afx-max-num');
+  let a=Math.max(0,Math.min(10,parseInt(nl.value,10)||0)),b=Math.max(0,Math.min(10,parseInt(nh.value,10)||0));
+  if(a>b){if(which==='min')a=b;else b=a;}
+  lo.value=a;hi.value=b;nl.value=a;nh.value=b;afxFill(a,b);
+}
+function afxRadioVal(group){const el=document.querySelector('input[name="afx-'+group+'"]:checked');return el?el.value:'All';}
+function afxReset(){
+  ['emphasis','tonality','sentiment'].forEach(g=>{const el=document.querySelector('input[name="afx-'+g+'"][value="'+afxState[g]+'"]');if(el)el.checked=true;});
+  document.getElementById('afx-min-range').value=afxState.min;
+  document.getElementById('afx-max-range').value=afxState.max;
+  afxSyncFromRange();
+}
+function afxBadge(){
+  let n=0;
+  if(afxState.emphasis!=='All')n++;
+  if(afxState.tonality!=='All')n++;
+  if(afxState.sentiment!=='All')n++;
+  if(afxState.min!==0||afxState.max!==10)n++;
+  const b=document.getElementById('afx-badge');if(b){b.textContent=n;b.style.display=n?'inline-flex':'none';}
+}
+function afxApply(){
+  afxState.emphasis=afxRadioVal('emphasis');
+  afxState.tonality=afxRadioVal('tonality');
+  afxState.sentiment=afxRadioVal('sentiment');
+  afxState.min=+document.getElementById('afx-min-range').value;
+  afxState.max=+document.getElementById('afx-max-range').value;
+  afxBadge();afxClose();
+}
+function afxClose(){
+  const m=document.getElementById('afx-menu');
+  if(!m||m.style.display==='none'||m.classList.contains('closing'))return;
+  m.classList.add('closing');
+  setTimeout(()=>{m.style.display='none';m.classList.remove('closing');},180);
+}
+function afxToggle(e){
+  e.stopPropagation();
+  const m=document.getElementById('afx-menu');if(!m)return;
+  const open=m.style.display!=='none'&&!m.classList.contains('closing');
+  if(open){afxClose();return;}
+  m.classList.remove('closing');afxReset();m.style.display='block';
+}
+document.addEventListener('click',function(e){
+  const menu=document.getElementById('afx-menu'),btn=document.getElementById('afx-btn');
+  if(menu&&menu.style.display!=='none'&&!menu.contains(e.target)&&btn&&!btn.contains(e.target))afxClose();
+});
+
+// ── Saved filters (mentions) — bookmark button saves + lists filter views ──
+const SF_KEY='mw-saved-filters';
+let savedFilters=(function(){try{return JSON.parse(localStorage.getItem(SF_KEY)||'[]');}catch(e){return[];}})();
+function sfPersist(){try{localStorage.setItem(SF_KEY,JSON.stringify(savedFilters));}catch(e){}}
+function sfEsc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function sfCapture(){
+  return {media:[...msSel],afx:{...afxState},search:(document.querySelector('.fc-search input')||{}).value||''};
+}
+function sfApplyState(s){
+  msSel=new Set(s.media&&s.media.length?s.media:MS_OPTIONS.map(o=>o.label));
+  const allOn=msSel.size===MS_OPTIONS.length;
+  const vals=allOn?[]:[...new Set(MS_OPTIONS.filter(o=>msSel.has(o.label)).map(o=>o.val))];
+  const st=alStateFor('spot');st.filters=vals;st.page=1;rerenderList('spot');
+  const lbl=document.getElementById('ms-label');if(lbl)lbl.textContent=msLabel();
+  if(s.afx){Object.assign(afxState,s.afx);afxBadge();}
+  const si=document.querySelector('.fc-search input');if(si)si.value=s.search||'';
+}
+function sfBadge(){const b=document.getElementById('sf-badge');if(b){b.textContent=savedFilters.length;b.style.display=savedFilters.length?'inline-flex':'none';}}
+function sfToast(msg){if(typeof showTrackerToast==='function')showTrackerToast(msg);}
+let sfConfirm=-1;
+// Build a readable summary of the filters a view captures (only the parts that differ from default)
+function sfMediaSummary(media){
+  const sel=new Set(media||[]);
+  if(sel.size===0||sel.size===MS_OPTIONS.length)return null;
+  const labels=MS_OPTIONS.filter(o=>sel.has(o.label)).map(o=>o.label);
+  return labels.length<=2?labels.join(', '):labels.length+' sources';
+}
+function sfSummaryParts(s){
+  const p=[],m=sfMediaSummary(s.media);if(m)p.push(m);
+  const x=s.afx||{};
+  if(x.emphasis&&x.emphasis!=='All')p.push('Emphasis: '+x.emphasis);
+  if(x.tonality&&x.tonality!=='All')p.push(x.tonality);
+  if(x.sentiment&&x.sentiment!=='All')p.push('Sentiment: '+x.sentiment);
+  if((x.min!=null&&x.min!==0)||(x.max!=null&&x.max!==10))p.push('SV '+(x.min||0)+'–'+(x.max==null?10:x.max));
+  if(s.search)p.push('“'+s.search+'”');
+  return p;
+}
+function sfSummaryText(s){const p=sfSummaryParts(s);return p.length?p.join(' · '):'All articles (no filters)';}
+function sfIsEmpty(s){return sfSummaryParts(s).length===0;}
+function sfDefaultName(s){return sfSummaryParts(s).slice(0,2).join(' · ');}
+function sfSameState(a,b){return JSON.stringify({m:[...(a.media||[])].sort(),x:a.afx,q:a.search})===JSON.stringify({m:[...(b.media||[])].sort(),x:b.afx,q:b.search});}
+function sfRender(){
+  const m=document.getElementById('sf-menu');if(!m)return;
+  const cur=sfCapture(),curEmpty=sfIsEmpty(cur);
+  const list=savedFilters.length?savedFilters.map((f,i)=>{
+    if(i===sfConfirm)return `<div class="sf-item sf-confirm"><span class="sf-item-name">Remove “${sfEsc(f.name)}”?</span><button class="sf-cf-yes" onclick="event.stopPropagation();sfDelete(${i})">Remove</button><button class="sf-cf-no" onclick="event.stopPropagation();sfCancelDelete()">Cancel</button></div>`;
+    const active=sfSameState(f.state,cur),sub=sfEsc(sfSummaryText(f.state));
+    return `<div class="sf-item${active?' on':''}" onclick="sfApply(${i})">
+      <i data-lucide="${active?'check':'bookmark'}"></i>
+      <div class="sf-item-main"><span class="sf-item-name" title="${sfEsc(f.name)}">${sfEsc(f.name)}</span><span class="sf-item-sub" title="${sub}">${sub}</span></div>
+      <span class="sf-item-del" onclick="event.stopPropagation();sfAskDelete(${i})" title="Delete"><i data-lucide="x"></i></span>
+    </div>`;
+  }).join(''):`<div class="sf-empty">No saved filters yet</div>`;
+  m.innerHTML=`<div class="sf-title">Saved Filters</div>
+    <div class="sf-list">${list}</div>
+    <div class="sf-divider"></div>
+    ${curEmpty?'<div class="sf-hint">No active filters to save</div>':''}
+    <div class="sf-save-row">
+      <input type="text" id="sf-name" placeholder="${curEmpty?'Set a filter first…':(sfEsc(sfDefaultName(cur))||'Name this view…')}"${curEmpty?' disabled':''} onkeydown="if(event.key==='Enter')sfSave()">
+      <button class="sf-save-btn"${curEmpty?' disabled':''} onclick="sfSave()">Save</button>
+    </div>`;
+  initIcons();
+}
+function sfSave(){
+  const cur=sfCapture();
+  if(sfIsEmpty(cur))return;
+  const dup=savedFilters.findIndex(f=>sfSameState(f.state,cur));
+  if(dup>=0){sfToast('Already saved as “'+savedFilters[dup].name+'”');return;}
+  const input=document.getElementById('sf-name');
+  const name=((input&&input.value||'').trim())||sfDefaultName(cur)||('Filter '+(savedFilters.length+1));
+  savedFilters.push({name,state:cur});
+  sfPersist();sfBadge();sfConfirm=-1;sfRender();sfToast('View saved');
+}
+function sfApply(i){const f=savedFilters[i];if(!f)return;sfApplyState(f.state);sfToast('Applied “'+f.name+'”');sfClose();}
+function sfAskDelete(i){sfConfirm=i;sfRender();}
+function sfCancelDelete(){sfConfirm=-1;sfRender();}
+function sfDelete(i){savedFilters.splice(i,1);sfConfirm=-1;sfPersist();sfBadge();sfRender();sfToast('View removed');}
+function sfClose(){
+  const m=document.getElementById('sf-menu');
+  if(!m||m.style.display==='none'||m.classList.contains('closing'))return;
+  m.classList.add('closing');setTimeout(()=>{m.style.display='none';m.classList.remove('closing');},180);
+}
+function sfToggle(e){
+  e.stopPropagation();
+  const m=document.getElementById('sf-menu');if(!m)return;
+  const open=m.style.display!=='none'&&!m.classList.contains('closing');
+  if(open){sfClose();return;}
+  sfConfirm=-1;m.classList.remove('closing');sfRender();m.style.display='block';
+}
+document.addEventListener('click',function(e){
+  const menu=document.getElementById('sf-menu'),btn=document.getElementById('sf-btn');
+  if(menu&&menu.style.display!=='none'&&!menu.contains(e.target)&&btn&&!btn.contains(e.target))sfClose();
+});
+sfBadge();
 
 function selectTrend(id){
   activeTrend=(activeTrend===id)?null:id;
@@ -200,13 +429,25 @@ function extractKeywords(text){
   return[...new Set(text.replace(/[^a-zA-Z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>3&&!stop.has(w.toLowerCase())).map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()))].slice(0,6);
 }
 
-function addToTracker(title,type,content){
+// Tracked stories persist across pages (mentions → tracker) via localStorage
+const TRK_KEY='mw-tracked';
+function trkLoad(){try{return JSON.parse(localStorage.getItem(TRK_KEY)||'[]');}catch(e){return[];}}
+function trkSave(arr){try{localStorage.setItem(TRK_KEY,JSON.stringify(arr));}catch(e){}}
+function trkPersist(na){
+  const arr=trkLoad();
+  if(arr.some(e=>e.title===na.title))return;
+  arr.unshift({title:na.title,type:na.type,date:na.date,content:na.content,matches:na.matches||[]});
+  trkSave(arr);
+}
+function aveToVal(s){const n=parseFloat(String(s).replace(/[^0-9.]/g,''))||0;return /m/i.test(s)?Math.round(n*1e6):/k/i.test(s)?Math.round(n*1e3):Math.round(n);}
+function addToTracker(title,type,content,matches){
   const today=new Date().toISOString().split('T')[0];
-  const na={id:atNid++,title,type,date:today,content,matches:[]};
+  const na={id:atNid++,title,type,date:today,content,matches:matches||[]};
   acts.unshift(na);
   trackerSel=na.id;
   freshTrack[na.id]=true;
   scanKwOff[na.id]=new Set();
+  trkPersist(na);
   showTrackerToast(title,na.id);
   const nb=document.getElementById('nb-tracker');
   if(nb)nb.textContent=acts.length;
@@ -231,14 +472,24 @@ function showTrackerToast(title,id,toastType){
   if(!toast){
     toast=document.createElement('div');
     toast.id='global-track-toast';
-    toast.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#181d26;color:#fff;font-size:12.5px;font-family:Inter,sans-serif;padding:11px 18px;border-radius:8px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,0.18);z-index:9999;animation:fadeIn 0.2s ease;max-width:420px';
+    toast.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#181d26;color:#fff;font-size:12.5px;font-family:Inter,sans-serif;padding:11px 18px;border-radius:8px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,0.18);z-index:9999;max-width:420px';
     document.body.appendChild(toast);
   }
-  toast.innerHTML=`<i data-lucide="circle-check" style="color:#86efac;width:14px;height:14px"></i><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Added to Activity Tracker</span><button onclick="goPage('tracker');this.closest('#global-track-toast').remove()" style="font-size:11px;padding:3px 10px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:4px;cursor:pointer;font-family:inherit;flex-shrink:0">View</button><button onclick="this.closest('#global-track-toast').remove()" style="background:transparent;border:none;color:rgba(255,255,255,0.5);cursor:pointer;padding:0 2px;font-size:14px;line-height:1">×</button>`;
+  toast.innerHTML=`<i data-lucide="circle-check" style="color:#86efac;width:14px;height:14px"></i><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Added to Activity Tracker</span><button onclick="goPage('tracker')" style="font-size:11px;padding:3px 10px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:4px;cursor:pointer;font-family:inherit;flex-shrink:0">View</button><button onclick="ttDismiss(this.closest('#global-track-toast'))" style="background:transparent;border:none;color:rgba(255,255,255,0.5);cursor:pointer;padding:0 2px;font-size:14px;line-height:1">×</button>`;
   toast.style.display='flex';
+  // Replay the fade-up entrance on every show (reflow reset)
+  toast.style.animation='none';void toast.offsetWidth;
+  toast.style.animation='ttUp 0.34s cubic-bezier(0.22,1,0.36,1) both';
   initIcons();
   clearTimeout(toast._t);
-  toast._t=setTimeout(()=>{if(toast.parentNode)toast.remove();},4000);
+  toast._t=setTimeout(()=>ttDismiss(toast),4000);
+}
+function ttDismiss(el){
+  el=el||document.getElementById('global-track-toast');
+  if(!el)return;
+  clearTimeout(el._t);
+  el.style.animation='ttDown 0.26s cubic-bezier(0.4,0,1,1) both';
+  setTimeout(()=>{if(el.parentNode)el.remove();},250);
 }
 
 function trackSpot(){
@@ -249,7 +500,8 @@ function trackSpot(){
   initIcons();
   document.getElementById('spot-toast').classList.add('show');
   const story=trendStories[0];
-  addToTracker(story.hl,'Trending',story.why);
+  const matches=(story.articles||[]).map((a,i)=>({id:'sp'+i,media:a.media,source:a.source,title:a.hl,date:a.date,value:aveToVal(a.ave),score:a.score?a.score/100:0,manual:false}));
+  addToTracker(story.hl,'Trending',story.why,matches);
 }
 
 function trackTrend(id){
@@ -426,8 +678,11 @@ function showAIReport(story){
   const body=document.getElementById('rpt-body');
   body.innerHTML=`<div class="rpt-loading"><div class="rpt-spinner"></div><div style="font-size:13px;color:#888">Generating AI report…</div></div>`;
   const ov=document.getElementById('rpt-overlay');
-  ov.style.display='flex';
-  setTimeout(()=>ov.classList.add('open'),10);
+  ov.style.display='block';
+  const sb=document.getElementById('sidebar');
+  _rptSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
+  if(sb)sb.classList.add('collapsed');
+  requestAnimationFrame(()=>{ov.classList.add('open');document.body.classList.add('rpt-open');});
   setTimeout(()=>{
     const sentChip=s.chips[0];
     const sentColor=sentChip.cls==='c-pos'?'#15803d':sentChip.cls==='c-neg'?'#991b1b':'#1d4ed8';
@@ -473,11 +728,18 @@ function showAIReport(story){
   },1600);
 }
 
+let _rptSidebarWasCollapsed=false;
 function closeAIReport(){
   const ov=document.getElementById('rpt-overlay');
   ov.classList.remove('open');
-  setTimeout(()=>{ov.style.display='none';},250);
+  document.body.classList.remove('rpt-open');
+  const sb=document.getElementById('sidebar');
+  if(sb&&!_rptSidebarWasCollapsed)sb.classList.remove('collapsed');
+  setTimeout(()=>{ov.style.display='none';},280);
 }
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&document.getElementById('rpt-overlay')?.classList.contains('open'))closeAIReport();
+});
 
 // ── Export modal ──
 function openExport(){
@@ -594,6 +856,8 @@ function renderTableRows(){
   const tbody=document.getElementById('tbl-tbody');
   if(!tbody)return;
   tbody.innerHTML=mentionData.slice(start,end).map((d,k)=>renderTableRow(d,start+k)).join('');
+  const footer=document.querySelector('.tbl-footer');
+  if(footer)footer.style.display=(isDetail||mentionsView==='cards')?'none':'flex';
   if(isDetail){
     const infoEl=document.getElementById('tbl-pg-info');
     const numEl=document.getElementById('tbl-pg-num');
@@ -701,19 +965,190 @@ function renderMentionList(){
   </div>`;
   return `<div class="md-list-header">Mentions · ${total}</div>${items}${pager}`;
 }
+let mdSpotCtx=null,mdSpotArticle=null;   // spotlight/trending origin context for a distinct detail layout
+function spotStoryFor(listId){
+  if(listId==='spot')return trendStories[0];
+  if(listId&&listId.indexOf('trend-')===0)return trendStories.find(s=>s.id===+listId.split('-')[1])||null;
+  return null;
+}
 function openMention(i){
   if(!mentionData[i])return;
-  mdActive=i;
+  mdSpotCtx=null;mdSpotArticle=null;
+  openDetailFor(mentionData[i],i);
+}
+// Open the inline detail layout for a mention object. idx is its index in mentionData
+// when it's a real feed item; omit it for a synthesized preview (e.g. spotlight-only coverage).
+function openDetailFor(d,idx){
+  mdActive=(idx!=null?idx:-1);
   mdMode='split';
-  tblPage=Math.floor(i/TBL_DETAIL_PER_PAGE);
+  if(idx!=null)tblPage=Math.floor(idx/TBL_DETAIL_PER_PAGE);
   const sb=document.querySelector('.sidebar');
   mdSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
   if(sb)sb.classList.add('collapsed');
   const ret=document.getElementById('fc-detail-return');
-  if(ret){ret.style.display='inline-flex';initIcons();}
-  document.getElementById('page-mentions').classList.add('detail-open');
+  if(ret){ret.style.display=mdSpotCtx?'none':'inline-flex';initIcons();}
+  const page=document.getElementById('page-mentions');
+  page.classList.add('detail-open');
+  page.classList.toggle('spot-detail',!!mdSpotCtx);
   renderTableRows();
-  renderInlineDetail(mentionData[i]);
+  renderInlineDetail(d);
+}
+// Preview a coverage row (spotlight / trending list) in the mention-detail layout.
+// Real feed items open their full detail; spotlight-only items use a synthesized object.
+// Shared-element open: morph the clicked headline into the preview's title via the View Transitions
+// API. Falls back to a plain open when unsupported or when the user prefers reduced motion.
+function vtOpen(srcSel,doOpen){
+  const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!document.startViewTransition||reduce){doOpen();return;}
+  const src=srcSel&&document.querySelector(srcSel);
+  if(src)src.style.viewTransitionName='vt-art-title';
+  const tgtSel='#adp-col-right .adp-title';
+  const t=document.startViewTransition(()=>{
+    doOpen();
+    const tgt=document.querySelector(tgtSel);
+    if(tgt)tgt.style.viewTransitionName='vt-art-title';
+  });
+  const cleanup=()=>{
+    if(src)src.style.viewTransitionName='';
+    const tgt=document.querySelector(tgtSel);
+    if(tgt)tgt.style.viewTransitionName='';
+  };
+  t.finished.then(cleanup,cleanup);
+}
+function previewArticle(listId,hlEnc){
+  const hl=decodeURIComponent(hlEnc);
+  const arts=articlesForList(listId)||[];
+  const a=arts.find(x=>x.hl===hl);if(!a)return;
+  mdSpotCtx=spotStoryFor(listId);
+  mdSpotArticle=mdSpotCtx?{listId,hl}:null;
+  const idx=mentionData.findIndex(d=>d.title===hl);
+  vtOpen('#al-'+listId+' .match-tbl-row[data-hl="'+hlEnc+'"] .match-hl',
+    ()=>openDetailFor(idx>=0?mentionData[idx]:spotToMention(a),idx>=0?idx:null));
+}
+// Left column for spotlight-origin detail: story header + why + chips + scoped coverage list
+function renderSpotPanel(d){
+  const s=mdSpotCtx;if(!s)return'';
+  const listId=mdSpotArticle?mdSpotArticle.listId:'spot';
+  const arts=articlesForList(listId)||[];
+  const curHl=mdSpotArticle?mdSpotArticle.hl:d.title;
+  const chips=(s.chips||[]).map(ch=>`<span class="chip ${ch.cls}">${ch.t}</span>`).join('');
+  const rows=arts.map(a=>{
+    const ic=ATicn[a.media]||{cls:'type-online',icon:'newspaper'};
+    const sc=a.score>=85?'sc-hi':a.score>=70?'sc-mid':'sc-lo';
+    return `<div class="spot-cov-li${a.hl===curHl?' active':''}" onclick="selectSpotArticle('${encodeURIComponent(a.hl)}')">
+      <span class="md-li-ico ${ic.cls}"><i data-lucide="${ic.icon}"></i></span>
+      <div class="spot-cov-body"><div class="spot-cov-hl">${a.hl}</div><div class="spot-cov-meta">${a.source} · ${a.date}</div></div>
+      <span class="spot-cov-match ${sc}">${a.score}%</span>
+    </div>`;
+  }).join('');
+  return `<div class="spot-panel">
+    <button class="spot-back" onclick="backToSpotlight()"><i data-lucide="arrow-left"></i> Back to spotlight</button>
+    <div class="spot-tier"><i data-lucide="star" class="icon-sm"></i> Tier 1 Spotlight</div>
+    <div class="spot-panel-title">${s.hl}</div>
+    <div class="spot-panel-why"><span class="spot-why-lbl"><i data-lucide="zap"></i> Why this was picked</span><span class="spot-why-txt">${s.why}</span></div>
+    <div class="chips spot-panel-chips">${chips}</div>
+    <div class="spot-cov-hd">Coverage · ${arts.length} articles</div>
+    <div class="spot-cov-list">${rows}</div>
+  </div>`;
+}
+function selectSpotArticle(hlEnc){
+  const hl=decodeURIComponent(hlEnc);
+  const listId=mdSpotArticle?mdSpotArticle.listId:'spot';
+  const a=(articlesForList(listId)||[]).find(x=>x.hl===hl);if(!a)return;
+  mdSpotArticle={listId,hl};
+  const idx=mentionData.findIndex(d=>d.title===hl);
+  mdActive=(idx>=0?idx:-1);
+  renderInlineDetail(idx>=0?mentionData[idx]:spotToMention(a));
+}
+function backToSpotlight(){
+  const listId=mdSpotArticle?mdSpotArticle.listId:'spot';
+  mdSpotCtx=null;mdSpotArticle=null;
+  document.getElementById('page-mentions').classList.remove('spot-detail');
+  closeMention();
+  const tabs=document.querySelectorAll('.mm-tab');
+  const trend=listId.indexOf('trend-')===0;
+  const t=tabs[trend?1:0];if(t)switchBriefTab(trend?'trend':'spot',t);
+}
+function spotToMention(a){
+  const tmpl=JSON.parse(JSON.stringify(mentionData[0]||{}));   // clone a real mention → every field exists
+  const typeMap={Print:'broadsheet',Online:'online',TV:'tv',Radio:'radio',Social:'blog'};
+  const sv=Math.max(1,a.score/20);
+  return Object.assign(tmpl,{
+    title:a.hl,sub:a.source,outlet:a.source,type:typeMap[a.media]||'online',
+    ave:a.ave,sv:+sv.toFixed(2),avgSv:sv.toFixed(2),authorScore:(sv*0.8).toFixed(2),
+    date:a.date,ago:a.date,section:'News',author:'Staff Writer',brand:'neutral',tone:'neutral'
+  });
+}
+// ── Tracker article preview: open a matched article in the 3-column detail, framed by its activity ──
+const TYPE_ACCENT={'Press Release':'#4f46e5','Event':'#2563eb','Crisis':'#dc2626','Trending':'#d97706','Product':'#16a34a'};
+let mdActCtx=null,mdActMatch=null;
+function matchToMention(m){
+  const idx=mentionData.findIndex(d=>d.title===m.title);
+  if(idx>=0)return mentionData[idx];
+  const tmpl=JSON.parse(JSON.stringify(mentionData[0]||{}));
+  const typeMap={Print:'broadsheet',Online:'online',TV:'tv',Radio:'radio',Social:'blog'};
+  const sv=Math.max(1,(m.score?m.score*5:2));
+  return Object.assign(tmpl,{
+    title:m.title,sub:m.source,outlet:m.source,type:typeMap[m.media]||'online',
+    ave:fv(m.value),sv:+sv.toFixed(2),avgSv:sv.toFixed(2),authorScore:(sv*0.8).toFixed(2),
+    date:m.date,ago:timeAgo(m.date),section:'News',author:'Staff Writer',brand:'neutral',tone:'neutral'
+  });
+}
+function previewMatch(actId,matchId){
+  const a=acts.find(x=>x.id===actId);if(!a)return;
+  const m=(a.matches||[]).find(x=>x.id===matchId);if(!m)return;
+  vtOpen('#mr-'+matchId+' .match-hl',()=>{
+    mdActCtx=a;mdActMatch=matchId;mdSpotCtx=null;
+    const sb=document.querySelector('.sidebar');
+    mdSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
+    if(sb)sb.classList.add('collapsed');
+    const page=document.getElementById('page-tracker');
+    if(page)page.classList.add('tk-detail-open');
+    const panel=document.getElementById('article-detail-panel');
+    if(panel)panel.style.setProperty('--ctx-accent',TYPE_ACCENT[a.type]||'#7c3aed');
+    renderInlineDetail(matchToMention(m));
+  });
+}
+function selectActMatch(matchId){
+  if(!mdActCtx)return;
+  const m=(mdActCtx.matches||[]).find(x=>x.id===matchId);if(!m)return;
+  mdActMatch=matchId;
+  renderInlineDetail(matchToMention(m));
+}
+function backToActivity(){
+  mdActCtx=null;mdActMatch=null;
+  const page=document.getElementById('page-tracker');
+  if(page)page.classList.remove('tk-detail-open');
+  const sb=document.querySelector('.sidebar');
+  if(sb&&!mdSidebarWasCollapsed)sb.classList.remove('collapsed');
+}
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape'||!mdActCtx)return;
+  if(document.getElementById('ent-modal')?.classList.contains('open'))return;
+  if(document.getElementById('bs-lightbox')?.classList.contains('open'))return;
+  backToActivity();
+});
+function renderActPanel(){
+  const a=mdActCtx;if(!a)return'';
+  const tc=(typeof TC!=='undefined'&&TC[a.type])?TC[a.type]:{icon:'flame'};
+  const rows=(a.matches||[]).map(m=>{
+    const ic=ATicn[m.media]||{cls:'type-online',icon:'newspaper'};
+    const pct=m.score?Math.round(m.score*100):null;
+    const sc=pct>=85?'sc-hi':pct>=70?'sc-mid':'sc-lo';
+    return `<div class="spot-cov-li${m.id===mdActMatch?' active':''}" onclick="selectActMatch('${m.id}')">
+      <span class="md-li-ico ${ic.cls}"><i data-lucide="${ic.icon}"></i></span>
+      <div class="spot-cov-body"><div class="spot-cov-hl">${m.title}</div><div class="spot-cov-meta">${m.source} · ${m.date}</div></div>
+      ${pct?`<span class="spot-cov-match ${sc}">${pct}%</span>`:''}
+    </div>`;
+  }).join('');
+  return `<div class="spot-panel ctx-act">
+    <button class="spot-back" onclick="backToActivity()"><i data-lucide="arrow-left"></i> Back to activity</button>
+    <div class="spot-tier ctx-tier"><i data-lucide="${tc.icon}" class="icon-sm"></i> ${a.type}</div>
+    <div class="spot-panel-title">${a.title}</div>
+    ${a.content?`<div class="spot-panel-why"><span class="spot-why-lbl"><i data-lucide="zap"></i> Activity context</span><span class="spot-why-txt">${a.content.length>180?a.content.slice(0,180)+'…':a.content}</span></div>`:''}
+    <div class="spot-cov-hd">Matched articles · ${(a.matches||[]).length}</div>
+    <div class="spot-cov-list">${rows}</div>
+  </div>`;
 }
 function selectMention(i){
   if(!mentionData[i])return;
@@ -883,7 +1318,7 @@ function renderMentionCards(){
   const total=mentionData.length,pages=Math.max(1,Math.ceil(total/MC_PER_PAGE));
   if(mcPage>=pages)mcPage=pages-1;
   const start=mcPage*MC_PER_PAGE,end=Math.min(start+MC_PER_PAGE,total);
-  const cards=mentionData.slice(start,end).map((d,k)=>{const i=start+k;const hasImg=['online','blog','tv'].includes(articleType(d));return `<div class="mc-card" id="mention-card-${i}" onclick="openMention(${i})">
+  const cards=mentionData.slice(start,end).map((d,k)=>{const i=start+k;const hasImg=['online','blog','tv'].includes(articleType(d));return `<div class="mc-card" id="mention-card-${i}" style="animation-delay:${(k*0.03).toFixed(2)}s" onclick="openMention(${i})">
     ${hasImg?`<div class="mc-thumb"><img src="https://picsum.photos/seed/${encodeURIComponent(d.outlet+d.sv)}/480/270" alt=""></div>`:''}
     <div class="mc-body">
       <div class="mc-top">
@@ -916,6 +1351,7 @@ function gotoMcPage(p){
   document.getElementById('mentions-cards').innerHTML=renderMentionCards();
   initIcons();
 }
+function playViewAnim(el){if(!el)return;el.style.animation='none';void el.offsetWidth;el.style.animation='viewIn 0.28s cubic-bezier(0.22,1,0.36,1) both';}
 function setMentionsView(v){
   mentionsView=v;
   const tableWrap=document.querySelector('.tbl-scroll'),cards=document.getElementById('mentions-cards'),footer=document.querySelector('.tbl-footer');
@@ -928,10 +1364,12 @@ function setMentionsView(v){
     if(tableWrap)tableWrap.style.display='none';
     if(footer)footer.style.display='none';   // cards have their own pager
     initIcons();
+    playViewAnim(cards);
   }else{
     cards.style.display='none';
     if(tableWrap)tableWrap.style.display='block';
     if(footer)footer.style.display='flex';
+    playViewAnim(tableWrap);
   }
 }
 function renderModeToggle(){
@@ -1035,20 +1473,48 @@ function renderTVCard(d,p){
   const radio=d.type==='radio';
   const poster=d.poster||`https://picsum.photos/seed/${encodeURIComponent(d.outlet+d.sv)}/880/495`;
   const src=d.audioUrl||d.videoUrl||'Video/Tensyon%20sumiklab%20sa%20pagitan.mp4';
-  const eqBars=radio?Array.from({length:48},(_,i)=>{const env=Math.sin((i/47)*Math.PI);return `<span style="--i:${i};--peak:${(0.2+env*0.8).toFixed(2)}"></span>`;}).join(''):'';
-  const media=radio
-    ? `<audio class="tv-video" src="${src}" preload="metadata"></audio><div class="tv-eq">${eqBars}</div>`
-    : `<video class="tv-video" src="${src}" poster="${poster}" preload="metadata" playsinline></video>`;
-  return `
+  const head=`
     <h1 class="${p}-title">${d.title}</h1>
     <div class="${p}-byline">
       <span class="${p}-pub">${d.sub}</span>
       <span class="${p}-pub-dot"></span>
       <span class="${p}-posted">Aired ${d.aired||d.date}</span>
     </div>
-    ${renderArticleActions(d)}
-    <div class="tv-player${radio?' tv-player-radio':''}" onclick="tvVideoClick(event)" title="${radio?'Play broadcast':'Play clip'}">
-      ${media}
+    ${renderArticleActions(d)}`;
+  if(radio){
+    // SoundCloud-style waveform: deterministic bar heights seeded from the title
+    const N=140,ti=d.title||d.sub||'';
+    let seed=0;for(let i=0;i<ti.length;i++)seed=(seed*31+ti.charCodeAt(i))>>>0;
+    let s=seed||1;const rnd=()=>{s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff;};
+    const bars=Array.from({length:N},()=>`<i style="--h:${(0.1+Math.pow(rnd(),0.55)*0.9).toFixed(3)}"></i>`).join('');
+    return `${head}
+    <div class="tv-player tv-player-radio rw" onclick="tvVideoClick(event)" title="Play / pause">
+      <audio class="tv-video" src="${src}" preload="metadata"></audio>
+      <div class="rw-head">
+        <button class="rw-play" onclick="tvTogglePlay(event)" aria-label="Play / pause"><i data-lucide="play" class="tvi tvi-play"></i><i data-lucide="pause" class="tvi tvi-pause"></i></button>
+        <div class="rw-meta"><span class="rw-title">${d.outlet||d.sub}</span></div>
+        <div class="rw-right">
+          <span class="rw-ago">${d.ago||d.date}</span>
+          <div class="rw-tools" onclick="event.stopPropagation()">
+            <button class="rw-tool" title="Theater mode" onclick="toggleTheater(event)"><i data-lucide="gallery-horizontal-end"></i></button>
+            <button class="rw-tool" title="Full screen" onclick="playerFullscreen(event)"><i data-lucide="maximize"></i></button>
+          </div>
+        </div>
+      </div>
+      <div class="rw-wave" onclick="rwSeekClick(event)" onmousemove="rwHover(event)" onmouseleave="rwHoverOut(event)">
+        <div class="rw-bars">${bars}</div>
+        <div class="rw-bars rw-fill">${bars}</div>
+        <div class="rw-scrub"></div>
+        <div class="rw-playhead"></div>
+        <span class="rw-tip">0:00</span>
+        <span class="rw-cur">0:00</span>
+        <span class="rw-tot">0:00</span>
+      </div>
+    </div>`;
+  }
+  return `${head}
+    <div class="tv-player" onclick="tvVideoClick(event)" title="Play clip">
+      <video class="tv-video" src="${src}" poster="${poster}" preload="metadata" playsinline></video>
       <span class="tv-net">${(d.outlet||d.sub).toUpperCase()}</span>
       <button class="tv-play" aria-label="Play"><i data-lucide="play"></i></button>
       <div class="tv-bar" onclick="event.stopPropagation()">
@@ -1125,6 +1591,9 @@ function tvVideoClick(e){const v=e.currentTarget.querySelector('.tv-video');if(!
 function tvTogglePlay(e){e.stopPropagation();const v=e.currentTarget.closest('.tv-player').querySelector('.tv-video');if(!v)return;if(v.paused)v.play().catch(()=>{});else v.pause();}
 function tvMute(e){e.stopPropagation();const v=e.currentTarget.closest('.tv-player').querySelector('.tv-video');if(v)v.muted=!v.muted;}
 function tvSeek(input){const v=input.closest('.tv-player').querySelector('.tv-video');if(v&&v.duration)v.currentTime=(input.value/100)*v.duration;}
+function rwSeekClick(e){e.stopPropagation();const wave=e.currentTarget,v=wave.closest('.tv-player').querySelector('.tv-video');if(!v||!v.duration)return;const r=wave.getBoundingClientRect();v.currentTime=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width))*v.duration;}
+function rwHover(e){const wave=e.currentTarget,v=wave.closest('.tv-player').querySelector('.tv-video'),r=wave.getBoundingClientRect(),x=Math.min(r.width,Math.max(0,e.clientX-r.left)),frac=r.width?x/r.width:0;wave.style.setProperty('--hx',x+'px');wave.classList.add('rw-hovering');const tip=wave.querySelector('.rw-tip');if(tip)tip.textContent=(v&&v.duration)?tvFmt(frac*v.duration):'0:00';}
+function rwHoverOut(e){e.currentTarget.classList.remove('rw-hovering');}
 // Bind each player's video to its bar (idempotent — safe to call after every render)
 // Smooth word-karaoke driven by requestAnimationFrame (timeupdate is too coarse at ~4fps)
 let tvCapRAF=0;
@@ -1166,15 +1635,17 @@ function tvWire(){
     if(v.dataset.wired)return; v.dataset.wired='1';
     const player=v.closest('.tv-player');
     const seek=player.querySelector('.tv-seek'),time=player.querySelector('.tv-time');
+    const rwWave=player.querySelector('.rw-wave'),rwCur=player.querySelector('.rw-cur'),rwTot=player.querySelector('.rw-tot');
     const tbody=()=>document.querySelector('.tv-trans-body');
     v.addEventListener('play',()=>{player.classList.add('playing','vp-playing');const tb=tbody();if(tb)tb.classList.add('captions-on');startCap(v);});
     v.addEventListener('pause',()=>{player.classList.remove('vp-playing');const tb=tbody();if(tb)tb.classList.remove('captions-on');stopCap();});
     v.addEventListener('ended',()=>{stopCap();const tb=tbody();if(tb){tb.classList.remove('captions-on');tb.querySelectorAll('p.tv-cap-active').forEach(p=>{p.classList.remove('tv-cap-active');if(p.dataset.txt!==undefined){p.textContent=p.dataset.txt;delete p.dataset.txt;}});}v.dataset.capIdx='';v.dataset.capWord='';});
     v.addEventListener('volumechange',()=>player.classList.toggle('muted',v.muted||v.volume===0));
-    v.addEventListener('loadedmetadata',()=>{if(time)time.textContent='0:00 / '+tvFmt(v.duration);});
+    v.addEventListener('loadedmetadata',()=>{if(time)time.textContent='0:00 / '+tvFmt(v.duration);if(rwTot)rwTot.textContent=tvFmt(v.duration);});
     v.addEventListener('timeupdate',()=>{
       if(seek&&v.duration)seek.value=(v.currentTime/v.duration)*100;
       if(time)time.textContent=tvFmt(v.currentTime)+' / '+tvFmt(v.duration||0);
+      if(v.duration){const pc=(v.currentTime/v.duration)*100;if(rwWave)rwWave.style.setProperty('--rwp',pc+'%');if(rwCur)rwCur.textContent=tvFmt(v.currentTime);}
     });
   });
 }
@@ -1442,8 +1913,8 @@ function renderInlineDetail(d){
   const mentions=d.chart.reduce((a,b)=>a+b,0);
   const fq=buildFreq(d);
 
-  // Left column hidden — table takes that role
-  document.getElementById('adp-col-left').innerHTML='';
+  // Left column: empty in normal mode; spotlight panel from a story; activity panel from the tracker
+  document.getElementById('adp-col-left').innerHTML=mdSpotCtx?renderSpotPanel(d):(mdActCtx?renderActPanel():'');
 
   // Middle column (30%): all data cards stacked
   document.getElementById('adp-col-mid').innerHTML=`
@@ -1547,6 +2018,13 @@ function applyAveColor(){
   el.classList.remove('grn','red');
   el.classList.add(val>=target?'grn':'red');
 }
+// Media-type maps + tooltip helper, hoisted above the top-level mentions init below so
+// renderArticleList can use them during the early spotlight render (avoids a TDZ ReferenceError).
+const ATmc={'TV':'media-tv','Online':'media-online','Print':'media-print','Radio':'media-radio','Social':'media-social'};
+const ATicn={'TV':{cls:'type-tv',icon:'tv'},'Online':{cls:'type-online',icon:'newspaper'},'Print':{cls:'type-broadsheet',icon:'file-text'},'Radio':{cls:'type-radio',icon:'radio'},'Social':{cls:'type-blog',icon:'share-2'}};
+const _barTips=new Map();
+let _barTipId=0;
+function _makeTip(data){const id='bt'+(++_barTipId);_barTips.set(id,data);return id;}
 if(document.getElementById('page-mentions')){
   renderTrendRows();
   applyAveColor();
@@ -1577,7 +2055,10 @@ document.querySelectorAll('.tcb').forEach(cb=>{
 });
 // ── PAGE ROUTING (pages are now separate HTML files sharing this script) ──
 let currentPage=document.getElementById('page-tracker')?'tracker'
-               :document.getElementById('page-dashboard')?'dashboard':'mentions';
+               :document.getElementById('page-dashboard')?'dashboard'
+               :document.getElementById('page-publishers')?'publishers'
+               :document.getElementById('page-authors')?'authors'
+               :document.getElementById('page-categories')?'categories':'mentions';
 function goPage(page){
   if(currentPage===page)return;
   window.location.href=page+'.html';
@@ -1591,8 +2072,6 @@ const TC={
   'Trending':{cls:'type-tr',icls:'icon-tr',icon:'flame'},
   'Product':{cls:'type-pd',icls:'icon-pd',icon:'box'},
 };
-const ATmc={'TV':'media-tv','Online':'media-online','Print':'media-print','Radio':'media-radio','Social':'media-social'};
-const ATicn={'TV':{cls:'type-tv',icon:'tv'},'Online':{cls:'type-online',icon:'newspaper'},'Print':{cls:'type-broadsheet',icon:'file-text'},'Radio':{cls:'type-radio',icon:'radio'},'Social':{cls:'type-blog',icon:'share-2'}};
 const DB=[
   {media:'Online',source:'Manila Times Online',title:'DITO expands 5G footprint in Metro Manila',date:'May 20, 2026',value:312000},
   {media:'Print',source:'Philippine Daily Inquirer',title:'DITO Telecommunity posts record subscriber growth',date:'May 19, 2026',value:520000},
@@ -1606,10 +2085,10 @@ const DB=[
 ];
 let acts=[
   {id:1,title:'DITO 5G Expansion — Visayas Coverage Push',type:'Press Release',date:'2026-05-18',content:'DITO Telecommunity accelerating 5G rollout across Visayas region. Coverage expansion to reach Cebu Iloilo Bacolod by Q3 2026. Partnership with Huawei for network infrastructure upgrade.',matches:[
-    {id:'m1',media:'Online',source:'BusinessWorld',title:'Telco war heats up as DITO expands 5G coverage to Visayas',date:'May 22, 2026',value:256000,score:0.94,manual:false},
-    {id:'m2',media:'Online',source:'SunStar Cebu',title:'DITO Telecommunity opens new flagship store in Cebu City',date:'May 21, 2026',value:78000,score:0.87,manual:false},
-    {id:'m3',media:'TV',source:'ABS-CBN News',title:'DITO eyes Visayas coverage by Q3 2026',date:'May 18, 2026',value:890000,score:0.81,manual:false},
-    {id:'m4',media:'Online',source:'Inquirer Online',title:'DITO reigns supreme as the Philippines fastest mobile network',date:'May 23, 2026',value:190000,score:0.76,manual:false},
+    {id:'m1',media:'Online',source:'BusinessWorld',title:'Telco war heats up as DITO expands 5G coverage to Visayas',date:'Jun 22, 2026',value:256000,score:0.94,manual:false},
+    {id:'m2',media:'Online',source:'SunStar Cebu',title:'DITO Telecommunity opens new flagship store in Cebu City',date:'Jun 21, 2026',value:78000,score:0.87,manual:false},
+    {id:'m3',media:'TV',source:'ABS-CBN News',title:'DITO eyes Visayas coverage by Q3 2026',date:'Jun 18, 2026',value:890000,score:0.81,manual:false},
+    {id:'m4',media:'Online',source:'Inquirer Online',title:'DITO reigns supreme as the Philippines fastest mobile network',date:'Jun 23, 2026',value:190000,score:0.76,manual:false},
   ]},
   {id:2,title:'Jimenez PLDT Rivalry — Executive Response',type:'Crisis',date:'2026-05-25',content:'Official response to PLDT executive statements on competitive landscape. Jimenez remarks on market positioning drove Tier 1 pickup across major outlets within 24 hours.',matches:[
     {id:'m6',media:'Print',source:'Philippine Daily Inquirer',title:"BIZ BUZZ: Jimenez twits PLDT's foes",date:'May 25, 2026',value:397000,score:0.96,manual:false},
@@ -1620,10 +2099,20 @@ let acts=[
 ];
 let atNid=3,trackerSel=null,trackerTabs={},msQ={},msF={},msR={},aiCache={},atTypeFilter='',atSearchFilter='',atAddOpen={},artFilter={},artSort={},freshTrack={},scanKwOff={};
 let atSelectMode=false,atSelected=new Set();
+// Merge stories tracked from other pages (persisted in localStorage) into the activity list
+(function mergeTrackedExtras(){
+  trkLoad().forEach(e=>{
+    if(acts.some(a=>a.title===e.title))return;
+    acts.unshift({id:atNid++,title:e.title,type:e.type,date:e.date,content:e.content,matches:e.matches||[]});
+  });
+  const nb=document.getElementById('nb-tracker');
+  if(nb)nb.textContent=acts.length;
+})();
 let matchSel={}; // per-activity selected match IDs: {actId: Set}
 
 function fv(v){return v>=1000000?'PHP '+(v/1000000).toFixed(1)+'M':v>=1000?'PHP '+(v/1000).toFixed(0)+'K':'PHP '+v;}
 function fmtActDate(s){if(!s)return'';const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);if(!m)return s;const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m[2]-1];return`${mo} ${+m[3]}, ${m[1]}`;}
+function timeAgo(s){if(!s)return'';const then=new Date(s);if(isNaN(then))return'';const h=Math.round((Date.now()-then)/3600000);if(h<1)return'just now';if(h<24)return h+'h ago';const d=Math.round(h/24);if(d<7)return d+'d ago';return Math.round(d/7)+'w ago';}
 function tAve(m){const t=m.reduce((s,x)=>s+x.value,0);return fv(t);}
 function scC(s){if(!s)return{b:'#e4e6ea',t:'#9097a3'};if(s>=0.85)return{b:'#41454d',t:'#9097a3'};if(s>=0.7)return{b:'#6b7280',t:'#9097a3'};return{b:'#9097a3',t:'#9097a3'};}
 
@@ -1637,6 +2126,8 @@ function toggleAtTypeDD(e){
 document.addEventListener('click',function(){
   const menu=document.getElementById('at-type-menu');
   if(menu) menu.classList.remove('open');
+  const sortMenu=document.getElementById('art-sort-menu');
+  if(sortMenu) sortMenu.classList.remove('open');
 });
 
 function setAtFilter(k,v){
@@ -1712,6 +2203,12 @@ function renderTracker(){
 
 function renderTrackerDetail(){
   const a=acts.find(x=>x.id===trackerSel);if(!a)return'';
+  return`<div class="detail-wrap" id="dw">${renderDetailInner(a)}</div>`;
+}
+
+// Everything INSIDE the .detail-wrap frame — swapped on its own so the card
+// frame stays mounted (no full-card flash) when switching activities.
+function renderDetailInner(a){
   const tc=TC[a.type]||TC['Press Release'];
   const aiC=a.matches.filter(m=>!m.manual).length;
   const mnC=a.matches.filter(m=>m.manual).length;
@@ -1724,50 +2221,6 @@ function renderTrackerDetail(){
   const manMatches=a.matches.filter(m=>m.manual);
 
   const allMatches=[...aiMatches,...manMatches];
-  const mSel=matchSel[a.id]||(matchSel[a.id]=new Set());
-  const renderMatchRow=(m,i)=>{
-    const mic=ATicn[m.media]||{cls:'type-online',icon:'newspaper'},pct=m.score?Math.round(m.score*100):null;
-    const scoreCls=pct>=85?'sc-hi':pct>=70?'sc-mid':'sc-lo';
-    const checked=mSel.has(m.id);
-    return`<tr id="mr-${m.id}" class="match-tbl-row${checked?' match-row-checked':''}" style="animation-delay:${i*0.03}s">
-      <td style="width:32px;text-align:center"><span class="tcb${checked?' tcb-on':''}" onclick="toggleMatchSel(${a.id},'${m.id}')">${checked?'<i data-lucide="check" style="width:9px;height:9px;color:#fff"></i>':''}</span></td>
-      <td>
-        <div class="hl-cell">
-          <span class="hl-icon ${mic.cls}" data-btip="${_makeTip({label:m.media})}"><i data-lucide="${mic.icon}"></i></span>
-          <div>
-            <div class="match-hl">${m.title}</div>
-            ${m.manual?`<span style="font-size:10px;color:#854f0b;background:#faeeda;padding:1px 6px;border-radius:10px;font-weight:500;display:inline-block;margin-top:3px">Manual</span>`:''}
-          </div>
-        </div>
-      </td>
-      <td style="width:130px"><div class="pub-name">${m.source}</div></td>
-      <td style="width:100px"><span class="match-ave">${fv(m.value)}</span></td>
-      <td style="width:120px">${pct?`<span class="art-score-val ${scoreCls}">${pct}% match</span><div class="match-score-track" style="margin-top:4px"><div class="match-score-fill" style="width:${pct}%;background:${pct>=85?'#16a34a':pct>=70?'#d97706':'#9ca3af'}"></div></div>`:'—'}</td>
-      <td style="width:90px;white-space:nowrap"><div class="date-main">${m.date}</div></td>
-      <td style="width:36px;text-align:center"><div class="remove-btn" onclick="rmMatch(${a.id},'${m.id}')" title="Remove"><i data-lucide="trash-2" style="width:12px;height:12px"></i></div></td>
-    </tr>`;
-  };
-
-  // search panel state
-  const searchOpen=!!(atAddOpen&&atAddOpen[a.id]);
-  const q=msQ[a.id]||'',f=msF[a.id]||'',res=msR[a.id]||[];
-  const existing=new Set(a.matches.map(m=>m.title));
-  const filtered=f?res.filter(r=>r.media===f):res;
-
-  const searchResults=q
-    ?(filtered.length===0
-      ?`<div style="text-align:center;padding:14px 0;color:#ccc;font-size:12px">No results — try different keywords</div>`
-      :filtered.map((r,i)=>{
-          const mc2=ATmc[r.media]||'media-online',inAct=existing.has(r.title);
-          return`<div class="match-row" style="animation-delay:${i*0.03}s">
-            <div class="match-main">
-              <div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:4px"><span class="media-badge ${mc2}">${r.media}</span><span class="match-hl">${r.title}</span></div>
-              <div class="match-meta"><span class="match-source">${r.source}</span><span class="match-date">${r.date}</span><span class="match-ave">${fv(r.value)} AVE</span>${inAct?`<span style="font-size:10px;color:#276627;background:#e8f5e8;padding:1px 6px;border-radius:10px;font-weight:500"><i data-lucide="check" style="width:10px;height:10px"></i> Added</span>`:''}</div>
-            </div>
-            ${!inAct?`<button class="at-btn-primary-sm" onclick="addMan(${a.id},'${r.title.replace(/'/g,"\\'")}',${r.value},'${r.media}','${r.source}','${r.date}')"><i data-lucide="plus" style="width:10px;height:10px"></i> Add</button>`:''}
-          </div>`;
-        }).join(''))
-    :'';
 
   // coverage snapshot channels
   const channels=[...new Set(a.matches.map(m=>m.media))];
@@ -1783,7 +2236,7 @@ function renderTrackerDetail(){
       }).join('')
     :`<div style="font-size:12.5px;color:#ccc">No coverage yet</div>`;
 
-  return`<div class="detail-wrap" id="dw">
+  return`
     <!-- Inline radar overlay (shown during scan) -->
     <div class="detail-radar" id="dr-${a.id}" style="display:none">
       <div class="dr-card">
@@ -1812,9 +2265,9 @@ function renderTrackerDetail(){
       <div class="detail-head-body">
         <div class="detail-head-title">${a.title}</div>
         <div class="detail-head-meta">
-          <span style="font-size:11px;color:#aaa">${fmtActDate(a.date)}</span>
+          <span class="dh-date"><i data-lucide="calendar"></i> ${fmtActDate(a.date)}</span>
         </div>
-        ${(!freshTrack[a.id]&&a.content)?`<div style="font-size:11.5px;color:#9090a0;line-height:1.5;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;cursor:default" title="${a.content.replace(/"/g,'&quot;')}">${a.content.length>100?a.content.slice(0,100)+'…':a.content}</div>`:''}
+        ${(!freshTrack[a.id]&&a.content)?`<div style="font-size:11.5px;color:#9090a0;line-height:1.5;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;cursor:default" data-btip="${_makeTip({detail:a.content})}">${a.content.length>100?a.content.slice(0,100)+'…':a.content}</div>`:''}
       </div>
       <div class="detail-head-actions">
         ${!freshTrack[a.id]?`<button class="at-btn-edit" onclick="showEdit(${a.id})"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit</button>`:''}
@@ -1858,72 +2311,25 @@ function renderTrackerDetail(){
       <!-- Section header + filter bar: hidden before scan -->
       ${!freshTrack[a.id]?`<div class="dpane-section-hd">
         <span class="dpane-section-hd-label"><i data-lucide="newspaper" style="color:#181d26"></i> Matched articles</span>
-        <button onclick="toggleAddSearch(${a.id})" style="font-size:11px;padding:4px 10px;background:${searchOpen?'#f0f0f2':'transparent'};color:#181d26;border:1px solid #d4d6da;border-radius:5px;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:'Inter',sans-serif;font-weight:500;transition:all 0.12s"><i data-lucide="${searchOpen?'chevron-up':'plus'}" style="width:10px;height:10px"></i> Add article</button>
+        <button class="at-btn-outline" onclick="openAddArt(${a.id})"><i data-lucide="plus" style="width:12px;height:12px"></i> Add article</button>
       </div>
       <div class="art-filter-bar">
-        <select class="art-sort-dd" onchange="setArtSort(${a.id},this.value)">
-          <option value="similarity"${(artSort[a.id]||'similarity')==='similarity'?' selected':''}>Sort: Similarity</option>
-          <option value="ave"${(artSort[a.id]||'')==='ave'?' selected':''}>Sort: AVE</option>
-          <option value="date"${(artSort[a.id]||'')==='date'?' selected':''}>Sort: Date</option>
-        </select>
-        <span class="art-count">All coverage — ${a.matches.length} article${a.matches.length!==1?'s':''}</span>
-        <div class="art-media-pills">${['All','Print','Online','TV','Radio'].map(x=>{const sel=artFilter[a.id]||[];if(x==='All')return `<span class="art-pill${sel.length===0?' on':''}" onclick="clearArtFilter(${a.id})">All</span>`;const on=sel.includes(x);return `<span class="art-pill${on?' on':''}" onclick="toggleArtFilter(${a.id},'${x}')">${on?'<i data-lucide="check"></i> ':''}${x}</span>`;}).join('')}</div>
-      </div>`:''}
-
-
-      <!-- Collapsible search panel -->
-      ${searchOpen?`<div class="add-art-panel">
-        <div class="inline-search-bar">
-          <div class="ms-input-wrap"><i data-lucide="search" style="width:12px;height:12px;color:#bbb"></i><input type="text" placeholder="Search articles to add..." id="ms-q" value="${q}" onkeydown="if(event.key==='Enter')doSrch(${a.id})" autofocus></div>
-          <button class="at-btn-new" style="font-size:12px;padding:7px 14px;font-weight:500" onclick="doSrch(${a.id})">Search</button>
-        </div>
-        <div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap">${['All','Online','Print','TV','Radio'].map(x=>`<span class="ms-f${f===(x==='All'?'':x)?' on':''}" onclick="setMsF(${a.id},'${x==='All'?'':x}')">${x}</span>`).join('')}</div>
-        <div class="inline-search-results">${searchResults}</div>
-      </div>`:''}
-
-      <!-- Article list (filtered + sorted) -->
-      ${(()=>{
-        const af=artFilter[a.id]||[],as=artSort[a.id]||'similarity';
-        let list=a.matches.filter(m=>af.length===0||af.includes(m.media));
-        if(as==='ave') list=[...list].sort((a,b)=>b.value-a.value);
-        else if(as==='date') list=[...list].sort((a,b)=>new Date(b.date)-new Date(a.date));
-        else list=[...list].sort((a,b)=>(b.score||0)-(a.score||0));
-        if(list.length===0&&a.matches.length===0&&freshTrack[a.id]){
-          const kws=extractKeywords(a.title+' '+a.content);
-          const off=scanKwOff[a.id]||new Set();
-          const kwHtml=kws.map(k=>`<span class="scan-kw${off.has(k)?' off':''}" onclick="toggleScanKw(${a.id},'${k}')">${k}</span>`).join('');
-          return`<div class="ready-banner">
-            <div class="rb-icon"><i data-lucide="radio-tower"></i></div>
-            <div class="rb-title">Story ready to scan</div>
-            <div class="rb-sub">${a.title}</div>
-            <div class="rb-from"><i data-lucide="arrow-up" style="width:10px;height:10px"></i> Tracked from Today's spotlight</div>
-            <div class="scan-kw-row" style="justify-content:center;margin-bottom:20px">${kwHtml}</div>
-            <button class="at-btn-ai" onclick="runScan(${a.id})" style="padding:9px 28px;font-size:13px"><i data-lucide="radio-tower" style="width:14px;height:14px"></i> Scan now</button>
-            <button class="at-btn-ghost" onclick="dismissScan(${a.id})" style="font-size:11px;margin-top:8px;border:none;background:transparent;color:#bbb;cursor:pointer;font-family:'Inter',sans-serif">Dismiss</button>
-          </div>`;
-        }
-        if(list.length===0&&a.matches.length===0) return`<div style="padding:28px 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px"><i data-lucide="search" style="width:20px;height:20px;color:#ddd"></i><div style="font-size:13px;font-weight:600;color:#aaa">No coverage yet</div><div style="font-size:12px;color:#ccc;margin-bottom:4px">Use "+ Add article" to search and add coverage manually.</div></div>`;
-        if(list.length===0) return`<div style="padding:18px 0;text-align:center;color:#ccc;font-size:12px">No articles match this filter.</div>`;
-        const selCount=mSel.size;
-        const allChecked=list.length>0&&list.every(m=>mSel.has(m.id));
-        const someChecked=selCount>0&&!allChecked;
-        const delBar=selCount>0?`<div class="match-del-bar" id="mdb-${a.id}">
-          <span class="match-del-bar-count">${selCount} article${selCount!==1?'s':''} selected</span>
-          <div class="match-del-bar-actions">
-            <button class="match-del-cancel" onclick="clearMatchSel(${a.id})">Cancel</button>
-            <button class="match-del-btn" onclick="confirmMatchBulkDelete(${a.id})"><i data-lucide="trash-2" style="width:10px;height:10px"></i> Delete</button>
+        <div class="at-type-dd" id="art-sort-dd">
+          <div class="fc" onclick="toggleSortDD(event)">
+            <span id="art-sort-label">Sort: ${({similarity:'Similarity',ave:'AVE',date:'Date'})[artSort[a.id]||'similarity']}</span>
+            <i data-lucide="chevron-down"></i>
           </div>
-        </div>`:'';
-        return`${delBar}<table class="tbl match-tbl"><thead><tr>
-          <th style="width:32px;text-align:center"><span class="tcb${allChecked?' tcb-on':''}" style="${someChecked?'background:var(--ink-2);border-color:var(--ink-2)':''}" onclick="toggleMatchSelAll(${a.id})">${allChecked?'<i data-lucide="check" style="width:9px;height:9px;color:#fff"></i>':someChecked?'<i data-lucide="minus" style="width:9px;height:9px;color:#fff"></i>':''}</span></th>
-          <th>Headline</th>
-          <th style="width:130px">Outlet</th>
-          <th style="width:100px">AVE</th>
-          <th style="width:120px">Match</th>
-          <th style="width:90px;white-space:nowrap">Date</th>
-          <th style="width:36px"></th>
-        </tr></thead><tbody>${list.map((m,i)=>renderMatchRow(m,i)).join('')}</tbody></table>`;
-      })()}
+          <div class="at-type-menu" id="art-sort-menu">
+            ${[['similarity','Similarity'],['ave','AVE'],['date','Date']].map(([v,l])=>`<div class="at-type-opt${(artSort[a.id]||'similarity')===v?' active':''}" onclick="setArtSort(${a.id},'${v}')"><span>Sort: ${l}</span></div>`).join('')}
+          </div>
+        </div>
+        <span class="art-count">All coverage — ${a.matches.length} article${a.matches.length!==1?'s':''}</span>
+        <div class="art-media-pills" id="art-media-pills">${buildPills(a)}</div>
+      </div>`:''}
+
+
+      <!-- Article list (filtered + sorted) — re-rendered in isolation on filter/sort -->
+      <div id="art-list-region" class="art-list-region">${buildArtList(a)}</div>
 
       <!-- AI report target -->
       <div id="ai-report-${a.id}"></div>
@@ -1935,7 +2341,92 @@ function renderTrackerDetail(){
       <button class="at-btn-csv" onclick="dlCSV(${a.id})"><i data-lucide="file-spreadsheet" style="width:12px;height:12px"></i> Download CSV</button>
       <button class="at-btn-ai" id="ai-btn-${a.id}" onclick="genAI(${a.id})"><i data-lucide="sparkles" style="width:12px;height:12px"></i> Generate AI summary</button>
     </div>`:''}
-  </div>`;
+  `;
+}
+
+// Media-filter pills (rebuilt in isolation when a filter is toggled)
+function buildPills(a){
+  return ['All','Print','Online','TV','Radio'].map(x=>{const sel=artFilter[a.id]||[];if(x==='All')return `<span class="art-pill${sel.length===0?' on':''}" onclick="clearArtFilter(${a.id})">All</span>`;const on=sel.includes(x);return `<span class="art-pill${on?' on':''}" onclick="toggleArtFilter(${a.id},'${x}')">${on?'<i data-lucide="check"></i> ':''}${x}</span>`;}).join('');
+}
+
+// Article list (filter + sort applied) — extracted so it can be re-rendered alone
+function buildArtList(a){
+  const mSel=matchSel[a.id]||(matchSel[a.id]=new Set());
+  const renderMatchRow=(m,i)=>{
+    const mic=ATicn[m.media]||{cls:'type-online',icon:'newspaper'},pct=m.score?Math.round(m.score*100):null;
+    const scoreCls=pct>=85?'sc-hi':pct>=70?'sc-mid':'sc-lo';
+    const checked=mSel.has(m.id);
+    // On add, animate only the new row; otherwise the usual staggered entrance.
+    const aStyle=_addAnimNewId?(m.id===_addAnimNewId?'animation-delay:0s':'animation:none'):`animation-delay:${i*0.05}s`;
+    return`<tr id="mr-${m.id}" class="match-tbl-row${checked?' match-row-checked':''}" style="${aStyle}">
+      <td style="width:32px;text-align:center"><span class="tcb${checked?' tcb-on':''}" onclick="toggleMatchSel(${a.id},'${m.id}')">${checked?'<i data-lucide="check" style="width:9px;height:9px;color:#fff"></i>':''}</span></td>
+      <td style="cursor:pointer" onclick="previewMatch(${a.id},'${m.id}')" title="Preview article">
+        <div class="hl-cell">
+          <span class="hl-icon ${mic.cls}" data-btip="${_makeTip({label:m.media})}"><i data-lucide="${mic.icon}"></i></span>
+          <div>
+            <div class="match-hl">${m.title}</div>
+            ${m.manual?`<span style="font-size:10px;color:#854f0b;background:#faeeda;padding:1px 6px;border-radius:10px;font-weight:500;display:inline-block;margin-top:3px">Manual</span>`:''}
+          </div>
+        </div>
+      </td>
+      <td style="width:130px"><div class="pub-name">${m.source}</div><div class="pub-cat">${m.media}</div></td>
+      <td style="width:100px"><span class="match-ave">${fv(m.value)}</span></td>
+      <td style="width:120px">${pct?`<span class="art-score-val ${scoreCls}">${pct}% match</span><div class="match-score-track" style="margin-top:4px"><div class="match-score-fill" style="width:${pct}%;background:${pct>=85?'#16a34a':pct>=70?'#d97706':'#9ca3af'}"></div></div>`:'—'}</td>
+      <td style="width:90px;white-space:nowrap"><div class="date-main">${m.date}</div><div class="date-ago">${timeAgo(m.date)}</div></td>
+      <td style="width:36px;text-align:center"><div class="remove-btn" onclick="rmMatch(${a.id},'${m.id}')" title="Remove"><i data-lucide="trash-2" style="width:12px;height:12px"></i></div></td>
+    </tr>`;
+  };
+  const af=artFilter[a.id]||[],as=artSort[a.id]||'similarity';
+  let list=a.matches.filter(m=>af.length===0||af.includes(m.media));
+  if(as==='ave') list=[...list].sort((a,b)=>b.value-a.value);
+  else if(as==='date') list=[...list].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  else list=[...list].sort((a,b)=>(b.score||0)-(a.score||0));
+  if(list.length===0&&a.matches.length===0&&freshTrack[a.id]){
+    const kws=extractKeywords(a.title+' '+a.content);
+    const off=scanKwOff[a.id]||new Set();
+    const kwHtml=kws.map(k=>`<span class="scan-kw${off.has(k)?' off':''}" onclick="toggleScanKw(${a.id},'${k}')">${k}</span>`).join('');
+    return`<div class="ready-banner">
+      <div class="rb-icon"><i data-lucide="radio-tower"></i></div>
+      <div class="rb-title">Story ready to scan</div>
+      <div class="rb-sub">${a.title}</div>
+      <div class="rb-from"><i data-lucide="arrow-up" style="width:10px;height:10px"></i> Tracked from Today's spotlight</div>
+      <div class="scan-kw-row" style="justify-content:center;margin-bottom:20px">${kwHtml}</div>
+      <button class="at-btn-ai" onclick="runScan(${a.id})" style="padding:9px 28px;font-size:13px"><i data-lucide="radio-tower" style="width:14px;height:14px"></i> Scan now</button>
+      <button class="at-btn-ghost" onclick="dismissScan(${a.id})" style="font-size:11px;margin-top:8px;border:none;background:transparent;color:#bbb;cursor:pointer;font-family:'Inter',sans-serif">Dismiss</button>
+    </div>`;
+  }
+  if(list.length===0&&a.matches.length===0) return`<div style="padding:28px 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px"><i data-lucide="search" style="width:20px;height:20px;color:#ddd"></i><div style="font-size:13px;font-weight:600;color:#aaa">No coverage yet</div><div style="font-size:12px;color:#ccc;margin-bottom:4px">Use "+ Add article" to search and add coverage manually.</div></div>`;
+  if(list.length===0) return`<div style="padding:18px 0;text-align:center;color:#ccc;font-size:12px">No articles match this filter.</div>`;
+  const selCount=mSel.size;
+  const allChecked=list.length>0&&list.every(m=>mSel.has(m.id));
+  const someChecked=selCount>0&&!allChecked;
+  const delBar=selCount>0?`<div class="match-del-bar" id="mdb-${a.id}">
+    <span class="match-del-bar-count">${selCount} article${selCount!==1?'s':''} selected</span>
+    <div class="match-del-bar-actions">
+      <button class="match-del-cancel" onclick="clearMatchSel(${a.id})">Cancel</button>
+      <button class="match-del-btn" onclick="confirmMatchBulkDelete(${a.id})"><i data-lucide="trash-2" style="width:10px;height:10px"></i> Delete</button>
+    </div>
+  </div>`:'';
+  return`${delBar}<table class="tbl match-tbl"><thead><tr>
+    <th style="width:32px;text-align:center"><span class="tcb${allChecked?' tcb-on':''}" style="${someChecked?'background:var(--ink-2);border-color:var(--ink-2)':''}" onclick="toggleMatchSelAll(${a.id})">${allChecked?'<i data-lucide="check" style="width:9px;height:9px;color:#fff"></i>':someChecked?'<i data-lucide="minus" style="width:9px;height:9px;color:#fff"></i>':''}</span></th>
+    <th>Headline</th>
+    <th style="width:130px">Outlet</th>
+    <th style="width:100px">AVE</th>
+    <th style="width:120px">Match</th>
+    <th style="width:90px;white-space:nowrap">Date</th>
+    <th style="width:36px"></th>
+  </tr></thead><tbody>${list.map((m,i)=>renderMatchRow(m,i)).join('')}</tbody></table>`;
+}
+
+// Re-render ONLY the article list + pills (smooth — no full-section reload)
+function renderArtListOnly(id){
+  const a=acts.find(x=>x.id===id);if(!a)return;
+  const region=document.getElementById('art-list-region');
+  if(!region){renderDetailOnly();return;}
+  region.innerHTML=buildArtList(a);
+  const pills=document.getElementById('art-media-pills');
+  if(pills)pills.innerHTML=buildPills(a);
+  initIcons();
 }
 
 function genAI(id){
@@ -2023,12 +2514,21 @@ function rmMatch(aid,mid){
 function selAct(id){trackerSel=id;if(!trackerTabs[id])trackerTabs[id]='matches';renderDetailOnly();}
 function closeDetail(){trackerSel=null;renderDetailOnly();}
 function setTab(t){renderDetailOnly();}
-function setMsF(id,f){msF[id]=f;renderDetailOnly();}
 function renderDetailOnly(){
   const detailEl=document.getElementById('at-detail-panel');
   if(!detailEl)return;
   if(trackerSel){
-    detailEl.innerHTML=renderTrackerDetail();
+    const a=acts.find(x=>x.id===trackerSel);
+    const wrap=detailEl.querySelector('.detail-wrap');
+    if(wrap&&a){
+      // Frame already mounted — swap only the inner details (no full-card flash).
+      // New child nodes auto-replay their CSS entrance animation, except on add
+      // where we suppress the header/KPI entrance (only the new row animates).
+      wrap.classList.toggle('detail-no-anim',!!_addAnimNewId);
+      wrap.innerHTML=renderDetailInner(a);
+    } else {
+      detailEl.innerHTML=renderTrackerDetail();
+    }
   } else {
     detailEl.innerHTML=`<div class="at-empty-state"><i data-lucide="mouse-pointer-2"></i><p>Select an activity to view matched articles</p></div>`;
   }
@@ -2177,26 +2677,111 @@ function runScan(id){
   tick();
 }
 
-function toggleAddSearch(id){
-  atAddOpen[id]=!atAddOpen[id];
-  if(!atAddOpen[id]){msQ[id]='';msR[id]=[];}
-  renderDetailOnly();
+function clearArtFilter(id){artFilter[id]=[];renderArtListOnly(id);}
+function toggleArtFilter(id,val){const a=artFilter[id]||(artFilter[id]=[]);const i=a.indexOf(val);if(i>=0)a.splice(i,1);else a.push(val);renderArtListOnly(id);}
+function toggleSortDD(e){e.stopPropagation();const m=document.getElementById('art-sort-menu');if(m)m.classList.toggle('open');}
+function setArtSort(id,val){
+  artSort[id]=val;
+  // The sort dropdown lives in the filter bar (outside the re-rendered list region),
+  // so update its label + active state directly, then close — mirrors setAtFilter('type').
+  const lbl=document.getElementById('art-sort-label');
+  if(lbl)lbl.textContent='Sort: '+({similarity:'Similarity',ave:'AVE',date:'Date'})[val];
+  document.querySelectorAll('#art-sort-menu .at-type-opt').forEach(o=>{
+    o.classList.toggle('active',(o.querySelector('span')?.textContent||'')==='Sort: '+({similarity:'Similarity',ave:'AVE',date:'Date'})[val]);
+  });
+  document.getElementById('art-sort-menu')?.classList.remove('open');
+  renderArtListOnly(id);
 }
-function clearArtFilter(id){artFilter[id]=[];renderDetailOnly();}
-function toggleArtFilter(id,val){const a=artFilter[id]||(artFilter[id]=[]);const i=a.indexOf(val);if(i>=0)a.splice(i,1);else a.push(val);renderDetailOnly();}
-function setArtSort(id,val){artSort[id]=val;renderDetailOnly();}
-function doSrch(id){
-  const inp=document.getElementById('ms-q');if(!inp)return;
-  const q=inp.value.trim().toLowerCase();msQ[id]=q;
-  if(!q){msR[id]=[];renderDetailOnly();return;}
-  msR[id]=DB.filter(d=>d.title.toLowerCase().includes(q)||d.source.toLowerCase().includes(q)||d.media.toLowerCase().includes(q));
-  renderDetailOnly();
-}
+// When set during a render, suppress the header/KPI entrance and animate only this row.
+let _addAnimNewId=null;
 function addMan(aid,title,value,media,source,date){
   const a=acts.find(x=>x.id===aid);if(!a)return;
-  a.matches.unshift({id:'man'+Date.now(),media,source,title,date,value,score:null,manual:true});renderDetailOnly();
+  const oldMn=a.matches.filter(m=>m.manual).length;   // previous count — tween from here, not 0
+  const newId='man'+Date.now();
+  a.matches.unshift({id:newId,media,source,title,date,value,score:null,manual:true});
+  _addAnimNewId=newId;            // gate animation to just the new row for this render
+  renderDetailOnly();
+  _addAnimNewId=null;
+  // Tween the "manually added" KPI number from its previous value
+  const card=document.getElementById('at-kpi-strip-'+aid)?.querySelector('.ss:nth-child(4)');
+  const val=card?.querySelector('.ss-val');
+  if(val){
+    val.classList.remove('muted');
+    countUp(val,a.matches.filter(m=>m.manual).length,450,null,oldMn);
+  }
   showSimpleToast(`Article added to <strong style="font-weight:600">${a.title}</strong>`,'circle-check');
 }
+
+// ── Add coverage slide-over (Search existing DB + Add manually) ──
+let addArt={id:null,media:'',q:'',_results:[]};
+
+let _aaSidebarWasCollapsed=false;
+function openAddArt(id){
+  addArt.id=id; addArt.media=''; addArt.q='';
+  const ov=document.getElementById('addart-overlay');if(!ov)return;
+  // Auto-collapse the left nav (mirrors openNewsletter); remember prior state to restore on close
+  const sb=document.getElementById('sidebar');
+  _aaSidebarWasCollapsed=!!(sb&&sb.classList.contains('collapsed'));
+  if(sb)sb.classList.add('collapsed');
+  const q=document.getElementById('aa-q');if(q)q.value='';
+  renderAddArtPills();
+  renderAddArtResults();
+  // Two-step open (mirrors openNewsletter): mount off-screen, then add .open next
+  // frame so the transform transition actually slides the panel in. The body class
+  // shrinks .app-body (margin-right) in sync so the drawer pushes content, not overlays.
+  ov.style.display='block';
+  requestAnimationFrame(()=>{ov.classList.add('open');document.body.classList.add('addart-open');});
+  initIcons();
+  setTimeout(()=>document.getElementById('aa-q')?.focus(),120);
+}
+function closeAddArt(){
+  const ov=document.getElementById('addart-overlay');if(!ov)return;
+  ov.classList.remove('open');                       // slides out
+  document.body.classList.remove('addart-open');     // content expands back in sync
+  const sb=document.getElementById('sidebar');        // restore nav unless it was already collapsed
+  if(sb&&!_aaSidebarWasCollapsed)sb.classList.remove('collapsed');
+  setTimeout(()=>{ov.style.display='none';},280);    // hide after the 0.28s transition
+}
+function renderAddArtPills(){
+  const el=document.getElementById('aa-pills');if(!el)return;
+  el.innerHTML=['All','Online','Print','TV','Radio'].map(x=>{const v=x==='All'?'':x;return`<span class="ms-f${addArt.media===v?' on':''}" onclick="setAddArtMedia('${v}')">${x}</span>`;}).join('');
+}
+function setAddArtMedia(v){addArt.media=v;renderAddArtPills();renderAddArtResults();}
+function addArtInput(v){addArt.q=v;renderAddArtResults();}
+function renderAddArtResults(){
+  const el=document.getElementById('addart-results');if(!el)return;
+  const a=acts.find(x=>x.id===addArt.id);
+  const q=(addArt.q||'').trim().toLowerCase();
+  const existing=a?new Set(a.matches.map(m=>m.title)):new Set();
+  let list=DB.filter(d=>!addArt.media||d.media===addArt.media);
+  if(q)list=list.filter(d=>d.title.toLowerCase().includes(q)||d.source.toLowerCase().includes(q)||d.media.toLowerCase().includes(q));
+  addArt._results=list;
+  if(list.length===0){el.innerHTML=`<div class="aa-empty">${q?'No results — try different keywords, or use “Add manually”.':'No coverage in the library for this filter.'}</div>`;initIcons();return;}
+  el.innerHTML=list.map((r,i)=>{
+    const ic=ATicn[r.media]||{cls:'type-online',icon:'newspaper'},added=existing.has(r.title);
+    return`<div class="match-row" data-aa-idx="${i}" style="animation-delay:${i*0.04}s">
+      <span class="hl-icon ${ic.cls}" data-btip="${_makeTip({label:r.media})}"><i data-lucide="${ic.icon}"></i></span>
+      <div class="match-main">
+        <div class="match-hl">${r.title}</div>
+        <div class="match-meta"><span class="match-source">${r.source}</span><span class="aa-dot">·</span><span class="match-date">${r.date}</span><span class="aa-dot">·</span><span class="match-ave">${fv(r.value)} AVE</span></div>
+      </div>
+      <div class="aa-action">${added?`<span class="aa-added"><i data-lucide="check"></i> Added</span>`:`<button class="at-btn-outline" onclick="addArtAddIdx(${i})"><i data-lucide="plus" style="width:12px;height:12px"></i> Add</button>`}</div>
+    </div>`;
+  }).join('');
+  initIcons();
+}
+function addArtAddIdx(i){
+  const r=(addArt._results||[])[i];if(!r||addArt.id==null)return;
+  addMan(addArt.id,r.title,r.value,r.media,r.source,r.date);
+  // Flip only the clicked row's action (Add → Added) with a pop — avoids re-animating
+  // the whole list and keeps scroll position. Later searches/filters re-sync via full render.
+  const act=document.querySelector(`#addart-results [data-aa-idx="${i}"] .aa-action`);
+  if(act){act.innerHTML=`<span class="aa-added aa-pop"><i data-lucide="check"></i> Added</span>`;initIcons();}
+  else renderAddArtResults();
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&document.getElementById('addart-overlay')?.classList.contains('open'))closeAddArt();
+});
 
 function showEdit(id){
   const a=acts.find(x=>x.id===id);if(!a)return;
@@ -2382,7 +2967,13 @@ function showCreate(){
       <div style="font-size:12px;color:#41454d;margin-bottom:18px;padding:9px 11px;background:#f7f8fa;border-radius:0 5px 5px 0;border-left:3px solid #181d26"><i data-lucide="sparkles" style="width:12px;height:12px;color:#181d26;margin-right:4px"></i>Fill in the details below. Click <strong>Scan for matches</strong> to find related coverage.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div style="grid-column:1/-1"><label class="form-label">Title</label><input class="form-input" type="text" id="f-title" placeholder="e.g. DITO 5G Launch Press Release"></div>
-        <div><label class="form-label">Type</label><select class="form-select" id="f-type"><option value="">Select type...</option><option>Press Release</option><option>Event</option><option>Crisis</option><option>Trending</option><option>Product</option></select></div>
+        <div><label class="form-label">Type</label>
+          <div class="at-type-dd ft-dd">
+            <div class="form-select ft-trigger" id="ft-trigger" onclick="ftToggle(event)"><span id="ft-label" class="ft-ph">Select type...</span></div>
+            <div class="at-type-menu ft-menu" id="ft-menu">${['Press Release','Event','Crisis','Trending','Product'].map(t=>`<div class="at-type-opt" onclick="ftPick('${t}')"><span>${t}</span></div>`).join('')}</div>
+            <input type="hidden" id="f-type" value="">
+          </div>
+        </div>
         <div><label class="form-label">Date released</label><input class="form-input" type="date" id="f-date" value="${new Date().toISOString().split('T')[0]}"></div>
         <div style="grid-column:1/-1"><label class="form-label">Content</label><textarea class="form-textarea" id="f-content" placeholder="Paste your press release or activity summary here..."></textarea><div style="font-size:11px;color:#bbb;margin-top:4px;text-align:right" id="cc">0 characters</div></div>
       </div>
@@ -2397,15 +2988,27 @@ function showCreate(){
   if(fc) fc.addEventListener('input',function(){const cc=document.getElementById('cc');if(cc)cc.textContent=this.value.length+' characters';});
 }
 
+// Custom "Type" dropdown (replaces the native select; writes to hidden #f-type)
+function ftToggle(e){e.stopPropagation();const m=document.getElementById('ft-menu');if(m)m.classList.toggle('open');}
+function ftPick(val){
+  const inp=document.getElementById('f-type');if(inp)inp.value=val;
+  const lbl=document.getElementById('ft-label');if(lbl){lbl.textContent=val;lbl.classList.remove('ft-ph');}
+  document.querySelectorAll('#ft-menu .at-type-opt').forEach(o=>o.classList.toggle('active',o.textContent.trim()===val));
+  document.getElementById('ft-trigger')?.classList.remove('ft-error');
+  document.getElementById('ft-menu')?.classList.remove('open');
+}
+document.addEventListener('click',function(){const m=document.getElementById('ft-menu');if(m)m.classList.remove('open');});
+
 function startScan(){
   const title=document.getElementById('f-title').value.trim();
   const type=document.getElementById('f-type').value;
   const date=document.getElementById('f-date').value;
   const content=document.getElementById('f-content').value.trim();
   if(!title){document.getElementById('f-title').focus();document.getElementById('f-title').style.borderColor='#d44';return;}
-  if(!type){document.getElementById('f-type').style.borderColor='#d44';return;}
+  if(!type){document.getElementById('ft-trigger')?.classList.add('ft-error');return;}
   if(!content){document.getElementById('f-content').focus();document.getElementById('f-content').style.borderColor='#d44';return;}
-  ['f-title','f-type','f-content'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.borderColor='';});
+  ['f-title','f-content'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.borderColor='';});
+  document.getElementById('ft-trigger')?.classList.remove('ft-error');
 
   const ov=document.getElementById('dr-create');if(!ov)return;
   ov.style.display='flex';
@@ -2523,10 +3126,7 @@ function initIcons(){
   });
   if(typeof tvWire==='function')tvWire();
 }
-// ── Bar chart rich tooltip ──
-const _barTips=new Map();
-let _barTipId=0;
-function _makeTip(data){const id='bt'+(++_barTipId);_barTips.set(id,data);return id;}
+// ── Bar chart rich tooltip (state + _makeTip hoisted near the top for load-order) ──
 (function(){
   const el=document.createElement('div');
   el.id='md-tooltip';
@@ -2551,9 +3151,9 @@ function _makeTip(data){const id='bt'+(++_barTipId);_barTips.set(id,data);return
     if(!t)return;
     el.classList.remove('anchored');
     let html='';
-    if(t.label!=null){
-      // Anchored tooltip with arrow (e.g. article type icon or KPI card)
-      html+=`<div class="tip-date">${t.label}</div>`;
+    if(t.label!=null||t.detail!=null){
+      // Anchored tooltip with arrow (article type icon, KPI card, or a label-less brief)
+      if(t.label!=null)html+=`<div class="tip-date">${t.label}</div>`;
       if(t.detail)html+=`<div class="tip-detail">${t.detail}</div>`;
       el.innerHTML=html;
       el.classList.toggle('has-detail',!!t.detail);
@@ -2630,16 +3230,18 @@ if(document.getElementById('page-mentions')){
   });
 })();
 // ── KPI scan-ring + count-up animation ──
-function countUp(el,target,duration,onComplete){
-  // ease-out-expo: rockets up fast, decelerates crisply into the final value
-  el.textContent=0;
+function countUp(el,target,duration,onComplete,from){
+  // ease-out-expo: rockets up fast, decelerates crisply into the final value.
+  // `from` (default 0) lets callers tween an in-place change (e.g. 5 → 6) instead of resetting.
+  from=from||0;
+  el.textContent=from;
   const start=performance.now();
-  const isFloat=target%1!==0;
+  const isFloat=(target%1!==0)||(from%1!==0);
   (function tick(now){
     const p=Math.min((now-start)/duration,1);
     const ease=p===1?1:1-Math.pow(2,-10*p);
-    const val=isFloat?(ease*target).toFixed(2):(Math.round(ease*target));
-    el.textContent=val;
+    const cur=from+(target-from)*ease;
+    el.textContent=isFloat?cur.toFixed(2):Math.round(cur);
     if(p<1){requestAnimationFrame(tick);}
     else{
       el.textContent=isFloat?target.toFixed(2):target;
@@ -2810,7 +3412,7 @@ function initDashboard(){
   const{
     ResponsiveContainer,ComposedChart,BarChart,ScatterChart,PieChart,
     Area,Line,Bar,Scatter,Pie,Cell,
-    XAxis,YAxis,CartesianGrid,Tooltip,Legend,LabelList
+    XAxis,YAxis,CartesianGrid,Tooltip,Legend,LabelList,Brush,ReferenceArea,Customized,Rectangle
   }=window.Recharts;
   const TT={
     contentStyle:{background:'#181d26',border:'none',borderRadius:6,padding:'8px 12px'},
@@ -2818,152 +3420,781 @@ function initDashboard(){
     labelStyle:{color:'#fff',fontSize:12,fontFamily:'Inter'}
   };
 
-  // Shared factory for single-series horizontal bar charts
-  function hBar(id,data,yKey,cells,opts){
-    const{margin={top:28,right:60,bottom:8,left:100},maxBarSize=20,labelFmt,tooltipFmt}=opts||{};
-    const TickY=({x,y,payload})=>RC('text',{x,y,dy:4,textAnchor:'end',fontSize:11,fill:'#6b7280'},
-      payload.value.length>22?payload.value.slice(0,22)+'…':payload.value);
-    dbMount(id,RC(ResponsiveContainer,{width:'99%',height:'100%'},
-      RC(BarChart,{data,layout:'vertical',margin},
-        RC(XAxis,{type:'number',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false}),
-        RC(YAxis,{type:'category',dataKey:yKey,tick:TickY,axisLine:false,tickLine:false,width:margin.left-10}),
-        RC(Tooltip,{...TT,...(tooltipFmt?{formatter:tooltipFmt}:{})}),
-        RC(Bar,{dataKey:'value',maxBarSize,radius:[0,4,4,0]},
-          ...cells,
-          RC(LabelList,{dataKey:'value',position:'right',style:{fontSize:11,fill:'#6b7280'},formatter:labelFmt||undefined})
-        )
-      )
-    ));
+  // ── Timeline (composed: day-stripes + bollinger band + results bars + value line + brush) ──
+  const TL_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const TL_FULL=(function(){
+    const end=new Date(2026,5,23),N=30;                 // 30 days ending Jun 23, 2026
+    const tail={0:15,1:56,2:150,3:70,4:65,5:12,6:45,7:78,8:5}; // last 9 days = the screenshot
+    const out=[];
+    for(let i=N-1;i>=0;i--){
+      const d=new Date(end);d.setDate(end.getDate()-i);
+      const results=i<=8?tail[8-i]:30+((i*37)%70);
+      const sv=0;                                       // constant → perfectly straight line
+      const proj=0;
+      out.push({
+        date:`${d.getDate()}. ${TL_MONTHS[d.getMonth()]}`,
+        fullDate:`${TL_MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`,
+        results,storyValue:sv,projAvg:proj,band:[proj-12,proj+12]   // constant straight band
+      });
+    }
+    return out;
+  })();
+  function tlRow(color,name,val){
+    return RC('div',{key:name,style:{display:'flex',alignItems:'center',gap:8,fontSize:12,margin:'3px 0'}},
+      RC('span',{style:{width:7,height:7,borderRadius:'50%',background:color,flexShrink:0}}),
+      RC('span',{style:{color:'rgba(255,255,255,0.62)',flex:1,whiteSpace:'nowrap'}},name),
+      RC('span',{style:{color:'#fff',fontWeight:600,marginLeft:18}},val));
+  }
+  function TLTooltip(o){
+    if(!o||!o.active||!o.payload||!o.payload.length)return null;
+    const p=o.payload[0].payload;
+    return RC('div',{style:{background:'#181d26',border:'none',borderRadius:8,padding:'10px 13px',boxShadow:'0 6px 20px rgba(0,0,0,0.28)',minWidth:232}},
+      RC('div',{style:{fontWeight:600,color:'#fff',marginBottom:7,fontSize:12.5}},p.fullDate),
+      tlRow('#b9a4f7','Total Story Value',p.storyValue),
+      tlRow('#9ca3af','Projected 7 days Average',p.projAvg),
+      tlRow('#b9a4f7','Max 7 days Forecast',p.band[1]),
+      tlRow('#cfc3f3','Min 7 days Forecast',p.band[0]),
+      RC('div',{style:{height:1,background:'rgba(255,255,255,0.12)',margin:'7px 0'}}),
+      tlRow('#16a34a','Total Results',p.results));
+  }
+  let tlRange=7,tlSelectedDate=null;
+  function buildTimeline(rangeDays){
+    tlRange=rangeDays;
+    const data=TL_FULL.slice(-rangeDays);
+    const maxR=Math.max(...data.map(d=>d.results),10);
+    // Alternating single-day stripes (zebra), full plot height
+    const stripes=[];
+    for(let i=0;i<data.length;i+=2)
+      stripes.push(RC(ReferenceArea,{key:'st'+i,yAxisId:'r',x1:data[i].date,x2:data[i].date,fill:'rgba(24,29,38,0.04)',fillOpacity:1,stroke:'none'}));
+    dbMount('db-timeline',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(ComposedChart,{data,margin:{top:16,right:18,bottom:4,left:48}},
+        ...stripes,
+        RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
+        RC(XAxis,{dataKey:'date',scale:'point',padding:{left:40,right:40},tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
+        RC(YAxis,{yAxisId:'v',orientation:'left',domain:[-110,90],tick:false,axisLine:false,tickLine:false,width:0}),
+        RC(YAxis,{yAxisId:'r',orientation:'left',domain:[0,Math.ceil(maxR*2.6)],tick:false,axisLine:false,tickLine:false,width:0}),
+        RC(Customized,{component:(props)=>{
+          const o=props.offset||{};const top=o.top||16,h=o.height||300,left=o.left||48;
+          const rMax=Math.ceil(maxR*2.6);
+          const title=(label,yFrac)=>{const y=top+h*yFrac;return RC('text',{key:'t'+label,x:11,y,transform:`rotate(-90 11 ${y})`,textAnchor:'middle',fontSize:10.5,fill:'#9ca3af'},label);};
+          const num=(val,yFrac,key)=>RC('text',{key:'n'+key,x:left-7,y:top+h*yFrac+4,textAnchor:'end',fontSize:11,fill:'#6b7280'},val);
+          return RC('g',{},
+            title('Total Story Value',0.42),title('Total Results',0.80),
+            num('0',0.45,'sv'),num('100',1-100/rMax,'r100'),num('0',0.985,'r0'));
+        }}),
+        RC(Tooltip,{content:TLTooltip,cursor:{stroke:'#9097a3',strokeWidth:1}}),
+        RC(Legend,{verticalAlign:'bottom',height:40,iconSize:10,wrapperStyle:{fontSize:11,color:'#6b7280',paddingTop:18}}),
+        RC(Area,{yAxisId:'v',type:'monotone',dataKey:'band',name:'Bollinger Bands',stroke:'none',fill:'#b9a4f7',fillOpacity:0.22,legendType:'circle',dot:false,activeDot:false}),
+        RC(Bar,{yAxisId:'r',dataKey:'results',name:'Total Results Bar',fill:'#16a34a',maxBarSize:42,radius:[3,3,0,0],legendType:'circle',cursor:'pointer',
+          onClick:(d)=>{const fd=d&&(d.fullDate||(d.payload&&d.payload.fullDate));if(fd)openTimelineDay(fd);}},
+          data.map((d,i)=>RC(Cell,{key:'c'+i,fill:'#16a34a',fillOpacity:(tlSelectedDate&&d.fullDate!==tlSelectedDate)?0.3:1}))),
+        RC(Line,{yAxisId:'v',type:'linear',dataKey:'projAvg',name:'Projected Average',stroke:'#9ca3af',strokeWidth:1.5,strokeDasharray:'4 3',dot:false,activeDot:false,legendType:'plainline'}),
+        RC(Line,{yAxisId:'v',type:'linear',dataKey:'storyValue',name:'Total Story Value',stroke:'#b9a4f7',strokeWidth:1.75,dot:{r:3,fill:'#b9a4f7',stroke:'#fff',strokeWidth:1},activeDot:{r:5,fill:'#b9a4f7'},legendType:'plainline'}),
+        RC(Brush,{dataKey:'date',height:36,stroke:'#d4d4d8',travellerWidth:8,tickFormatter:()=>''},
+          RC(Area,{dataKey:'results',type:'monotone',stroke:'#16a34a',fill:'#86d9a8',fillOpacity:0.55}))
+      )));
+  }
+  // ── Timeline Insights panel ──
+  const TI_ICN={online:{cls:'type-online',icon:'newspaper'},broadsheet:{cls:'type-broadsheet',icon:'file-text'},provincial:{cls:'type-provincial',icon:'newspaper'},tabloid:{cls:'type-tabloid',icon:'newspaper'},blog:{cls:'type-blog',icon:'rss'},magazine:{cls:'type-magazine',icon:'book-open'},tv:{cls:'type-tv',icon:'tv'},radio:{cls:'type-radio',icon:'radio'}};
+  const tiIcn=t=>TI_ICN[t||'online']||TI_ICN.online;
+  const toneColor=t=>t==='positive'?'#16a34a':t==='negative'?'#e94f37':'#9ca3af';
+  const tlData=()=>TL_FULL.slice(-tlRange);
+  const rangeLabel=()=>({3:'last 3 days',7:'last 7 days',15:'last 15 days',30:'last 30 days'}[tlRange]||('last '+tlRange+' days'));
+  let tiOpen=false,tiMode='overview',tiKey=null,tiSource='timeline';
+  function dayArticles(day){
+    const list=mentionData.filter(d=>d.date===day.fullDate);
+    let seed=0;for(let i=0;i<day.fullDate.length;i++)seed=(seed*31+day.fullDate.charCodeAt(i))>>>0;
+    const want=Math.max(3,Math.min(8,Math.round(day.results/14)));
+    for(let k=0;list.length<want&&k<mentionData.length*3;k++){
+      const cand=mentionData[(seed+k*7)%mentionData.length];
+      if(!list.includes(cand))list.push(cand);
+    }
+    return list;
+  }
+  function artRow(d){
+    const ic=tiIcn(d.type),src=d.sub||d.outlet||'';
+    return `<div class="ti-art">
+      <span class="hl-icon ${ic.cls}"><i data-lucide="${ic.icon}"></i></span>
+      <div class="ti-art-main">
+        <div class="ti-art-hl">${d.title}</div>
+        <div class="ti-art-meta"><span>${src}</span><span class="aa-dot">·</span><span>${d.date}</span><span class="aa-dot">·</span><span>${d.ave||''}</span></div>
+      </div>
+      <span class="ti-sent-dot" style="background:${toneColor(d.tone)}" title="${d.tone||'neutral'}"></span>
+    </div>`;
+  }
+  function tiAnalysis(){
+    const data=tlData(),n=data.length,results=data.map(d=>d.results);
+    const total=results.reduce((a,b)=>a+b,0),avg=Math.round(total/n);
+    let peak=data[0],trough=data[0];
+    data.forEach(d=>{if(d.results>peak.results)peak=d;if(d.results<trough.results)trough=d;});
+    const first=data[0],last=data[n-1];
+    const trendPct=first.results?Math.round(((last.results-first.results)/first.results)*100):0;
+    let spike=null,drop=null;
+    for(let i=1;i<n;i++){const delta=data[i].results-data[i-1].results;
+      if(spike===null||delta>spike.delta)spike={day:data[i],delta};
+      if(drop===null||delta<drop.delta)drop={day:data[i],delta};}
+    const h=Math.max(1,Math.floor(n/3));
+    const lastAvg=Math.round(results.slice(-h).reduce((a,b)=>a+b,0)/h);
+    const prevAvg=Math.round(results.slice(-2*h,-h).reduce((a,b)=>a+b,0)/h)||lastAvg;
+    const topDays=[...data].sort((a,b)=>b.results-a.results).slice(0,3);
+    const srcMap={};
+    data.forEach(d=>dayArticles(d).forEach(a=>{const s=a.sub||a.outlet;if(s)srcMap[s]=(srcMap[s]||0)+1;}));
+    const topSources=Object.entries(srcMap).sort((a,b)=>b[1]-a[1]).slice(0,4);
+    return {n,total,avg,peak,trough,first,last,trendPct,spike,drop,lastAvg,prevAvg,topDays,topSources};
+  }
+  function tiOverviewHTML(){
+    const a=tiAnalysis();
+    const tCls=a.trendPct>=0?'ti-up':'ti-down',tSign=a.trendPct>=0?'+':'';
+    const momUp=a.lastAvg>=a.prevAvg;
+    const topMax=a.topDays[0]?a.topDays[0].results:1;
+    const srcMax=a.topSources[0]?a.topSources[0][1]:1;
+    return `
+      <div class="ti-narrative">Coverage ${a.trendPct>=0?'climbed':'eased'} over the ${rangeLabel()}, peaking on <b>${a.peak.date}</b> with <b>${a.peak.results}</b> results. The quietest day was <b>${a.trough.date}</b> (${a.trough.results}).</div>
+      <div class="ti-stats">
+        <div class="ti-stat"><div class="ti-stat-lbl">Total results</div><div class="ti-stat-val">${a.total.toLocaleString()}</div><div class="ti-stat-sub">across ${a.n} days</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Peak day</div><div class="ti-stat-val">${a.peak.results}</div><div class="ti-stat-sub">${a.peak.date}</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Daily average</div><div class="ti-stat-val">${a.avg}</div><div class="ti-stat-sub">results / day</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Trend</div><div class="ti-stat-val ${tCls}">${tSign}${a.trendPct}%</div><div class="ti-stat-sub">first → last day</div></div>
+      </div>
+      <div>
+        <div class="ti-sec-title"><i data-lucide="trending-up"></i> Key trends</div>
+        <div class="ti-insight"><i data-lucide="${a.trendPct>=0?'arrow-up-right':'arrow-down-right'}"></i><div>Overall <b class="${tCls}">${tSign}${a.trendPct}%</b> from ${a.first.date} (${a.first.results}) to ${a.last.date} (${a.last.results}).</div></div>
+        <div class="ti-insight"><i data-lucide="activity"></i><div>Momentum is <b>${momUp?'building':'cooling'}</b> — recent days average <b>${a.lastAvg}</b> vs ${a.prevAvg} earlier.</div></div>
+        <div class="ti-insight"><i data-lucide="bar-chart-2"></i><div>Daily volume ranges <b>${a.trough.results}–${a.peak.results}</b> results.</div></div>
+      </div>
+      <div>
+        <div class="ti-sec-title"><i data-lucide="zap"></i> Notable spikes &amp; drops</div>
+        ${a.spike?`<div class="ti-callout" onclick="openTimelineDay('${a.spike.day.fullDate}')">
+          <span class="ti-callout-ic" style="background:rgba(22,163,74,0.12);color:#16a34a"><i data-lucide="trending-up"></i></span>
+          <div class="ti-callout-main"><div class="ti-callout-lbl">Spike on ${a.spike.day.date}</div><div class="ti-callout-sub">Biggest day-over-day rise</div></div>
+          <span class="ti-callout-val ti-up">+${a.spike.delta}</span></div>`:''}
+        ${a.drop?`<div class="ti-callout" onclick="openTimelineDay('${a.drop.day.fullDate}')">
+          <span class="ti-callout-ic" style="background:rgba(233,79,55,0.12);color:#e94f37"><i data-lucide="trending-down"></i></span>
+          <div class="ti-callout-main"><div class="ti-callout-lbl">Drop on ${a.drop.day.date}</div><div class="ti-callout-sub">Largest single-day fall</div></div>
+          <span class="ti-callout-val ti-down">${a.drop.delta}</span></div>`:''}
+      </div>
+      <div>
+        <div class="ti-sec-title"><i data-lucide="award"></i> Top days by volume</div>
+        ${a.topDays.map((d,i)=>`<div class="ti-rank" onclick="openTimelineDay('${d.fullDate}')">
+          <span class="ti-rank-no">${i+1}</span><span class="ti-rank-name">${d.fullDate}</span>
+          <span class="ti-rank-bar"><span class="ti-rank-bar-fill" style="width:${Math.round(d.results/topMax*100)}%"></span></span>
+          <span class="ti-rank-val">${d.results}</span></div>`).join('')}
+      </div>
+      <div>
+        <div class="ti-sec-title"><i data-lucide="newspaper"></i> Top sources</div>
+        ${a.topSources.map(([name,c],i)=>`<div class="ti-rank" style="cursor:default">
+          <span class="ti-rank-no">${i+1}</span><span class="ti-rank-name">${name}</span>
+          <span class="ti-rank-bar"><span class="ti-rank-bar-fill" style="width:${Math.round(c/srcMax*100)}%;background:#7c3aed"></span></span>
+          <span class="ti-rank-val">${c}</span></div>`).join('')}
+      </div>
+      <div class="ti-foot"><i data-lucide="sparkles"></i><span>AI-generated summary derived from the current filter and date range. Click any bar in the chart for that day's articles.</span></div>`;
+  }
+  function tiDetailHTML(){
+    const data=tlData();
+    const day=data.find(d=>d.fullDate===tiKey);
+    if(!day)return tiOverviewHTML();
+    const idx=data.indexOf(day),prev=idx>0?data[idx-1]:null;
+    const delta=prev?day.results-prev.results:0;
+    const total=data.reduce((s,d)=>s+d.results,0),share=total?Math.round(day.results/total*100):0;
+    const rank=[...data].sort((a,b)=>b.results-a.results).findIndex(d=>d.fullDate===tiKey)+1;
+    const arts=dayArticles(day),dCls=delta>=0?'ti-up':'ti-down',dSign=delta>=0?'+':'';
+    return `
+      <div class="ti-stats">
+        <div class="ti-stat"><div class="ti-stat-lbl">Results</div><div class="ti-stat-val">${day.results}</div><div class="ti-stat-sub">on this day</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">vs previous day</div><div class="ti-stat-val ${prev?dCls:''}">${prev?dSign+delta:'—'}</div><div class="ti-stat-sub">${prev?prev.date:'no prior day'}</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Share of range</div><div class="ti-stat-val">${share}%</div><div class="ti-stat-sub">of ${total.toLocaleString()} results</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Rank</div><div class="ti-stat-val">#${rank}</div><div class="ti-stat-sub">of ${data.length} days</div></div>
+      </div>
+      <div>
+        <div class="ti-sec-title"><i data-lucide="file-text"></i> Related articles</div>
+        ${arts.map(artRow).join('')}
+        ${day.results>arts.length?`<div class="ti-more-note">Showing ${arts.length} of ${day.results} results</div>`:''}
+      </div>`;
+  }
+  // Source-aware panel controller (Timeline + Media Exposure plug in here)
+  function tiHeadHTML(label,sub,detailTitle){
+    return tiMode==='overview'
+      ?`<span class="ti-head-badge"><i data-lucide="sparkles"></i></span>
+         <div class="ti-head-titles"><div class="ti-head-title">${label}</div><div class="ti-head-sub">${sub}</div></div>
+         <button class="ti-x" onclick="closeInsights()" title="Close"><i data-lucide="x"></i></button>`
+      :`<div class="ti-head-titles"><button class="ti-back" onclick="insBack()"><i data-lucide="arrow-left"></i> ${label}</button><div class="ti-head-title">${detailTitle}</div></div>
+         <button class="ti-x" onclick="closeInsights()" title="Close"><i data-lucide="x"></i></button>`;
+  }
+  // Chart sources register here: {card, sub(), detailTitle(), overview(), detail(), clear()}
+  const SRC={};
+  SRC.timeline={card:'db-timeline-card',sub:()=>'Timeline · '+rangeLabel(),detailTitle:()=>tiKey,overview:()=>tiOverviewHTML(),detail:()=>tiDetailHTML(),clear:()=>{tlSelectedDate=null;buildTimeline(tlRange);}};
+  const curSrc=()=>SRC[tiSource]||SRC.timeline;
+  function renderTIHead(){
+    const head=document.getElementById('ti-head');if(!head)return;
+    const s=curSrc();
+    head.innerHTML=tiHeadHTML('Insights',s.sub(),s.detailTitle());
+  }
+  function tiBodyHTML(){const s=curSrc();return tiMode==='overview'?s.overview():s.detail();}
+  function tiRender(){
+    renderTIHead();
+    const body=document.getElementById('ti-body');
+    if(body)body.innerHTML=tiBodyHTML();
+    initIcons();
+  }
+  const tiFocusCard=()=>document.getElementById(curSrc().card);
+  function tiSpotlight(){
+    document.querySelectorAll('.is-focused').forEach(e=>e.classList.remove('is-focused'));
+    document.querySelectorAll('.has-focus').forEach(e=>e.classList.remove('has-focus'));
+    const card=tiFocusCard();
+    if(card){card.classList.add('is-focused');const row=card.closest('.db-row');if(row)row.classList.add('has-focus');}
+    return card;
+  }
+  let _tiSidebarWasCollapsed=false;
+  function tiShow(){
+    const ov=document.getElementById('ti-overlay');if(!ov)return;
+    ov.style.display='block';
+    const firstOpen=!tiOpen;
+    if(firstOpen){
+      const sb=document.getElementById('sidebar');
+      _tiSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
+      if(sb)sb.classList.add('collapsed');
+    }
+    const card=tiSpotlight();
+    if(firstOpen&&card)setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'center'}),60);
+    requestAnimationFrame(()=>{ov.classList.add('open');document.body.classList.add('ins-open');});
+    tiOpen=true;
+  }
+  function tiClearSel(){Object.values(SRC).forEach(s=>s.clear&&s.clear());}
+  function tiOpenSource(src){tiSource=src;tiMode='overview';tiKey=null;tiClearSel();tiRender();tiShow();}
+  window.openTimelineInsights=()=>tiOpenSource('timeline');
+  window.openExposureInsights=()=>tiOpenSource('exposure');
+  window.openTimelineDay=function(fullDate){tiSource='timeline';tiMode='detail';tiKey=fullDate;tlSelectedDate=fullDate;buildTimeline(tlRange);tiRender();tiShow();};
+  window.openExposureChannel=function(key){tiSource='exposure';tiMode='detail';tiKey=key;expSelected=key;renderExposure();tiRender();tiShow();};
+  window.insBack=function(){tiMode='overview';tiKey=null;tiClearSel();tiRender();};
+  window.closeInsights=function(){
+    const ov=document.getElementById('ti-overlay');
+    if(ov){ov.classList.remove('open');setTimeout(()=>{ov.style.display='none';},300);}
+    document.body.classList.remove('ins-open');tiOpen=false;
+    document.querySelectorAll('.is-focused,.has-focus').forEach(e=>e.classList.remove('is-focused','has-focus'));
+    tiClearSel();
+    const sb=document.getElementById('sidebar');
+    if(sb&&!_tiSidebarWasCollapsed)sb.classList.remove('collapsed');
+  };
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&tiOpen)closeInsights();});
+  // Click outside the focused card (or panel) closes the Insights panel.
+  // Geometry-based (not .contains) so a bar click — which re-renders the chart and detaches
+  // the clicked element — doesn't get mistaken for an outside click.
+  document.addEventListener('click',e=>{
+    if(!tiOpen)return;
+    const inRect=el=>{const r=el&&el.getBoundingClientRect();return r&&e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;};
+    if(inRect(document.getElementById('ti-overlay'))||inRect(document.querySelector('.is-focused')))return;
+    closeInsights();
+  });
+
+  window.setTimelineRange=function(n){
+    buildTimeline(n);
+    document.querySelectorAll('.db-tl-range').forEach(b=>b.classList.toggle('on',+b.dataset.r===n));
+    if(tiOpen&&tiSource==='timeline'){
+      if(tiMode==='detail'&&!tlData().some(d=>d.fullDate===tiKey)){tiMode='overview';tiKey=null;tlSelectedDate=null;buildTimeline(n);}
+      tiRender();
+    }
+  };
+  buildTimeline(7);
+
+  // ── Media Exposure (100% stacked channel share, single horizontal bar) ──
+  const expSeries=[  // colors mirror the media-type icons (.hl-icon.type-*) used across the app
+    {key:'online',label:'Online News',color:'#3b6098',labelColor:'#fff'},
+    {key:'blogs',label:'Blogs',color:'#d97706',labelColor:'#fff'},
+    {key:'broadsheet',label:'Broadsheet',color:'#4f46e5',labelColor:'#fff'},
+    {key:'provincial',label:'Provincial',color:'#0891b2',labelColor:'#fff'},
+    {key:'tabloid',label:'Tabloid',color:'#ea580c',labelColor:'#fff'},
+    {key:'tv',label:'TV',color:'#7c3aed',labelColor:'#fff'},
+    {key:'radio',label:'Radio',color:'#db2777',labelColor:'#fff'}
+  ];
+  const expData=[{name:'',online:55.24,blogs:16.43,broadsheet:8.62,provincial:1.64,tabloid:1.44,tv:13.35,radio:3.29}];
+  function ExpTooltip(o){
+    if(!o||!o.active)return null;
+    return RC('div',{style:{background:'#181d26',border:'none',borderRadius:8,padding:'10px 13px',boxShadow:'0 6px 20px rgba(0,0,0,0.28)',minWidth:196}},
+      ...expSeries.map(s=>RC('div',{key:s.key,style:{display:'flex',alignItems:'center',gap:8,fontSize:12,margin:'3px 0'}},
+        RC('span',{style:{width:7,height:7,borderRadius:'50%',background:s.color,flexShrink:0}}),
+        RC('span',{style:{color:'rgba(255,255,255,0.62)',flex:1,whiteSpace:'nowrap'}},s.label+':'),
+        RC('span',{style:{color:'#fff',fontWeight:600,marginLeft:18}},expData[0][s.key]+'%'))));
+  }
+  let expSelected=null;   // channel locked open via Insights detail → dim the others
+  function ExposureBar(){
+    const [hov,setHov]=React.useState(null);   // hovered channel key → dim the others
+    const dimKey=expSelected||hov;
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data:expData,layout:'vertical',margin:{top:22,right:10,bottom:22,left:10},onMouseLeave:()=>setHov(null)},
+        RC(XAxis,{type:'number',domain:[0,100],hide:true}),
+        RC(YAxis,{type:'category',dataKey:'name',hide:true}),
+        RC(Tooltip,{content:ExpTooltip,cursor:false}),
+        ...expSeries.map((s,i)=>RC(Bar,{key:s.key,dataKey:s.key,stackId:'a',fill:s.color,maxBarSize:50,
+          isAnimationActive:false,cursor:'pointer',
+          fillOpacity:(dimKey&&dimKey!==s.key)?0.3:1,
+          onMouseEnter:()=>setHov(s.key),
+          onClick:()=>window.openExposureChannel(s.key),
+          radius:i===0?[5,0,0,5]:i===expSeries.length-1?[0,5,5,0]:0},
+          RC(LabelList,{dataKey:s.key,position:'center',formatter:v=>v>=10?`${s.label.toUpperCase()}: ${v}%`:'',style:{fontSize:11,fontWeight:600,fill:s.labelColor}})
+        ))
+      ));
+  }
+  function renderExposure(){dbMount('db-exposure',RC(ExposureBar));}
+  renderExposure();
+  // Media Exposure Insights content (uses the shared artRow/tiIcn/toneColor helpers)
+  const EXP_TOTAL=304;   // notional article total → online 55.24% ≈ 168 (matches the KPI card)
+  const expChannelLabel=k=>{const s=expSeries.find(x=>x.key===k);return s?s.label:k;};
+  function expChannelArticles(key){
+    const M={online:d=>!d.type||d.type==='online',blogs:d=>d.type==='blog',broadsheet:d=>d.type==='broadsheet',provincial:d=>d.type==='provincial',tabloid:d=>d.type==='tabloid',tv:d=>d.type==='tv',radio:d=>d.type==='radio'};
+    const m=M[key]||(()=>false),list=mentionData.filter(m);
+    let seed=0;for(let i=0;i<key.length;i++)seed=(seed*31+key.charCodeAt(i))>>>0;
+    const want=Math.max(3,Math.min(8,Math.round((expData[0][key]||0)/8)));
+    for(let k=0;list.length<want&&k<mentionData.length*3;k++){const c=mentionData[(seed+k*7)%mentionData.length];if(!list.includes(c))list.push(c);}
+    return list;
+  }
+  function expAnalysis(){
+    const rows=expSeries.map(s=>({key:s.key,label:s.label,color:s.color,pct:expData[0][s.key],count:Math.round(expData[0][s.key]/100*EXP_TOTAL)})).sort((a,b)=>b.pct-a.pct);
+    const top=rows[0],second=rows[1];
+    const top3=+(rows.slice(0,3).reduce((a,r)=>a+r.pct,0)).toFixed(2);
+    const tail=+(rows.slice(3).reduce((a,r)=>a+r.pct,0)).toFixed(2);
+    const active=rows.filter(r=>r.pct>0).length;
+    const mult=second&&second.pct?top.pct/second.pct:0;
+    return {rows,top,second,top3,tail,active,mult,total:EXP_TOTAL};
+  }
+  function expOverviewHTML(){
+    const a=expAnalysis(),max=a.rows[0].pct,last=a.rows[a.rows.length-1];
+    return `
+      <div class="ti-narrative"><b>${a.top.label}</b> dominates exposure at <b>${a.top.pct}%</b> (${a.top.count} articles)${a.mult>=1.5?`, over <b>${a.mult.toFixed(1)}×</b> the next channel (${a.second.label}, ${a.second.pct}%)`:''}. The top 3 channels carry <b>${a.top3}%</b> of all coverage.</div>
+      <div class="ti-stats">
+        <div class="ti-stat"><div class="ti-stat-lbl">Top channel</div><div class="ti-stat-val">${a.top.pct}%</div><div class="ti-stat-sub">${a.top.label}</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Top-3 concentration</div><div class="ti-stat-val">${a.top3}%</div><div class="ti-stat-sub">of all coverage</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Active channels</div><div class="ti-stat-val">${a.active}</div><div class="ti-stat-sub">with coverage</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Long tail</div><div class="ti-stat-val">${a.tail}%</div><div class="ti-stat-sub">bottom ${a.rows.length-3} channels</div></div>
+      </div>
+      <div>
+        <div class="ti-sec-title"><i data-lucide="lightbulb"></i> Key insights</div>
+        <div class="ti-insight"><i data-lucide="crown"></i><div><b>${a.top.label}</b> leads with <b>${a.top.pct}%</b> (${a.top.count} articles)${a.mult>=1.5?` — ${a.mult.toFixed(1)}× the next channel`:''}.</div></div>
+        <div class="ti-insight"><i data-lucide="pie-chart"></i><div>Coverage is <b>${a.top3>=70?'highly concentrated':'fairly spread'}</b> — the top 3 channels hold <b>${a.top3}%</b>.</div></div>
+        <div class="ti-insight"><i data-lucide="trending-down"></i><div>Smallest channel is <b>${last.label}</b> at just <b>${last.pct}%</b>.</div></div>
+      </div>
+      <div>
+        <div class="ti-sec-title"><i data-lucide="bar-chart-3"></i> Channel share</div>
+        ${a.rows.map((r,i)=>`<div class="ti-rank" onclick="openExposureChannel('${r.key}')">
+          <span class="ti-rank-no">${i+1}</span><span class="ti-rank-name">${r.label}</span>
+          <span class="ti-rank-bar"><span class="ti-rank-bar-fill" style="width:${Math.round(r.pct/max*100)}%;background:${r.color}"></span></span>
+          <span class="ti-rank-val">${r.pct}%</span></div>`).join('')}
+      </div>
+      <div class="ti-foot"><i data-lucide="sparkles"></i><span>AI-generated summary of channel share. Click any segment in the bar for that channel's articles.</span></div>`;
+  }
+  function expDetailHTML(){
+    const a=expAnalysis(),rows=a.rows,idx=rows.findIndex(r=>r.key===tiKey);
+    if(idx<0)return expOverviewHTML();
+    const r=rows[idx],above=idx>0?rows[idx-1]:null;
+    const gap=above?+(above.pct-r.pct).toFixed(2):0;
+    const arts=expChannelArticles(tiKey);
+    return `
+      <div class="ti-stats">
+        <div class="ti-stat"><div class="ti-stat-lbl">Share</div><div class="ti-stat-val">${r.pct}%</div><div class="ti-stat-sub">of all coverage</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Articles</div><div class="ti-stat-val">${r.count}</div><div class="ti-stat-sub">of ${a.total}</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Rank</div><div class="ti-stat-val">#${idx+1}</div><div class="ti-stat-sub">of ${rows.length} channels</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">${above?'Gap to #'+idx:'Position'}</div><div class="ti-stat-val">${above?'−'+gap+'%':'Top'}</div><div class="ti-stat-sub">${above?'vs '+above.label:'leading channel'}</div></div>
+      </div>
+      <div>
+        <div class="ti-sec-title"><i data-lucide="file-text"></i> Related articles</div>
+        ${arts.map(artRow).join('')}
+        ${r.count>arts.length?`<div class="ti-more-note">Showing ${arts.length} of ${r.count} articles</div>`:''}
+      </div>`;
+  }
+  SRC.exposure={card:'db-exposure-card',sub:()=>'Media Exposure · article share',detailTitle:()=>expChannelLabel(tiKey),overview:()=>expOverviewHTML(),detail:()=>expDetailHTML(),clear:()=>{expSelected=null;renderExposure();}};
+
+  // ── Channel summary cards (icons reuse the .hl-icon.type-* chips from mentions) ──
+  const channelData=[
+    {name:'Online News',icon:'newspaper',cls:'type-online',score:'7.74',sv:'0',ave:'62.0M',words:'485',articles:'269'},
+    {name:'Blogs',icon:'rss',cls:'type-blog',score:'8.35',sv:'0',ave:'16.1M',words:'547',articles:'80'},
+    {name:'Broadsheet',icon:'file-text',cls:'type-broadsheet',score:'1.28',sv:'0',ave:'10.9M',words:'418',articles:'42'},
+    {name:'Provincial',icon:'map-pin',cls:'type-provincial',score:'7.96',sv:'0',ave:'638.5K',words:'382',articles:'8'},
+    {name:'Tabloid',icon:'message-square',cls:'type-tabloid',score:'0.43',sv:'0',ave:'1.5M',words:'525',articles:'7'},
+    {name:'TV',icon:'tv',cls:'type-tv',score:'5.53',sv:'0',ave:'84.8M',words:'1.3K',articles:'65'},
+    {name:'Radio',icon:'radio',cls:'type-radio',score:'10',sv:'0',ave:'10.2M',words:'757',articles:'16'}
+  ];
+  const chGrid=document.getElementById('db-channels');
+  if(chGrid){
+    const sub=(lbl,val)=>`<div class="db-ch-sub-stat"><span class="db-ch-sub-lbl">${lbl}</span><span class="db-ch-sub-val${val==='0'?' zero':''}">${val}</span></div>`;
+    chGrid.innerHTML=channelData.map(c=>`<div class="db-ch-card">
+      <div class="db-ch-hd"><span class="hl-icon ${c.cls}"><i data-lucide="${c.icon}"></i></span><span class="db-ch-name">${c.name}</span></div>
+      <div class="db-ch-hero"><div class="db-ch-hero-lbl">Total AVE</div><div class="db-ch-hero-val">${c.ave}</div></div>
+      <div class="db-ch-sub">
+        ${sub('Articles',c.articles)}${sub('Pub. Score',c.score)}
+        ${sub('Avg Words',c.words)}${sub('Story Value',c.sv)}
+      </div>
+    </div>`).join('');
+    initIcons();
   }
 
-  // Coverage Trend
-  const trendDays=['May 18','May 19','May 20','May 21','May 22','May 23','May 24','May 25'];
-  const trendData=trendDays.map((day,i)=>({day,online:[18,24,31,28,42,38,29,35][i],print:[8,10,12,9,14,11,8,12][i],broadcast:[4,5,7,6,8,9,5,7][i]}));
-  dbMount('db-trend',RC(ResponsiveContainer,{width:'99%',height:'100%'},
-    RC(ComposedChart,{data:trendData,margin:{top:28,right:16,bottom:36,left:48}},
-      RC(CartesianGrid,{strokeDasharray:'',stroke:'#f0f1f3',vertical:false}),
-      RC(XAxis,{dataKey:'day',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
-      RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false}),
-      RC(Tooltip,TT),
-      RC(Legend,{iconSize:10,wrapperStyle:{fontSize:11,color:'#6b7280'},verticalAlign:'top',align:'right'}),
-      RC(Area,{type:'monotone',dataKey:'online',name:'Online',stroke:'#181d26',strokeWidth:2.5,fill:'rgba(24,29,38,0.12)',dot:{r:2.5,fill:'#181d26'},activeDot:{r:4}}),
-      RC(Line,{type:'monotone',dataKey:'print',name:'Print',stroke:'#e94f37',strokeWidth:2,dot:{r:2.5,fill:'#e94f37'},activeDot:{r:4}}),
-      RC(Line,{type:'monotone',dataKey:'broadcast',name:'Broadcast',stroke:'#b9a4f7',strokeWidth:2,dot:{r:2.5,fill:'#b9a4f7'},activeDot:{r:4}})
-    )
-  ));
+  // ── Topic Emphasis (100% stacked: mention vs main; labels=%, tooltip=counts) ──
+  const empSeries=[
+    {key:'mention',label:'Mention',color:'#5b8def',labelColor:'#fff',count:7},
+    {key:'main',label:'Main',color:'#a8e6c8',labelColor:'#2a5a40',count:1}
+  ];
+  const empData=[{name:'',mention:87.5,main:12.5}];
+  function EmpTooltip(o){
+    if(!o||!o.active)return null;
+    return RC('div',{style:{background:'#181d26',border:'none',borderRadius:8,padding:'10px 13px',boxShadow:'0 6px 20px rgba(0,0,0,0.28)',minWidth:160}},
+      ...empSeries.map(s=>RC('div',{key:s.key,style:{display:'flex',alignItems:'center',gap:8,fontSize:12,margin:'3px 0'}},
+        RC('span',{style:{width:7,height:7,borderRadius:'50%',background:s.color,flexShrink:0}}),
+        RC('span',{style:{color:'rgba(255,255,255,0.62)',flex:1,whiteSpace:'nowrap'}},s.label+':'),
+        RC('span',{style:{color:'#fff',fontWeight:600,marginLeft:18}},s.count))));
+  }
+  let empSelected=null;   // category locked open via Insights detail → dim the other
+  function EmphasisBar(){
+    const [hov,setHov]=React.useState(null);
+    const dimKey=empSelected||hov;
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data:empData,layout:'vertical',margin:{top:22,right:10,bottom:22,left:10},onMouseLeave:()=>setHov(null)},
+        RC(XAxis,{type:'number',domain:[0,100],hide:true}),
+        RC(YAxis,{type:'category',dataKey:'name',hide:true}),
+        RC(Tooltip,{content:EmpTooltip,cursor:false}),
+        ...empSeries.map((s,i)=>RC(Bar,{key:s.key,dataKey:s.key,stackId:'a',fill:s.color,maxBarSize:50,
+          isAnimationActive:false,cursor:'pointer',
+          fillOpacity:(dimKey&&dimKey!==s.key)?0.3:1,
+          onMouseEnter:()=>setHov(s.key),
+          onClick:()=>window.openEmphasisCategory(s.key),
+          radius:i===0?[5,0,0,5]:i===empSeries.length-1?[0,5,5,0]:0},
+          RC(LabelList,{dataKey:s.key,position:'center',formatter:v=>v>=10?`${s.label.toUpperCase()}: ${v}%`:'',style:{fontSize:11,fontWeight:600,fill:s.labelColor}})
+        ))
+      ));
+  }
+  function renderEmphasis(){dbMount('db-emphasis',RC(EmphasisBar));}
+  renderEmphasis();
+  // Topic Emphasis Insights content
+  const EMP_TOTAL=empSeries.reduce((a,s)=>a+s.count,0);
+  const empCatLabel=k=>{const s=empSeries.find(x=>x.key===k);return s?s.label:k;};
+  function empCatArticles(key){
+    const s=empSeries.find(x=>x.key===key),want=Math.min(8,s?s.count:3);
+    let seed=0;for(let i=0;i<key.length;i++)seed=(seed*31+key.charCodeAt(i))>>>0;
+    const list=[];
+    for(let k=0;list.length<want&&k<mentionData.length*3;k++){const c=mentionData[(seed+k*7)%mentionData.length];if(!list.includes(c))list.push(c);}
+    return list;
+  }
+  function empAnalysis(){
+    const rows=empSeries.map(s=>({key:s.key,label:s.label,color:s.color,pct:empData[0][s.key],count:s.count})).sort((a,b)=>b.pct-a.pct);
+    const main=rows.find(r=>r.key==='main'),mention=rows.find(r=>r.key==='mention');
+    const ratio=main&&main.pct?mention.pct/main.pct:0;
+    return {rows,total:EMP_TOTAL,main,mention,ratio};
+  }
+  function empOverviewHTML(){
+    const a=empAnalysis(),max=a.rows[0].pct;
+    return `
+      <div class="ti-narrative">Just <b>${a.main.pct}%</b> of coverage features the brand as the <b>main subject</b> — the other <b>${a.mention.pct}%</b> are passing mentions.</div>
+      <div class="ti-stats">
+        <div class="ti-stat"><div class="ti-stat-lbl">Main subject</div><div class="ti-stat-val">${a.main.pct}%</div><div class="ti-stat-sub">${a.main.count} article${a.main.count===1?'':'s'}</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Mention</div><div class="ti-stat-val">${a.mention.pct}%</div><div class="ti-stat-sub">${a.mention.count} articles</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Total articles</div><div class="ti-stat-val">${a.total}</div><div class="ti-stat-sub">in scope</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Mention : Main</div><div class="ti-stat-val">${a.ratio?a.ratio.toFixed(0)+':1':'—'}</div><div class="ti-stat-sub">prominence ratio</div></div>
+      </div>
+      <div>
+        <div class="ti-sec-title"><i data-lucide="lightbulb"></i> Key insights</div>
+        <div class="ti-insight"><i data-lucide="${a.main.pct<25?'alert-triangle':'check'}"></i><div>The brand is <b>${a.main.pct<25?'rarely the focus':'often the focus'}</b> — only <b>${a.main.pct}%</b> of stories are primarily about it.</div></div>
+        <div class="ti-insight"><i data-lucide="message-square"></i><div><b>${a.mention.pct}%</b> of coverage references the brand <b>in passing</b> alongside other topics.</div></div>
+        <div class="ti-insight"><i data-lucide="target"></i><div>Opportunity: convert high-volume mentions into <b>brand-led narratives</b> to lift main-subject share.</div></div>
+      </div>
+      <div>
+        <div class="ti-sec-title"><i data-lucide="bar-chart-3"></i> Emphasis breakdown</div>
+        ${a.rows.map((r,i)=>`<div class="ti-rank" onclick="openEmphasisCategory('${r.key}')">
+          <span class="ti-rank-no">${i+1}</span><span class="ti-rank-name">${r.label}</span>
+          <span class="ti-rank-bar"><span class="ti-rank-bar-fill" style="width:${Math.round(r.pct/max*100)}%;background:${r.color}"></span></span>
+          <span class="ti-rank-val">${r.pct}%</span></div>`).join('')}
+      </div>
+      <div class="ti-foot"><i data-lucide="sparkles"></i><span>AI-generated summary of subject prominence. Click a segment in the bar for that category's articles.</span></div>`;
+  }
+  function empDetailHTML(){
+    const a=empAnalysis(),rows=a.rows,idx=rows.findIndex(r=>r.key===tiKey);
+    if(idx<0)return empOverviewHTML();
+    const r=rows[idx],other=rows[1-idx],diff=+(r.pct-other.pct).toFixed(1);
+    const arts=empCatArticles(tiKey);
+    const desc=r.key==='main'?'Stories primarily about the brand':'Stories that reference the brand in passing';
+    return `
+      <div class="ti-stats">
+        <div class="ti-stat"><div class="ti-stat-lbl">Share</div><div class="ti-stat-val">${r.pct}%</div><div class="ti-stat-sub">of all coverage</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Articles</div><div class="ti-stat-val">${r.count}</div><div class="ti-stat-sub">of ${a.total}</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Rank</div><div class="ti-stat-val">#${idx+1}</div><div class="ti-stat-sub">of ${rows.length}</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">vs ${other.label}</div><div class="ti-stat-val ${diff>=0?'ti-up':'ti-down'}">${diff>=0?'+':''}${diff}%</div><div class="ti-stat-sub">difference</div></div>
+      </div>
+      <div>
+        <div class="ti-sec-title"><i data-lucide="file-text"></i> Related articles</div>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 6px">${desc}.</p>
+        ${arts.map(artRow).join('')}
+      </div>`;
+  }
+  SRC.emphasis={card:'db-emphasis-card',sub:()=>'Topic Emphasis · subject prominence',detailTitle:()=>empCatLabel(tiKey),overview:()=>empOverviewHTML(),detail:()=>empDetailHTML(),clear:()=>{empSelected=null;renderEmphasis();}};
+  window.openEmphasisInsights=()=>tiOpenSource('emphasis');
+  window.openEmphasisCategory=function(key){tiSource='emphasis';tiMode='detail';tiKey=key;empSelected=key;renderEmphasis();tiRender();tiShow();};
 
-  // Sentiment Split
-  const sentData=[{name:'Positive',value:184,color:'#16a34a'},{name:'Neutral',value:35,color:'#9ca3af'},{name:'Negative',value:29,color:'#dc2626'}];
-  const sentTotal=sentData.reduce((s,d)=>s+d.value,0);
-  dbMount('db-sentiment',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+  // ── Tonality Distribution (sentiment donut + stacked time-bar) ──
+  const tonColors={Positive:'#16a34a',Neutral:'#9ca3af',Negative:'#dc2626'};
+  const tonDates=[
+    {date:'June 16, 2026',Positive:1,Neutral:1,Negative:0},
+    {date:'June 19, 2026',Positive:1,Neutral:0,Negative:1},
+    {date:'June 21, 2026',Positive:2,Neutral:1,Negative:1},
+    {date:'June 22, 2026',Positive:4,Neutral:1,Negative:0}
+  ];
+  const tonPie=[{name:'Positive',value:8},{name:'Neutral',value:3},{name:'Negative',value:2}];
+  const tonGrand=tonPie.reduce((s,d)=>s+d.value,0);
+  const tonLeg=document.getElementById('db-ton-legend');
+  if(tonLeg) tonLeg.innerHTML=tonPie.map(s=>`<span class="db-ton-leg-item"><span class="dot" style="background:${tonColors[s.name]}"></span>${s.name} <span class="muted">${(s.value/tonGrand*100).toFixed(2)}% (${s.value})</span></span>`).join('');
+  const tipBox=(...kids)=>RC('div',{style:{background:'#181d26',border:'none',borderRadius:8,padding:'10px 13px',boxShadow:'0 6px 20px rgba(0,0,0,0.28)',minWidth:150}},...kids);
+  function TonDonutTip(o){
+    if(!o||!o.active||!o.payload||!o.payload.length)return null;
+    const p=o.payload[0];
+    return tipBox(tlRow(tonColors[p.name],p.name,p.value));
+  }
+  function TonBarTip(o){
+    if(!o||!o.active||!o.payload||!o.payload.length)return null;
+    return tipBox(
+      RC('div',{style:{fontWeight:600,color:'#fff',marginBottom:7,fontSize:12.5}},o.label),
+      ...['Positive','Neutral','Negative'].map(k=>tlRow(tonColors[k],k,(o.payload.find(p=>p.dataKey===k)||{}).value||0)));
+  }
+  dbMount('db-tonality-donut',RC(ResponsiveContainer,{width:'99%',height:'100%'},
     RC(PieChart,{},
-      RC(Pie,{data:sentData,cx:'35%',cy:'50%',innerRadius:'46%',outerRadius:'70%',dataKey:'value',paddingAngle:2},
-        ...sentData.map(d=>RC(Cell,{key:d.name,fill:d.color}))
-      ),
-      RC(Tooltip,{...TT,formatter:(val,name)=>[`${val} (${((val/sentTotal)*100).toFixed(0)}%)`,name]}),
-      RC(Legend,{layout:'vertical',align:'right',verticalAlign:'middle',iconSize:10,wrapperStyle:{fontSize:11,color:'#6b7280'}})
-    )
-  ));
-
-  // Media Breakdown (stacked)
-  const mediaData=[
-    {channel:'Online',positive:110,neutral:14,negative:12},
-    {channel:'Print',positive:34,neutral:10,negative:8},
-    {channel:'Topical',positive:22,neutral:6,negative:4},
-    {channel:'Broadcast',positive:18,neutral:5,negative:5}
-  ];
-  dbMount('db-media',RC(ResponsiveContainer,{width:'99%',height:'100%'},
-    RC(BarChart,{data:mediaData,layout:'vertical',margin:{top:28,right:16,bottom:36,left:56}},
-      RC(CartesianGrid,{strokeDasharray:'',stroke:'#f0f1f3',horizontal:false}),
-      RC(XAxis,{type:'number',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false}),
-      RC(YAxis,{type:'category',dataKey:'channel',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:56}),
-      RC(Tooltip,TT),
-      RC(Legend,{iconSize:10,wrapperStyle:{fontSize:11,color:'#6b7280'},verticalAlign:'top',align:'right'}),
-      RC(Bar,{dataKey:'positive',name:'Positive',stackId:'a',fill:'#16a34a',maxBarSize:28}),
-      RC(Bar,{dataKey:'neutral',name:'Neutral',stackId:'a',fill:'#9ca3af',maxBarSize:28}),
-      RC(Bar,{dataKey:'negative',name:'Negative',stackId:'a',fill:'#dc2626',maxBarSize:28,radius:[0,4,4,0]})
-    )
-  ));
-
-  // Top Topics
-  const topicsData=['5G Expansion','Network Quality','Pricing','Customer Service','Market Share','Partnerships','Executive News','Product Launch'].map((topic,i)=>({topic,value:[58,44,32,27,48,21,38,19][i]}));
-  hBar('db-topics',topicsData,'topic',
-    topicsData.map((_,i)=>RC(Cell,{key:i,fill:DB_PALETTE[i%DB_PALETTE.length]})),
-    {margin:{top:28,right:36,bottom:40,left:108},maxBarSize:20}
-  );
-
-  // Publication Frequency
-  const freqData=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day,i)=>({day,value:[42,38,51,47,62,28,18][i]}));
-  dbMount('db-freq',RC(ResponsiveContainer,{width:'99%',height:'100%'},
-    RC(BarChart,{data:freqData,margin:{top:28,right:16,bottom:32,left:48}},
-      RC(CartesianGrid,{strokeDasharray:'',stroke:'#f0f1f3',vertical:false}),
-      RC(XAxis,{dataKey:'day',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
-      RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false}),
-      RC(Tooltip,TT),
-      RC(Bar,{dataKey:'value',maxBarSize:36,radius:[4,4,0,0]},
-        ...freqData.map((_,i)=>RC(Cell,{key:i,fill:i===4?'#e94f37':'#181d26'})),
-        RC(LabelList,{dataKey:'value',position:'top',style:{fontSize:11,fill:'#6b7280'}})
-      )
-    )
-  ));
-
-  // Top Authors
-  const authorsData=['Daxim L. Lucas','Lawrence Agcaoili','Elijah Tubayan','Bernie C-Magkilat','Ashley Jose','Maria Santos','Ramon Castillo','John Rey Saavedra'].map((author,i)=>({author,value:[14,11,9,8,7,6,5,4][i]})).reverse();
-  hBar('db-authors',authorsData,'author',
-    authorsData.map((_,i)=>RC(Cell,{key:i,fill:i===authorsData.length-1?'#e94f37':'#b9a4f7'})),
-    {margin:{top:28,right:36,bottom:32,left:100},maxBarSize:22}
-  );
-
-  // AVE by Publisher
-  const publishers=[
-    {name:'Philippine Daily Inquirer',value:4200},{name:'Philstar Online',value:3100},
-    {name:'BusinessWorld',value:2600},{name:'Inquirer Online',value:1900},
-    {name:'Manila Bulletin',value:1400},{name:'Yahoo Philippines',value:980},
-    {name:'Inquirer Plus',value:820},{name:'Manila Shaker',value:460},
-    {name:'SunStar Cebu',value:390},{name:'Insider Ph',value:310}
-  ];
-  hBar('db-treemap',publishers,'name',
-    publishers.map((_,i)=>RC(Cell,{key:i,fill:['#181d26','#374151','#e94f37','#b9a4f7','#86d9a8','#fde2b6','#6b7280','#94a3b8','#d1d5db','#9ca3af'][i]})),
-    {margin:{top:8,right:72,bottom:8,left:160},maxBarSize:22,
-     tooltipFmt:(val)=>[`PHP ${val}K`,'AVE'],labelFmt:v=>`PHP ${v}K`}
-  );
-
-  // Publisher Bubble
-  const bubbleData=[
-    {x:8.2,y:38,ave:4200,name:'Philippine Daily Inquirer',color:'#181d26'},
-    {x:7.8,y:22,ave:3100,name:'Philstar Online',color:'#e94f37'},
-    {x:6.5,y:18,ave:2600,name:'BusinessWorld',color:'#b9a4f7'},
-    {x:8.9,y:19,ave:1900,name:'Inquirer Online',color:'#16a34a'},
-    {x:7.1,y:14,ave:1400,name:'Manila Bulletin',color:'#86d9a8'},
-    {x:5.2,y:11,ave:980,name:'Yahoo PH',color:'#fde2b6'},
-    {x:4.8,y:9,ave:820,name:'Inquirer Plus',color:'#d9a441'},
-    {x:6.3,y:8,ave:460,name:'Manila Shaker',color:'#94a3b8'},
-    {x:7.5,y:6,ave:390,name:'SunStar Cebu',color:'#f9a8b9'},
-    {x:3.9,y:5,ave:310,name:'Insider Ph',color:'#dc2626'}
-  ];
-  const BubbleDot=({cx,cy,payload})=>RC('g',{},
-    RC('circle',{cx,cy,r:Math.sqrt(payload.ave/1000)*7,fill:payload.color,opacity:0.85}),
-    RC('text',{x:cx,y:cy,textAnchor:'middle',dominantBaseline:'middle',fontSize:10,fill:'#fff',fontWeight:'600'},payload.name.split(' ')[0])
-  );
-  const BubbleTooltip=({active,payload})=>{
-    if(!active||!payload||!payload.length)return null;
-    const d=payload[0].payload;
-    return RC('div',{style:{background:'#181d26',border:'none',borderRadius:6,padding:'8px 12px',color:'#fff',fontSize:12,fontFamily:'Inter'}},
-      RC('div',{style:{fontWeight:600,marginBottom:4}},d.name),
-      RC('div',{},'Sentiment score: '+d.x),
-      RC('div',{},'Mentions: '+d.y),
-      RC('div',{},'AVE: PHP '+d.ave+'K')
-    );
+      RC(Pie,{data:tonPie,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none'},
+        ...tonPie.map(d=>RC(Cell,{key:d.name,fill:tonColors[d.name]}))),
+      RC(Tooltip,{content:TonDonutTip})
+    )));
+  // round the top corners of whichever segment is the topmost non-zero one in each stack
+  const tonOrder=['Positive','Neutral','Negative'];
+  const tonShape=key=>props=>{
+    if(!props||props.height<=0)return null;
+    const above=tonOrder.slice(tonOrder.indexOf(key)+1);
+    const isTop=above.every(k=>!props.payload[k]);
+    return RC(Rectangle,{...props,radius:isTop?[3,3,0,0]:0});
   };
-  dbMount('db-bubble',RC(ResponsiveContainer,{width:'99%',height:'100%'},
-    RC(ScatterChart,{margin:{top:28,right:20,bottom:48,left:56}},
-      RC(CartesianGrid,{strokeDasharray:'',stroke:'#f0f1f3'}),
-      RC(XAxis,{type:'number',dataKey:'x',name:'Sentiment Score',domain:[3,10],tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'Sentiment Score',position:'insideBottom',offset:-30,fontSize:11,fill:'#6b7280'}}),
-      RC(YAxis,{type:'number',dataKey:'y',name:'Mentions',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'Mentions',angle:-90,position:'insideLeft',offset:10,fontSize:11,fill:'#6b7280'}}),
-      RC(Tooltip,{content:BubbleTooltip,cursor:{stroke:'rgba(0,0,0,0.1)',strokeDasharray:'3 3'}}),
-      RC(Scatter,{data:bubbleData,shape:BubbleDot})
-    )
-  ));
+  dbMount('db-tonality-bar',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+    RC(BarChart,{data:tonDates,margin:{top:16,right:12,bottom:8,left:0}},
+      RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
+      RC(XAxis,{dataKey:'date',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
+      RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:28}),
+      RC(Tooltip,{content:TonBarTip,cursor:{fill:'rgba(24,29,38,0.04)'}}),
+      RC(Bar,{dataKey:'Positive',stackId:'s',fill:'#16a34a',maxBarSize:48,shape:tonShape('Positive')}),
+      RC(Bar,{dataKey:'Neutral',stackId:'s',fill:'#9ca3af',maxBarSize:48,shape:tonShape('Neutral')}),
+      RC(Bar,{dataKey:'Negative',stackId:'s',fill:'#dc2626',maxBarSize:48,shape:tonShape('Negative')})
+    )));
+
+  // ── Frequency Distribution (story-value histogram + brush, focus-&-dim hover) ──
+  const freqCounts={0:3,1:2,4:3};
+  const freqDistData=[0,1,2,3,4,5,6,7,8,9,10].map(v=>({value:v.toFixed(2),count:freqCounts[v]||0}));
+  function FreqTip(o){
+    if(!o||!o.active||!o.payload||!o.payload.length)return null;
+    return tipBox(tlRow('#b9a4f7','Article Count',o.payload[0].value));
+  }
+  function FrequencyChart(){
+    const [hov,setHov]=React.useState(null);
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data:freqDistData,margin:{top:24,right:14,bottom:18,left:6},onMouseLeave:()=>setHov(null)},
+        RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
+        RC(XAxis,{dataKey:'value',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Story Value',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
+        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:36,label:{value:'Article Count',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
+        RC(Tooltip,{content:FreqTip,cursor:false}),
+        RC(Bar,{dataKey:'count',maxBarSize:24,radius:[3,3,0,0],isAnimationActive:false,onMouseEnter:(d,i)=>setHov(i)},
+          ...freqDistData.map((d,i)=>RC(Cell,{key:i,fill:(hov===null||hov===i)?'#b9a4f7':'#e8e1fb'})),
+          RC(LabelList,{dataKey:'count',position:'top',style:{fontSize:11,fontWeight:600,fill:'#6b7280'}})
+        ),
+        RC(Brush,{dataKey:'value',height:28,stroke:'#b9a4f7',travellerWidth:8,tickFormatter:()=>''},
+          RC(Area,{dataKey:'count',type:'monotone',stroke:'#b9a4f7',fill:'#ece6fb',fillOpacity:0.6}))
+      ));
+  }
+  dbMount('db-frequency',RC(FrequencyChart));
+
+  // ── Publisher Score Distribution (bubble scatter: Article Count × Story Value, size=score) ──
+  const pubScoreData=[  // sorted ascending by Article Count so the brush maps to the x-axis
+    {name:'News5 Online',abbr:'N5',articles:1,sv:0.60,score:3.20,color:'#ec4899'},
+    {name:'Trend Hotspot',abbr:'TH',articles:2,sv:1.20,score:4.00,color:'#a855f7'},
+    {name:'Police Files! Tonite',abbr:'PFT',articles:3,sv:1.70,score:4.60,color:'#10b981'},
+    {name:'Astig Ph Online',abbr:'APO',articles:4,sv:2.00,score:5.10,color:'#f59e0b'},
+    {name:'Context.PH',abbr:'CTX',articles:5,sv:2.60,score:5.90,color:'#22d3ee'},
+    {name:'VicVic Bautista',abbr:'VVB',articles:6,sv:3.10,score:6.20,color:'#374151'},
+    {name:'Metro Pulse',abbr:'MP',articles:7,sv:3.30,score:6.90,color:'#ef4444'},
+    {name:'Daily Tribune',abbr:'DT',articles:8,sv:3.40,score:6.80,color:'#0ea5e9'},
+    {name:'Business Mirror Online',abbr:'BMO',articles:9,sv:3.90,score:7.10,color:'#8b5cf6'},
+    {name:'Sun Star Daily',abbr:'SSD',articles:10,sv:3.80,score:7.40,color:'#84cc16'},
+    {name:'Dot Daily Dose',abbr:'DDD',articles:11,sv:4.55,score:8.10,color:'#f97316'},
+    {name:'Rappler PH',abbr:'RAP',articles:12,sv:4.40,score:8.60,color:'#16a34a'},
+    {name:'Inquirer Net',abbr:'INQ',articles:13,sv:4.10,score:8.20,color:'#db2777'},
+    {name:'Manila Times Online',abbr:'MTO',articles:14,sv:4.29,score:7.92,color:'#3b82f6'}
+  ];
+  const PubDot=(p)=>{
+    if(p.cx==null||p.cy==null)return null;
+    const d=p.payload,r=6+d.score*1.5;
+    return RC('g',{},
+      RC('circle',{cx:p.cx,cy:p.cy,r,fill:d.color,opacity:0.82}),
+      RC('text',{x:p.cx,y:p.cy,textAnchor:'middle',dominantBaseline:'middle',fontSize:9,fill:'#fff',fontWeight:'600'},d.abbr));
+  };
+  function PubTip(o){
+    if(!o||!o.active||!o.payload||!o.payload.length)return null;
+    const d=o.payload[0].payload;
+    const row=(l,v)=>RC('div',{key:l,style:{display:'flex',justifyContent:'space-between',gap:20,fontSize:12,margin:'2px 0'}},
+      RC('span',{style:{color:'rgba(255,255,255,0.62)'}},l),RC('span',{style:{color:'#fff',fontWeight:600}},v));
+    return tipBox(
+      RC('div',{style:{fontWeight:600,color:'#fff',marginBottom:6,fontSize:12.5}},d.name),
+      row('Article Count',d.articles),row('Total Story Value',d.sv),row('Publisher Score',d.score));
+  }
+  // scatter → legend → brush; the brush (its own slim chart) filters the scatter via shared state
+  function PubScoreCard(){
+    const n=pubScoreData.length;
+    const [rng,setRng]=React.useState([0,n-1]);
+    const shown=pubScoreData.slice(rng[0],rng[1]+1);
+    return RC('div',{style:{display:'flex',flexDirection:'column',height:'100%'}},
+      RC('div',{style:{flex:1,minHeight:0}},
+        RC(ResponsiveContainer,{width:'99%',height:'100%'},
+          RC(ScatterChart,{margin:{top:16,right:20,bottom:24,left:8}},
+            RC(CartesianGrid,{stroke:'#f0f1f3'}),
+            RC(XAxis,{type:'number',dataKey:'articles',name:'Article Count',domain:[0,15],tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Article Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
+            RC(YAxis,{type:'number',dataKey:'sv',name:'Story Value',domain:[0,5],tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:40,label:{value:'Story Value',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
+            RC(Tooltip,{content:PubTip,cursor:{strokeDasharray:'3 3',stroke:'rgba(0,0,0,0.12)'}}),
+            RC(Scatter,{data:shown,shape:PubDot})
+          ))),
+      RC('div',{className:'db-pub-legend'},pubScoreData.map(p=>RC('span',{key:p.name,className:'db-pub-leg-item'},
+        RC('span',{className:'dot',style:{background:p.color}}),p.name))),
+      RC('div',{style:{height:30,flexShrink:0}},
+        RC(ResponsiveContainer,{width:'99%',height:'100%'},
+          RC(ComposedChart,{data:pubScoreData,margin:{top:2,right:20,bottom:2,left:8}},
+            RC(XAxis,{dataKey:'articles',hide:true}),
+            RC(YAxis,{hide:true}),
+            RC(Area,{dataKey:'sv',stroke:'transparent',fill:'transparent',isAnimationActive:false}),
+            RC(Brush,{dataKey:'articles',height:24,stroke:'#b9a4f7',fill:'#f3eefc',travellerWidth:8,tickFormatter:()=>'',startIndex:rng[0],endIndex:rng[1],onChange:e=>{if(e&&e.startIndex!=null)setRng([e.startIndex,e.endIndex]);}})
+          )))
+    );
+  }
+  dbMount('db-pubscore',RC(PubScoreCard));
+
+  // ── Top Publishers (timeline swimlane: published date per publisher) ──
+  const tpMk=(day)=>new Date(2026,5,day).getTime();   // June 2026
+  const TP_DOWS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const TP_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const topPubData=[  // design-system colors (media-type palette + coral/positive/muted)
+    {name:'Manila Times Online',color:'#2563eb',x:tpMk(22),count:1,title:'DITO 5G expansion accelerates across the Visayas region',author:'Maria Santos',section:'Business',pub:'Jun 22, 2026'},
+    {name:'Police Files! Tonite',color:'#d97706',x:tpMk(19),count:1,title:'Telco rivalry heats up as Jimenez fires back at PLDT',author:'Staff Reporter',section:'News',pub:'Jun 19, 2026'},
+    {name:'Vicvic Bautista',color:'#16a34a',x:tpMk(22),count:1,title:'DITO crowned fastest mobile network by Opensignal',author:'Vicvic Bautista',section:'Technology',pub:'Jun 22, 2026'},
+    {name:'Astig Ph Online',color:'#e94f37',x:tpMk(23),count:1,title:'Visayan Electric eyes smarter energy services with DITO',author:'Editorial Team',section:'News',pub:'Jun 23, 2026'},
+    {name:'Business Mirror Online',color:'#7c3aed',x:tpMk(21),count:1,title:'Gawad Manileño 2026 honors people and institutions helping build a better Manila',author:'BusinessMirror Editorial',section:'Metro',pub:'Jun 21, 2026'},
+    {name:'Context.ph',color:'#0891b2',x:tpMk(17),count:1,title:'Analysts weigh in on the shifting Philippine telco landscape',author:'Context Desk',section:'Analysis',pub:'Jun 17, 2026'},
+    {name:'Trend Hotspot',color:'#db2777',x:tpMk(23),count:1,title:'#DITO trends as 5G rollout reaches new cities',author:'Social Desk',section:'Trending',pub:'Jun 23, 2026'},
+    {name:'Dot Daily Dose',color:'#6b7280',x:tpMk(22),count:1,title:'DITO StreamZone199 promo draws 2M new users',author:'Newsroom',section:'News',pub:'Jun 22, 2026'}
+  ];
+  const tpDomain=[tpMk(16),tpMk(24)];
+  const tpTicks=[];for(let dd=17;dd<=24;dd++)tpTicks.push(tpMk(dd));
+  const TpYTick=(t)=>{
+    const d=topPubData.find(p=>p.name===t.payload.value)||{};
+    return RC('text',{x:t.x,y:t.y,dy:4,textAnchor:'end',fontSize:12,fontWeight:500},
+      RC('tspan',{fill:d.color||'#6b7280'},t.payload.value+' '),
+      RC('tspan',{fill:'#9ca3af'},'('+(d.count||1)+')'));
+  };
+  const TpDot=(p)=>p.cx==null?null:RC('circle',{cx:p.cx,cy:p.cy,r:6,fill:p.payload.color});
+  function TpTip(o){
+    if(!o||!o.active||!o.payload||!o.payload.length)return null;
+    const d=o.payload[0].payload;
+    const row=(l,v)=>RC('div',{key:l,style:{fontSize:11.5,margin:'2px 0'}},
+      RC('span',{style:{color:'rgba(255,255,255,0.62)'}},l+' '),RC('span',{style:{color:'#fff',fontWeight:600}},v));
+    return RC('div',{style:{background:'#181d26',border:'none',borderRadius:8,padding:'11px 13px',boxShadow:'0 6px 20px rgba(0,0,0,0.28)',maxWidth:300}},
+      RC('div',{style:{fontWeight:600,color:'#fff',marginBottom:7,fontSize:12.5,lineHeight:1.4}},d.title),
+      row('Author:',d.author),row('Section:',d.section),row('Published Date:',d.pub));
+  }
+  const tpFoot=document.getElementById('db-tp-foot');
+  if(tpFoot){const f=ts=>{const d=new Date(ts);return d.getDate()+' '+TP_MONTHS[d.getMonth()]+' '+d.getFullYear();};
+    tpFoot.innerHTML='<span>'+f(tpDomain[0])+'</span><span>'+f(tpDomain[1])+'</span>';}
+  dbMount('db-toppub',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+    RC(ScatterChart,{margin:{top:8,right:24,bottom:8,left:8}},
+      RC(CartesianGrid,{vertical:false,stroke:'#eef0f2'}),
+      RC(XAxis,{type:'number',dataKey:'x',domain:tpDomain,ticks:tpTicks,orientation:'top',tickFormatter:ts=>{const d=new Date(ts);return TP_DOWS[d.getDay()]+' '+d.getDate();},tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
+      RC(YAxis,{type:'category',dataKey:'name',tick:TpYTick,axisLine:false,tickLine:false,width:170,reversed:true}),
+      RC(Tooltip,{content:TpTip,cursor:{stroke:'#e4e6ea'}}),
+      RC(Scatter,{data:topPubData,shape:TpDot})
+    )));
+
+  // ── Author Story Value Distribution (tabbed: bubble plot + horizontal bar) ──
+  const authorData=[
+    {name:'Lariza Garcia',articles:1,sv:4.46,score:0.02,color:'#2563eb'},
+    {name:'Daxim L. Lucas',articles:5,sv:7.20,score:3.40,color:'#e94f37'},
+    {name:'Lawrence Agcaoili',articles:4,sv:6.10,score:2.80,color:'#7c3aed'},
+    {name:'Elijah Tubayan',articles:3,sv:5.30,score:2.10,color:'#16a34a'},
+    {name:'Bernie Cahiles-Magkilat',articles:6,sv:8.40,score:4.10,color:'#d97706'},
+    {name:'Ashley Erika Jose',articles:2,sv:3.80,score:1.50,color:'#0891b2'},
+    {name:'Maria Santos',articles:7,sv:9.10,score:5.20,color:'#db2777'},
+    {name:'John Rey Saavedra',articles:8,sv:8.80,score:5.60,color:'#6b7280'}
+  ];
+  const authorAsc=[...authorData].sort((a,b)=>a.articles-b.articles);
+  const authorDesc=[...authorData].sort((a,b)=>b.articles-a.articles);
+  const authorMaxX=Math.max(...authorData.map(a=>a.articles))+1;
+  const AuthorDot=(p)=>p.cx==null?null:RC('circle',{cx:p.cx,cy:p.cy,r:5+p.payload.sv*1.3,fill:p.payload.color,opacity:0.82});
+  function AuthorTip(o){
+    if(!o||!o.active||!o.payload||!o.payload.length)return null;
+    const d=o.payload[0].payload;
+    const row=(l,v)=>RC('div',{key:l,style:{display:'flex',justifyContent:'space-between',gap:20,fontSize:12,margin:'2px 0'}},
+      RC('span',{style:{color:'rgba(255,255,255,0.62)'}},l),RC('span',{style:{color:'#fff',fontWeight:600}},v));
+    return tipBox(
+      RC('div',{style:{fontWeight:600,color:'#fff',marginBottom:6,fontSize:12.5}},d.name),
+      row('Article Count',d.articles),row('Total Story Value',d.sv),row('Author Score',d.score));
+  }
+  function AuthorBubble(){
+    const n=authorAsc.length;
+    const [rng,setRng]=React.useState([0,n-1]);
+    const shown=authorAsc.slice(rng[0],rng[1]+1);
+    return RC('div',{style:{display:'flex',flexDirection:'column',height:'100%'}},
+      RC('div',{style:{flex:1,minHeight:0}},
+        RC(ResponsiveContainer,{width:'99%',height:'100%'},
+          RC(ScatterChart,{margin:{top:16,right:20,bottom:24,left:8}},
+            RC(CartesianGrid,{stroke:'#f0f1f3'}),
+            RC(XAxis,{type:'number',dataKey:'articles',name:'Article Count',domain:[0,authorMaxX],tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Article Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
+            RC(YAxis,{type:'number',dataKey:'sv',name:'Story Value',domain:[0,10],tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:40,label:{value:'Story Value',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
+            RC(Tooltip,{content:AuthorTip,cursor:{strokeDasharray:'3 3',stroke:'rgba(0,0,0,0.12)'}}),
+            RC(Scatter,{data:shown,shape:AuthorDot})
+          ))),
+      RC('div',{className:'db-pub-legend'},authorData.map(a=>RC('span',{key:a.name,className:'db-pub-leg-item'},RC('span',{className:'dot',style:{background:a.color}}),a.name))),
+      RC('div',{style:{height:30,flexShrink:0}},
+        RC(ResponsiveContainer,{width:'99%',height:'100%'},
+          RC(ComposedChart,{data:authorAsc,margin:{top:2,right:20,bottom:2,left:8}},
+            RC(XAxis,{dataKey:'articles',hide:true}),RC(YAxis,{hide:true}),
+            RC(Area,{dataKey:'sv',stroke:'transparent',fill:'transparent',isAnimationActive:false}),
+            RC(Brush,{dataKey:'name',height:24,stroke:'#b9a4f7',fill:'#f3eefc',travellerWidth:8,tickFormatter:()=>'',startIndex:rng[0],endIndex:rng[1],onChange:e=>{if(e&&e.startIndex!=null)setRng([e.startIndex,e.endIndex]);}})
+          )))
+    );
+  }
+  function AuthorBarTip(o){
+    if(!o||!o.active||!o.payload||!o.payload.length)return null;
+    return tipBox(
+      RC('div',{style:{fontWeight:600,color:'#fff',marginBottom:5,fontSize:12.5}},o.label),
+      tlRow('#b9a4f7','Article Count',o.payload[0].value));
+  }
+  dbMount('db-author-bubble',RC(AuthorBubble));
+  dbMount('db-author-bar',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+    RC(BarChart,{data:authorDesc,layout:'vertical',margin:{top:16,right:24,bottom:24,left:8}},
+      RC(CartesianGrid,{horizontal:false,stroke:'#f0f1f3'}),
+      RC(XAxis,{type:'number',dataKey:'articles',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'Article Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
+      RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:140}),
+      RC(Tooltip,{content:AuthorBarTip,cursor:{fill:'rgba(24,29,38,0.04)'}}),
+      RC(Bar,{dataKey:'articles',maxBarSize:26,radius:[0,4,4,0]},
+        ...authorDesc.map((a,i)=>RC(Cell,{key:i,fill:a.color})),
+        RC(LabelList,{dataKey:'articles',position:'right',style:{fontSize:11,fontWeight:600,fill:'#6b7280'}})
+      )
+    )));
+  window.setAuthorTab=function(t){
+    const bub=document.getElementById('db-author-bubble'),bar=document.getElementById('db-author-bar');
+    if(bub)bub.style.display=t==='bubble'?'':'none';
+    if(bar)bar.style.display=t==='bar'?'':'none';
+    document.querySelectorAll('#db-author-tabs .db-tab2').forEach(el=>el.classList.toggle('on',el.dataset.t===t));
+  };
+
+  // ── Entities Map (flexbox treemap, 2 columns; dark data-btip tooltips) ──
+  const entityData=[
+    {name:'ORG',value:48.18,color:'#8d7ba8',desc:'Organization Entities: An organized body of people with a particular purpose, especially a business, society, association, etc.'},
+    {name:'PERSON',value:40.00,color:'#6b7fb0',desc:'Person Entities: Names of people, including fictional characters.'},
+    {name:'GPE',value:9.09,color:'#6bb0bd',desc:'Geopolitical Entities: Countries, cities, or states.'},
+    {name:'NORP',value:2.73,color:'#5fb088',desc:'Nationalities or religious / political groups.'}
+  ];
+  const entEl=document.getElementById('db-entities');
+  if(entEl){
+    const cell=e=>'<div class="db-entmap-cell" style="flex:'+e.value+';background:'+e.color+'" data-btip="'+_makeTip({label:e.name+' ('+e.value.toFixed(2)+'%)',detail:e.desc})+'">'+e.name+' ('+e.value.toFixed(2)+'%)</div>';
+    const leftSum=entityData[0].value+entityData[1].value,rightSum=entityData[2].value+entityData[3].value;
+    entEl.innerHTML='<div class="db-entmap-col" style="flex:'+leftSum+'">'+cell(entityData[0])+cell(entityData[1])+'</div>'+
+                    '<div class="db-entmap-col" style="flex:'+rightSum+'">'+cell(entityData[2])+cell(entityData[3])+'</div>';
+  }
+  const entLeg=document.getElementById('db-ent-legend');
+  if(entLeg) entLeg.innerHTML=entityData.map(e=>'<span class="db-ent-leg-item"><span class="sq" style="background:'+e.color+'"></span>'+e.name+'</span>').join('');
+
 }
 (function(){function c(){document.querySelectorAll(".brief-stats .ss").forEach(function(card){var tr=card.querySelector(".ss-trend:not(.neu)");if(!tr)return;var neg=/[↓−-]/.test(tr.textContent);tr.classList.remove("pos","neg");tr.classList.add(neg?"neg":"pos");var v=card.querySelector(".ss-val");if(v){v.classList.remove("tcol-pos","tcol-neg");v.classList.add(neg?"tcol-neg":"tcol-pos");}});}if(document.readyState!=="loading")c();else document.addEventListener("DOMContentLoaded",c);})();
 
@@ -2971,7 +4202,7 @@ function initDashboard(){
 let pubSort='score',pubPage=0,pubSearch='';
 const PUB_PER_PAGE=16;
 function setPubSearch(v){pubSearch=v;pubPage=0;renderPublishers();}
-const PUB_COLORS=['#2563eb','#7c3aed','#0891b2','#d97706','#db2777','#0d9488','#4f46e5','#e11d8f'];
+const PUB_COLORS=[{bg:'#dbeafe',fg:'#2563eb'},{bg:'#ede9fe',fg:'#7c3aed'},{bg:'#cffafe',fg:'#0e7490'},{bg:'#fef3c7',fg:'#b45309'},{bg:'#fce7f3',fg:'#be185d'},{bg:'#ccfbf1',fg:'#0f766e'},{bg:'#e0e7ff',fg:'#4338ca'},{bg:'#ffe4e6',fg:'#be123c'}];
 function pubColor(name){let h=0;for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))>>>0;return PUB_COLORS[h%PUB_COLORS.length];}
 function buildPublishers(){
   const map={};
@@ -3009,7 +4240,7 @@ function renderPublishers(){
     <div class="pub-card">
       <div class="pub-card-hd">
         <div class="pub-name" title="${p.name}">${p.name}</div>
-        <div class="pub-avatar" style="background:${pubColor(p.name)}">${p.name.charAt(0)}<span class="pub-rank">${start+i+1}</span></div>
+        <div class="pub-avatar" style="background:${pubColor(p.name).bg};color:${pubColor(p.name).fg}">${p.name.charAt(0)}<span class="pub-rank">${start+i+1}</span></div>
       </div>
       ${renderSocialIcons()}
       <div class="pub-stats">
@@ -3028,6 +4259,108 @@ function renderPublishers(){
     h+=`<button class="pgb arrow" onclick="gotoPubPage(pubPage+1)"${pubPage>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
     btns.innerHTML=h;
   }
+  initIcons();
+}
+// ── AUTHORS PAGE ──
+let authSort='score',authPage=0,authSearch='';
+const AUTH_PER_PAGE=16;
+function setAuthorSearch(v){authSearch=v;authPage=0;renderAuthors();}
+const AUTH_COLORS=[{bg:'#dbeafe',fg:'#2563eb'},{bg:'#ede9fe',fg:'#7c3aed'},{bg:'#cffafe',fg:'#0e7490'},{bg:'#fef3c7',fg:'#b45309'},{bg:'#fce7f3',fg:'#be185d'},{bg:'#ccfbf1',fg:'#0f766e'},{bg:'#e0e7ff',fg:'#4338ca'},{bg:'#ffe4e6',fg:'#be123c'}];
+function authColor(name){let h=0;for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))>>>0;return AUTH_COLORS[h%AUTH_COLORS.length];}
+function buildAuthors(){
+  const map={};
+  mentionData.forEach(d=>{
+    const name=d.author;if(!name)return;
+    if(!map[name])map[name]={name,count:0,sv:0};
+    map[name].count++;map[name].sv+=(d.sv||0);
+  });
+  const list=Object.values(map).map(p=>({
+    name:p.name,
+    count:p.count,
+    totalSV:+p.sv.toFixed(2),
+    score:+((p.sv/p.count)*2).toFixed(2)   // synthesized Author Score = avg Story Value ×2
+  }));
+  if(authSort==='count')list.sort((a,b)=>b.count-a.count);
+  else if(authSort==='sv')list.sort((a,b)=>b.totalSV-a.totalSV);
+  else if(authSort==='az')list.sort((a,b)=>a.name.localeCompare(b.name));
+  else list.sort((a,b)=>b.score-a.score);
+  return list;
+}
+function setAuthorSort(v){authSort=v;authPage=0;renderAuthors();}
+function gotoAuthorPage(n){
+  const pages=Math.max(1,Math.ceil(buildAuthors().length/AUTH_PER_PAGE));
+  authPage=Math.max(0,Math.min(n,pages-1));renderAuthors();
+  const sc=document.querySelector('.app-body');if(sc)sc.scrollTop=0;
+}
+function renderAuthors(){
+  const grid=document.getElementById('author-grid');if(!grid)return;
+  const q=authSearch.trim().toLowerCase();
+  const all=buildAuthors().filter(p=>!q||p.name.toLowerCase().includes(q));
+  const total=all.length,pages=Math.max(1,Math.ceil(total/AUTH_PER_PAGE));
+  authPage=Math.max(0,Math.min(authPage,pages-1));
+  const start=authPage*AUTH_PER_PAGE,end=Math.min(start+AUTH_PER_PAGE,total);
+  grid.innerHTML=all.slice(start,end).map((p,i)=>`
+    <div class="pub-card">
+      <div class="pub-card-hd">
+        <div class="pub-name" title="${p.name}">${p.name}</div>
+        <div class="pub-avatar" style="background:${authColor(p.name).bg};color:${authColor(p.name).fg}">${p.name.charAt(0)}<span class="pub-rank">${start+i+1}</span></div>
+      </div>
+      ${renderSocialIcons()}
+      <div class="pub-stats">
+        <div class="pub-stat"><div class="pub-stat-lbl">Author Score</div><div class="pub-stat-val">${p.score.toFixed(2)}</div></div>
+        <div class="pub-stat"><div class="pub-stat-lbl">Articles</div><div class="pub-stat-val">${p.count}</div></div>
+        <div class="pub-stat"><div class="pub-stat-lbl">Total SValue</div><div class="pub-stat-val">${p.totalSV.toFixed(2)}</div></div>
+      </div>
+    </div>`).join('');
+  const info=`${start+1}–${end} of ${total} items`;
+  const bot=document.getElementById('author-pg-info');
+  if(bot)bot.textContent=info;
+  const btns=document.getElementById('author-pg-btns');
+  if(btns){
+    let h=`<button class="pgb arrow" onclick="gotoAuthorPage(authPage-1)"${authPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+    for(let p=0;p<pages;p++)h+=`<button class="pgb${p===authPage?' on':''}" onclick="gotoAuthorPage(${p})">${p+1}</button>`;
+    h+=`<button class="pgb arrow" onclick="gotoAuthorPage(authPage+1)"${authPage>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+    btns.innerHTML=h;
+  }
+  initIcons();
+}
+// ── CATEGORIES PAGE ──
+const catData=[
+  {name:'Company',    buckets:1, created:'May 07, 2026'},
+  {name:'Competitor', buckets:1, created:'May 07, 2026'},
+  {name:'Industry',   buckets:1, created:'May 07, 2026'},
+];
+let catSearch='',catPage=0,catPerPage=10;
+function setCatSearch(v){catSearch=v;catPage=0;renderCategories();}
+function setCatPerPage(v){catPerPage=+v;catPage=0;renderCategories();}
+function gotoCatPage(n){
+  const q=catSearch.trim().toLowerCase();
+  const total=catData.filter(c=>!q||c.name.toLowerCase().includes(q)).length;
+  const pages=Math.max(1,Math.ceil(total/catPerPage));
+  catPage=Math.max(0,Math.min(n,pages-1));renderCategories();
+  const sc=document.querySelector('.app-body');if(sc)sc.scrollTop=0;
+}
+function renderCategories(){
+  const tbody=document.getElementById('cat-tbody');if(!tbody)return;
+  const q=catSearch.trim().toLowerCase();
+  const all=catData.filter(c=>!q||c.name.toLowerCase().includes(q));
+  const total=all.length,pages=Math.max(1,Math.ceil(total/catPerPage));
+  catPage=Math.max(0,Math.min(catPage,pages-1));
+  const start=catPage*catPerPage,end=Math.min(start+catPerPage,total);
+  tbody.innerHTML=all.slice(start,end).map(c=>`
+    <tr>
+      <td style="cursor:grab"><i data-lucide="grip-vertical" class="cat-grip"></i></td>
+      <td class="cat-name">${c.name}</td>
+      <td>${c.buckets}</td>
+      <td>${c.created}</td>
+      <td><button class="icon-action" title="View" onclick="showTrackerToast('Viewing ${c.name} category')"><i data-lucide="eye" class="icon-lg"></i></button></td>
+    </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);cursor:default">No categories found</td></tr>`;
+  const info=total?`${start+1}-${end} of ${total} results`:'0 results';
+  const infoEl=document.getElementById('cat-pg-info');if(infoEl)infoEl.textContent=info;
+  let h=`<button class="pgb arrow" onclick="gotoCatPage(catPage-1)"${catPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+  for(let p=0;p<pages;p++)h+=`<button class="pgb${p===catPage?' on':''}" onclick="gotoCatPage(${p})">${p+1}</button>`;
+  h+=`<button class="pgb arrow" onclick="gotoCatPage(catPage+1)"${catPage>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+  const btnsEl=document.getElementById('cat-pg-btns');if(btnsEl)btnsEl.innerHTML=h;
   initIcons();
 }
 // ── ALL FILTERS MODAL ──
@@ -3544,3 +4877,5 @@ document.addEventListener('click',function(e){
 if(document.getElementById('page-tracker')){if(acts.length&&trackerSel===null){trackerSel=acts[0].id;trackerTabs[acts[0].id]='matches';}renderTracker();}
 if(document.getElementById('page-dashboard')) initDashboard();
 if(document.getElementById('page-publishers')) renderPublishers();
+if(document.getElementById('page-authors')) renderAuthors();
+if(document.getElementById('page-categories')) renderCategories();

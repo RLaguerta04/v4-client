@@ -39,8 +39,8 @@
       <div class="nav-i act" id="nav-tracker" data-label="Activity Tracker" onclick="goPage('tracker')"><i data-lucide="megaphone" class="icon-lg"></i><span class="nav-label">Activity Tracker</span><span class="nav-badge-at" id="nb-tracker">2</span></div>
       <div class="nav-i" id="nav-dashboard" data-label="Dashboard" onclick="goPage('dashboard')"><i data-lucide="layout-dashboard" class="icon-lg"></i><span class="nav-label">Dashboard</span></div>
       <div class="nav-i" id="nav-publishers" data-label="Publishers" onclick="goPage('publishers')"><i data-lucide="building-2" class="icon-lg"></i><span class="nav-label">Publishers</span></div>
-      <div class="nav-i" data-label="Authors"><i data-lucide="user" class="icon-lg"></i><span class="nav-label">Authors</span></div>
-      <div class="nav-i" data-label="Categories"><i data-lucide="folder" class="icon-lg"></i><span class="nav-label">Categories</span></div>
+      <div class="nav-i" id="nav-authors" data-label="Authors" onclick="goPage('authors')"><i data-lucide="user" class="icon-lg"></i><span class="nav-label">Authors</span></div>
+      <div class="nav-i" id="nav-categories" data-label="Categories" onclick="goPage('categories')"><i data-lucide="folder" class="icon-lg"></i><span class="nav-label">Categories</span></div>
     </nav>
 
     <!-- User profile -->
@@ -102,11 +102,29 @@
                 <div class="at-type-opt" id="at-f-pd" onclick="setAtFilter('type','Product')"><span>Product</span></div>
               </div>
             </div>
-            <div class="fc-date">
+            <div class="fc-date" id="fc-date-btn" onclick="drToggle()">
               <i data-lucide="calendar" style="width:12px;height:12px"></i>
-              <span>May 18, 2026</span>
+              <span id="dr-label-start">May 18, 2026</span>
               <span class="arrow"><i data-lucide="arrow-right" style="width:10px;height:10px"></i></span>
-              <span>May 25, 2026</span>
+              <span id="dr-label-end">May 25, 2026</span>
+            </div>
+            <!-- Date range picker — shares DR.* logic/styles with mentions.html (defined in app.js) -->
+            <div id="dr-picker" class="dr-picker" style="display:none">
+              <div class="dr-hint" id="dr-hint"></div>
+              <div class="dr-calendars">
+                <div class="dr-cal" id="dr-cal-left"></div>
+                <div class="dr-cal" id="dr-cal-right"></div>
+              </div>
+              <div class="dr-footer">
+                <div class="dr-presets">
+                  <button class="dr-preset" onclick="drPreset(7)">7D</button>
+                  <button class="dr-preset" onclick="drPreset(30)">1M</button>
+                  <button class="dr-preset" onclick="drPreset(90)">3M</button>
+                  <button class="dr-preset" onclick="drPreset(180)">6M</button>
+                  <button class="dr-preset" onclick="drPreset(365)">1Y</button>
+                </div>
+                <button class="dr-apply" onclick="drApply()">Apply</button>
+              </div>
             </div>
             <div class="fc-search">
               <i data-lucide="search" class="fc-search-icon"></i>
@@ -125,7 +143,6 @@
           <div class="at-list-header" id="at-list-header">
             <span class="at-list-header-label" id="at-list-header-label">Activities <span class="at-list-count" id="at-list-count"></span></span>
             <div class="at-list-header-actions" id="at-list-header-actions">
-              <button class="at-list-header-btn" onclick="showCreate()"><i data-lucide="plus" style="width:11px;height:11px"></i> New</button>
             </div>
             <div class="at-select-bar" id="at-select-bar" style="display:none">
               <div style="display:flex;align-items:center;gap:8px">
@@ -146,6 +163,23 @@
         <div class="at-detail-panel" id="at-detail-panel">
           <!-- populated by renderTrackerDetail() -->
         </div>
+      </div>
+
+      <!-- ARTICLE PREVIEW (3-column, opened from a matched article — framed by its activity) -->
+      <div class="art-detail-layout" id="article-detail-panel">
+        <div class="art-col-left" id="adp-col-left"></div>
+        <div class="art-col-mid" id="adp-col-mid"></div>
+        <div class="art-col-right" id="adp-col-right"></div>
+      </div>
+      <div class="ent-overlay" id="ent-modal" onclick="if(event.target===this)closeEntities()">
+        <div class="ent-modal">
+          <div class="ent-modal-hd"><span id="ent-modal-title">Entities</span><button class="ent-modal-close" onclick="closeEntities()" title="Close (Esc)"><i data-lucide="x"></i></button></div>
+          <div class="ent-modal-body" id="ent-modal-body"></div>
+        </div>
+      </div>
+      <div class="bs-lightbox" id="bs-lightbox" onclick="if(event.target===this)closeBroadsheet()">
+        <button class="bs-lb-close" onclick="closeBroadsheet()" title="Close (Esc)"><i data-lucide="x"></i></button>
+        <div class="bs-lb-scroll"><img id="bs-lb-img" src="" alt="Full broadsheet page"></div>
       </div>
 
     </div>
@@ -181,19 +215,37 @@
       </div>
     </div>
 
+    <!-- Add coverage slide-over -->
+    <div class="nl-overlay" id="addart-overlay">
+      <div class="nl-panel">
+        <div class="nl-head">
+          <i data-lucide="newspaper" style="color:#181d26;width:16px;height:16px"></i>
+          <span class="nl-head-title">Add coverage</span>
+          <button onclick="closeAddArt()" style="background:none;border:none;cursor:pointer;color:#888;padding:4px"><i data-lucide="x"></i></button>
+        </div>
+        <div class="aa-body on" id="aa-body-search">
+          <div class="aa-search-bar">
+            <div class="ms-input-wrap"><i data-lucide="search" style="width:12px;height:12px;color:#bbb"></i><input type="text" id="aa-q" placeholder="Search articles to add…" oninput="addArtInput(this.value)"></div>
+          </div>
+          <div class="aa-pills" id="aa-pills"></div>
+          <div id="addart-results"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- AI Report modal -->
     <div class="rpt-overlay" id="rpt-overlay" onclick="if(event.target===this)closeAIReport()">
       <div class="rpt-modal">
         <div style="padding:18px 24px;border-bottom:1px solid #ececf2;display:flex;align-items:center;gap:10px;flex-shrink:0">
           <i data-lucide="file-text" style="color:#181d26;width:16px;height:16px"></i>
-          <span style="font-weight:600;font-size:14px;flex:1" id="rpt-title">AI Report</span>
+          <span style="font-weight:600;font-size:14px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="rpt-title">AI Report</span>
           <button onclick="closeAIReport()" style="background:none;border:none;cursor:pointer;color:#888;padding:4px"><i data-lucide="x"></i></button>
         </div>
         <div id="rpt-body" style="flex:1;overflow-y:auto"></div>
         <div class="rpt-send-bar" id="rpt-send-bar" style="display:none">
           <input id="rpt-to" type="text" placeholder="Send to: recipients@company.com" style="flex:1;border:1px solid #ddd;border-radius:6px;padding:8px 12px;font-size:12px;font-family:inherit;outline:none">
-          <button class="btn-primary" onclick="sendAIReport()"><i data-lucide="send"></i> Send</button>
-          <button onclick="downloadAIReport()" style="padding:8px 14px;border:1px solid #ddd;border-radius:6px;background:#fff;font-size:12px;cursor:pointer;color:#666"><i data-lucide="download"></i> Download</button>
+          <button class="btn-filled" onclick="sendAIReport()"><i data-lucide="send"></i> Send</button>
+          <button class="btn-ghost" onclick="downloadAIReport()"><i data-lucide="download"></i> Download</button>
         </div>
       </div>
     </div>
