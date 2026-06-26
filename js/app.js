@@ -4947,11 +4947,76 @@ function renderAuthors(){
 }
 // ── CATEGORIES PAGE ──
 const catData=[
-  {name:'Company',    buckets:1, created:'May 07, 2026'},
-  {name:'Competitor', buckets:1, created:'May 07, 2026'},
-  {name:'Industry',   buckets:1, created:'May 07, 2026'},
+  {id:'cat-company',name:'Company',created:'May 07, 2026',buckets:[
+    {id:'b-dito',name:'DITO Brand',created:'May 07, 2026',keywords:[
+      {label:'DITO Telecommunity',expression:'"DITO Telecommunity"',type:'main'},
+      {label:'DITO core network',expression:'("DITO" OR "DITO Telecommunity") AND ("5G" OR "network")',type:'main'},
+      {label:'Subscribers',expression:'"DITO subscribers" OR "DITO users"',type:'additional'},
+      {label:'5G services',expression:'"DITO 5G" OR "5G rollout"',type:'additional'},
+      {label:'StreamZone',expression:'"DITO StreamZone" OR "StreamZone199"',type:'additional'},
+      {label:'Telco context',expression:'"telco" OR "telecommunications" OR "mobile network"',type:'related'},
+      {label:'Exclude name collisions',expression:'NOT ("Dito Carrillo" OR "DITO Network Korea")',type:'excluded'},
+    ]},
+    {id:'b-execs',name:'Executives',created:'May 07, 2026',keywords:[
+      {label:'Eric Alberto',expression:'"Eric Alberto"',type:'main'},
+      {label:'Jimenez',expression:'"Jimenez" AND ("DITO" OR "telco")',type:'main'},
+      {label:'Executive titles',expression:'"CEO" OR "COO" OR "chief executive"',type:'additional'},
+      {label:'Leadership signals',expression:'"leadership" OR "statement" OR "interview"',type:'related'},
+      {label:'Exclude namesake',expression:'NOT "Alberto Romulo"',type:'excluded'},
+    ]},
+  ]},
+  {id:'cat-competitor',name:'Competitor',created:'May 07, 2026',buckets:[
+    {id:'b-pldt',name:'PLDT',created:'May 07, 2026',keywords:[
+      {label:'PLDT brand',expression:'"PLDT" OR "Smart Communications"',type:'main'},
+      {label:'PLDT leadership',expression:'"Manny Pangilinan" OR "MVP"',type:'additional'},
+      {label:'PLDT products',expression:'"PLDT Home" OR "PLDT Hyppe"',type:'additional'},
+      {label:'Telco competition',expression:'"fiber" OR "postpaid" OR "telco rival"',type:'related'},
+      {label:'Exclude foundation',expression:'NOT "PLDT Foundation"',type:'excluded'},
+    ]},
+    {id:'b-globe',name:'Globe Telecom',created:'May 07, 2026',keywords:[
+      {label:'Globe brand',expression:'"Globe Telecom" OR "Globe"',type:'main'},
+      {label:'Globe sub-brands',expression:'"GlobeOne" OR "TM" OR "Globe at Home"',type:'additional'},
+      {label:'Ownership context',expression:'"Ayala telco"',type:'related'},
+      {label:'Service tiers',expression:'"prepaid" OR "postpaid"',type:'related'},
+      {label:'Exclude name collisions',expression:'NOT ("Globe Asiatique" OR "globe trotter")',type:'excluded'},
+    ]},
+    {id:'b-converge',name:'Converge ICT',created:'May 07, 2026',keywords:[
+      {label:'Converge brand',expression:'"Converge ICT" OR "Converge"',type:'main'},
+      {label:'Leadership',expression:'"Dennis Uy"',type:'additional'},
+      {label:'Products',expression:'"FiberX"',type:'additional'},
+      {label:'Industry context',expression:'"fiber broadband" OR "ISP"',type:'related'},
+      {label:'Exclude unrelated',expression:'NOT "converge magazine"',type:'excluded'},
+    ]},
+  ]},
+  {id:'cat-industry',name:'Industry',created:'May 07, 2026',buckets:[
+    {id:'b-5g',name:'5G & Networks',created:'May 07, 2026',keywords:[
+      {label:'5G coverage',expression:'"5G" OR "5G rollout"',type:'main'},
+      {label:'Network benchmarks',expression:'"Opensignal" OR "network speed"',type:'additional'},
+      {label:'Spectrum',expression:'"NTC spectrum"',type:'additional'},
+      {label:'Related infrastructure',expression:'"LTE" OR "fiber" OR "tower-sharing"',type:'related'},
+      {label:'Exclude unrelated G5',expression:'NOT "G5 summit"',type:'excluded'},
+    ]},
+    {id:'b-regulator',name:'Regulators & Policy',created:'May 07, 2026',keywords:[
+      {label:'NTC',expression:'"NTC" OR "National Telecommunications Commission"',type:'main'},
+      {label:'DICT',expression:'"DICT"',type:'main'},
+      {label:'Spectrum & franchise',expression:'"spectrum auction" OR "franchise"',type:'additional'},
+      {label:'Regulatory context',expression:'"compliance" OR "regulation"',type:'related'},
+    ]},
+  ]},
 ];
 let catSearch='',catPage=0,catPerPage=10;
+let catView={mode:'list',catId:null,bktId:null};
+let catBktSearch='',catBktSort='order';                   // 'order' | 'az' | 'za' | 'kw'
+function showCatDetail(catId){
+  const c=catData.find(x=>x.id===catId);
+  catView={mode:'category',catId,bktId:c&&c.buckets[0]?c.buckets[0].id:null};
+  catBktSearch='';catBktSort='order';
+  renderCategories();
+}
+function selectCatBucket(bktId){catView={...catView,bktId};renderCategories();}
+function backToCategories(){catView={mode:'list',catId:null,bktId:null};renderCategories();}
+function setCatBktSearch(v){catBktSearch=v;renderCategories();}
+function setCatBktSort(v){catBktSort=v;renderCategories();}
 function setCatSearch(v){catSearch=v;catPage=0;renderCategories();}
 function setCatPerPage(v){catPerPage=+v;catPage=0;renderCategories();}
 function gotoCatPage(n){
@@ -4962,27 +5027,194 @@ function gotoCatPage(n){
   const sc=document.querySelector('.app-body');if(sc)sc.scrollTop=0;
 }
 function renderCategories(){
-  const tbody=document.getElementById('cat-tbody');if(!tbody)return;
+  const host=document.getElementById('cat-page-inner');if(!host)return;
+  const page=document.getElementById('page-categories');
+  // Toggle filter bar visibility (hide in detail views — category view renders its own topbar)
+  const headerBar=document.querySelector('#page-categories .header-card');
+  if(headerBar)headerBar.style.display=catView.mode==='list'?'':'none';
+  // Category view uses a full-bleed split-pane layout — borrow .ent-page padding overrides
+  if(page)page.classList.toggle('ent-page',catView.mode==='category');
+  // .page-inner has a width cap; for split-pane we need full width
+  host.style.maxWidth=catView.mode==='category'?'none':'';
+  host.style.padding=catView.mode==='category'?'0':'';
+  host.style.gap=catView.mode==='category'?'0':'';
+  if(catView.mode==='list')host.innerHTML=_catListView();
+  else if(catView.mode==='category')host.innerHTML=_catCategoryView();
+  initIcons();
+}
+function _catListView(){
   const q=catSearch.trim().toLowerCase();
   const all=catData.filter(c=>!q||c.name.toLowerCase().includes(q));
   const total=all.length,pages=Math.max(1,Math.ceil(total/catPerPage));
   catPage=Math.max(0,Math.min(catPage,pages-1));
   const start=catPage*catPerPage,end=Math.min(start+catPerPage,total);
-  tbody.innerHTML=all.slice(start,end).map(c=>`
+  const rows=all.slice(start,end).map(c=>`
     <tr>
       <td style="cursor:grab"><i data-lucide="grip-vertical" class="cat-grip"></i></td>
       <td class="cat-name">${c.name}</td>
-      <td>${c.buckets}</td>
+      <td>${c.buckets.length}</td>
       <td>${c.created}</td>
-      <td><button class="icon-action" title="View" onclick="showTrackerToast('Viewing ${c.name} category')"><i data-lucide="eye" class="icon-lg"></i></button></td>
+      <td><button class="icon-action" title="View" onclick="showCatDetail('${c.id}')"><i data-lucide="eye" class="icon-lg"></i></button></td>
     </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);cursor:default">No categories found</td></tr>`;
   const info=total?`${start+1}-${end} of ${total} results`:'0 results';
-  const infoEl=document.getElementById('cat-pg-info');if(infoEl)infoEl.textContent=info;
-  let h=`<button class="pgb arrow" onclick="gotoCatPage(catPage-1)"${catPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
-  for(let p=0;p<pages;p++)h+=`<button class="pgb${p===catPage?' on':''}" onclick="gotoCatPage(${p})">${p+1}</button>`;
-  h+=`<button class="pgb arrow" onclick="gotoCatPage(catPage+1)"${catPage>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
-  const btnsEl=document.getElementById('cat-pg-btns');if(btnsEl)btnsEl.innerHTML=h;
-  initIcons();
+  let pgBtns=`<button class="pgb arrow" onclick="gotoCatPage(catPage-1)"${catPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+  for(let p=0;p<pages;p++)pgBtns+=`<button class="pgb${p===catPage?' on':''}" onclick="gotoCatPage(${p})">${p+1}</button>`;
+  pgBtns+=`<button class="pgb arrow" onclick="gotoCatPage(catPage+1)"${catPage>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+  return `<div class="tbl-card">
+    <div class="tbl-scroll">
+      <table class="tbl">
+        <thead><tr>
+          <th style="width:70px">Sort</th>
+          <th>Categories Name</th>
+          <th style="width:160px">No of Buckets</th>
+          <th style="width:190px">Date Created</th>
+          <th style="width:110px">Actions</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="tbl-footer">
+      <div class="pg-info">${info}</div>
+      <div class="tbl-pg-controls">
+        <div class="pg-btns">${pgBtns}</div>
+        <div class="tbl-select"><select onchange="setCatPerPage(this.value)" aria-label="Rows per page">
+          <option value="10">10 / page</option>
+          <option value="25">25 / page</option>
+          <option value="50">50 / page</option>
+        </select></div>
+      </div>
+    </div>
+  </div>`;
+}
+function _catCrumbs(parts){
+  // parts = [{label, onclick}, {label, onclick}, ...] — last one is non-clickable current
+  return `<nav class="cat-breadcrumb">${parts.map((p,i)=>{
+    const last=i===parts.length-1;
+    const sep=i>0?'<span class="cat-breadcrumb-sep">/</span>':'';
+    return sep+(last
+      ? `<span class="cat-breadcrumb-current">${p.label}</span>`
+      : `<a class="cat-breadcrumb-link" onclick="${p.onclick}">${p.label}</a>`);
+  }).join('')}</nav>`;
+}
+function _catBucketKwCount(b){return (b.keywords||[]).length;}
+// Highlight boolean operators inside a keyword expression
+function _catFmtExpression(expr){
+  return String(expr).replace(/\b(AND|OR|NOT)\b/g,'<span class="cat-kw-op">$1</span>');
+}
+// Per-bucket page state for the keywords table (keyed by bucket id)
+let catKwPage={};
+const CAT_KW_PER_PAGE=10;
+function goCatKwPage(n){
+  if(!catView.bktId)return;
+  catKwPage[catView.bktId]=n;
+  renderCategories();
+}
+// Copy an expression to clipboard; visual confirmation via the existing toast
+function copyKwExpr(idx){
+  if(!catView.bktId)return;
+  const cat=catData.find(c=>c.id===catView.catId);if(!cat)return;
+  const bkt=cat.buckets.find(b=>b.id===catView.bktId);if(!bkt)return;
+  const kw=(bkt.keywords||[])[idx];if(!kw)return;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(kw.expression).then(()=>{
+      if(typeof showTrackerToast==='function')showTrackerToast('Expression copied');
+    });
+  }
+}
+function _catCategoryView(){
+  const cat=catData.find(c=>c.id===catView.catId);
+  if(!cat)return _catListView();
+  // Filter + sort buckets per state
+  const q=(catBktSearch||'').trim().toLowerCase();
+  let buckets=cat.buckets.filter(b=>!q||b.name.toLowerCase().includes(q));
+  if(catBktSort==='az')buckets=[...buckets].sort((a,b)=>a.name.localeCompare(b.name));
+  else if(catBktSort==='za')buckets=[...buckets].sort((a,b)=>b.name.localeCompare(a.name));
+  else if(catBktSort==='kw')buckets=[...buckets].sort((a,b)=>_catBucketKwCount(b)-_catBucketKwCount(a));
+  // Clamp selected bucket to whatever's visible
+  if(!buckets.find(b=>b.id===catView.bktId))catView.bktId=buckets[0]?buckets[0].id:null;
+  const rows=buckets.length?buckets.map(b=>{
+    const sel=b.id===catView.bktId?' selected':'';
+    return `<div class="ent-row${sel}" onclick="selectCatBucket('${b.id}')">
+      <span class="ent-row-avatar" style="background:#ede9fe;color:#7c3aed"><i data-lucide="folder" style="width:14px;height:14px"></i></span>
+      <div class="ent-row-body">
+        <div class="ent-row-name">${b.name}</div>
+        <div class="ent-row-meta">${_catBucketKwCount(b)} keyword${_catBucketKwCount(b)!==1?'s':''} · ${b.created||''}</div>
+      </div>
+    </div>`;
+  }).join(''):`<div style="padding:24px;color:var(--muted);font-size:12.5px;text-align:center">No buckets match your search.</div>`;
+  // Right pane: definition-list of keywords (label on top, expression below, copy on hover)
+  const bkt=buckets.find(b=>b.id===catView.bktId);
+  let rightHtml;
+  if(!bkt){
+    rightHtml=`<div class="ent-empty"><i data-lucide="folder-open" style="width:24px;height:24px;color:#ddd"></i><div>${cat.buckets.length===0?'No buckets in this category':'Select a bucket to view its keywords'}</div></div>`;
+  }else{
+    const all=bkt.keywords||[];
+    const total=all.length;
+    const pages=Math.max(1,Math.ceil(total/CAT_KW_PER_PAGE));
+    let page=Math.max(0,Math.min(catKwPage[bkt.id]||0,pages-1));
+    catKwPage[bkt.id]=page;
+    const start=page*CAT_KW_PER_PAGE,end=Math.min(start+CAT_KW_PER_PAGE,total);
+    const pageKws=all.slice(start,end);
+    const TYPE_LBL={main:'Main',additional:'Additional',related:'Related',excluded:'Excluded'};
+    const entries=total===0
+      ? `<div class="cat-kw-empty"><i data-lucide="inbox" style="width:22px;height:22px;color:#ddd"></i><div>No keywords in this bucket yet</div></div>`
+      : pageKws.map((kw,i)=>{
+          const absIdx=start+i;
+          const t=kw.type||'main';
+          return `<div class="cat-kw-entry">
+            <div class="cat-kw-entry-hd">
+              <span class="cat-kw-label">${kw.label}</span>
+              <span class="cat-kw-typebadge cat-kw-typebadge--${t}">${TYPE_LBL[t]||t}</span>
+              <button class="cat-kw-copy" onclick="copyKwExpr(${absIdx})" title="Copy expression"><i data-lucide="copy"></i></button>
+            </div>
+            <div class="cat-kw-expr">${_catFmtExpression(kw.expression||'')}</div>
+          </div>`;
+        }).join('');
+    let pagerHtml='';
+    if(total>CAT_KW_PER_PAGE){
+      let btns=`<button class="pgb arrow" onclick="goCatKwPage(${page-1})"${page<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+      for(let p=0;p<pages;p++)btns+=`<button class="pgb${p===page?' on':''}" onclick="goCatKwPage(${p})">${p+1}</button>`;
+      btns+=`<button class="pgb arrow" onclick="goCatKwPage(${page+1})"${page>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+      pagerHtml=`<div class="tbl-footer ent-pager cat-kw-pager"><div class="pg-info">${start+1}–${end} of ${total} keywords</div><div class="pg-btns">${btns}</div></div>`;
+    }
+    rightHtml=`<div class="ent-detail-head cat-bkt-head">
+      <div class="ent-detail-body-info">
+        <div class="ent-detail-title">${bkt.name}</div>
+      </div>
+      <div class="ent-detail-stats">
+        <div class="ent-stat cat-bkt-stat"><div class="ent-stat-val">${total}</div><div class="ent-stat-lbl">Keywords</div></div>
+      </div>
+    </div>
+    <div class="ent-detail-scroll cat-bkt-scroll">
+      <div class="cat-kw-list">${entries}</div>
+      ${pagerHtml}
+    </div>`;
+  }
+  // Custom topbar (replaces the hidden filter bar): breadcrumb only on the left + sort/search on the right
+  return `<div class="header-card cat-cat-topbar">
+    ${_catCrumbs([{label:'Categories',onclick:'backToCategories()'},{label:cat.name}])}
+    <div class="cat-topbar-right">
+      <div class="tbl-select"><select onchange="setCatBktSort(this.value)" aria-label="Sort buckets">
+        <option value="order"${catBktSort==='order'?' selected':''}>Default order</option>
+        <option value="az"${catBktSort==='az'?' selected':''}>Name (A–Z)</option>
+        <option value="za"${catBktSort==='za'?' selected':''}>Name (Z–A)</option>
+        <option value="kw"${catBktSort==='kw'?' selected':''}>Most keywords</option>
+      </select></div>
+      <div class="fc-search">
+        <i data-lucide="search" class="fc-search-icon"></i>
+        <input type="text" placeholder="Search buckets…" oninput="setCatBktSearch(this.value)" value="${catBktSearch||''}">
+      </div>
+    </div>
+  </div>
+  <div class="ent-body">
+    <div class="ent-list-panel">
+      <div class="ent-list-header">
+        <span class="ent-list-header-label">Buckets <span class="at-list-count" style="margin-left:4px">${buckets.length}</span></span>
+      </div>
+      <div class="ent-list-scroll">${rows}</div>
+    </div>
+    <div class="ent-detail-panel">${rightHtml}</div>
+  </div>`;
 }
 // ── ALL FILTERS MODAL ──
 const AF={

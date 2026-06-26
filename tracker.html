@@ -126,15 +126,17 @@
                 <button class="dr-apply" onclick="drApply()">Apply</button>
               </div>
             </div>
-            <div class="fc-search">
-              <i data-lucide="search" class="fc-search-icon"></i>
-              <input type="text" placeholder="Search activities…" oninput="setAtFilter('search',this.value)">
-              <div class="fc-search-kbd"><kbd>⌘</kbd><kbd>K</kbd></div>
-            </div>
           </div>
         </div>
-        <button id="tk-detail-return" class="ah-return-btn" style="display:none;flex-shrink:0;margin-top:4px" onclick="backToActivity()"><i data-lucide="arrow-left"></i> Back to activity</button>
-        <button id="tk-btn-new" class="at-btn-new" style="flex-shrink:0;margin-top:4px" onclick="showCreate()"><i data-lucide="plus"></i> New activity</button>
+        <div class="tk-right-cluster" style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-top:4px">
+          <div class="fc-search">
+            <i data-lucide="search" class="fc-search-icon"></i>
+            <input type="text" placeholder="Search activities…" oninput="setAtFilter('search',this.value)">
+            <div class="fc-search-kbd"><kbd>⌘</kbd><kbd>K</kbd></div>
+          </div>
+          <button id="tk-detail-return" class="ah-return-btn" style="display:none" onclick="backToActivity()"><i data-lucide="arrow-left"></i> Back to activity</button>
+          <button id="tk-btn-new" class="at-btn-new" onclick="showCreate()"><i data-lucide="plus"></i> New activity</button>
+        </div>
       </div>
 
       <!-- Split body -->

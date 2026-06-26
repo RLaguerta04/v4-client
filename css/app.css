@@ -407,6 +407,45 @@ svg.lucide-chevron-down{width:18px!important;height:18px!important}
 .tbl-pg-controls{display:flex;align-items:center;gap:8px}
 .cat-grip{width:15px;height:15px;color:var(--muted)}
 .cat-name{color:var(--ink);font-weight:500}
+/* Categories drill-in views: breadcrumb + page head + keyword card */
+.cat-breadcrumb{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin-bottom:18px;flex-wrap:wrap}
+.cat-breadcrumb-link{color:var(--muted);cursor:pointer;text-decoration:none;transition:color 0.12s}
+.cat-breadcrumb-link:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.cat-breadcrumb-current{color:var(--ink);font-weight:500}
+.cat-breadcrumb-sep{color:var(--border);user-select:none}
+.cat-page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+.cat-page-title{font-size:22px;font-weight:700;color:var(--ink);font-family:var(--font-display);letter-spacing:-0.01em;line-height:1.2;margin:0 0 4px}
+.cat-page-sub{font-size:12.5px;color:var(--muted)}
+.cat-kw-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:20px 22px;box-shadow:0 1px 3px rgba(24,29,38,0.04)}
+/* Categories drill-in topbar — slim header replacing the original filter bar in category view */
+.cat-cat-topbar{display:flex;align-items:center;gap:12px;padding:12px 24px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface)}
+.cat-cat-topbar .cat-breadcrumb{margin-bottom:0;flex:1;min-width:0}
+.cat-topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.cat-topbar-right .fc-search input,.cat-topbar-right .tbl-select select{width:220px;min-width:220px}
+/* Bucket detail panel — smaller stat, denser header */
+.cat-bkt-head .ent-stat-val.cat-bkt-stat-val,.cat-bkt-stat .ent-stat-val{font-size:16px}
+.cat-bkt-scroll{padding:8px 0 0!important;display:flex;flex-direction:column}
+.cat-bkt-scroll .cat-kw-list{flex:1}
+/* Keyword definition-list: each entry has a label, an expression block, and a hover-revealed copy */
+.cat-kw-list{display:flex;flex-direction:column}
+.cat-kw-entry{padding:14px 28px;border-bottom:1px solid var(--border);transition:background 0.12s}
+.cat-kw-entry:last-child{border-bottom:none}
+.cat-kw-entry:hover{background:var(--canvas)}
+.cat-kw-entry:hover .cat-kw-copy{opacity:1}
+.cat-kw-entry-hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.cat-kw-label{font-size:13px;font-weight:600;color:var(--ink);flex:1;min-width:0}
+.cat-kw-typebadge{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;padding:2px 7px;border-radius:var(--radius-pill);border:1px solid;flex-shrink:0}
+.cat-kw-typebadge--main{background:#1a1a2e;color:#fff;border-color:#1a1a2e}
+.cat-kw-typebadge--additional{background:#e8f0fe;color:#1b4fc4;border-color:#c3d5fc}
+.cat-kw-typebadge--related{background:#e6f4ea;color:#1e6b3a;border-color:#b7dfc1}
+.cat-kw-typebadge--excluded{background:#fde8e8;color:#b91c1c;border-color:#f8bebe}
+.cat-kw-copy{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;border-radius:var(--radius-sm);color:var(--muted);cursor:pointer;opacity:0;transition:opacity 0.12s,background 0.12s,border-color 0.12s,color 0.12s;flex-shrink:0}
+.cat-kw-copy:hover{background:var(--surface);border-color:var(--border);color:var(--ink)}
+.cat-kw-copy i,.cat-kw-copy svg{width:12px;height:12px}
+.cat-kw-expr{font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12.5px;line-height:1.55;color:#41454d;background:#f5f5f7;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;word-break:break-word;white-space:pre-wrap}
+.cat-kw-op{font-weight:700;color:#181d26}
+.cat-kw-empty{padding:48px 24px;text-align:center;color:var(--muted);font-size:12.5px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.cat-kw-pager{margin:0;padding:12px 28px;border-top:1px solid var(--border);background:var(--surface)}
 #page-categories .tbl td{padding:10px 16px}
 #page-categories .tbl th{padding:12px 16px}
 
@@ -1087,6 +1126,8 @@ body.rpt-open .app-right{transition:padding-right 0.28s cubic-bezier(0.4,0,0.2,1
 
 /* ── ACTIVITY TRACKER PAGE ── */
 .at-page{padding:0!important;background:var(--canvas);width:100%;gap:0!important}
+/* In activity-preview mode, reverse the right cluster so "Back to activity" sits on the left, search on the right */
+#page-tracker.tk-detail-open .tk-right-cluster{flex-direction:row-reverse}
 
 /* Type dropdown */
 .at-type-dd{position:relative}

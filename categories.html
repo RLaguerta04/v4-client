@@ -103,39 +103,7 @@
           </div>
         </div>
       </div>
-      <div class="page-inner">
-        <div class="tbl-card">
-
-          <div class="tbl-scroll">
-            <table class="tbl">
-              <thead>
-                <tr>
-                  <th style="width:70px">Sort</th>
-                  <th>Categories Name</th>
-                  <th style="width:160px">No of Buckets</th>
-                  <th style="width:190px">Date Created</th>
-                  <th style="width:110px">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="cat-tbody"></tbody>
-            </table>
-          </div>
-
-          <!-- bottom pagination -->
-          <div class="tbl-footer">
-            <div class="pg-info" id="cat-pg-info"></div>
-            <div class="tbl-pg-controls">
-              <div class="pg-btns" id="cat-pg-btns"></div>
-              <div class="tbl-select"><select onchange="setCatPerPage(this.value)" aria-label="Rows per page">
-                <option value="10">10 / page</option>
-                <option value="25">25 / page</option>
-                <option value="50">50 / page</option>
-              </select></div>
-            </div>
-          </div>
-
-        </div>
-      </div>
+      <div class="page-inner" id="cat-page-inner"></div>
     </div>
   </div><!-- /main -->
   </div><!-- /app-body -->
