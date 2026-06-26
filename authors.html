@@ -82,7 +82,7 @@
   <div class="main">
 
     <!-- PAGE: AUTHORS -->
-    <div class="page" id="page-authors">
+    <div class="page ent-page" id="page-authors">
       <div class="header-card" style="padding:12px 24px">
         <!-- FILTERS -->
         <div class="filter-bar">
@@ -120,12 +120,18 @@
           </div>
         </div>
       </div>
-      <div class="page-inner">
-        <div class="pub-grid" id="author-grid"></div>
-        <div class="tbl-footer">
-          <div class="pg-info pub-pg-info" id="author-pg-info"></div>
-          <div class="pg-btns" id="author-pg-btns"></div>
+      <div class="ent-body">
+        <div class="ent-list-panel">
+          <div class="ent-list-header">
+            <span class="ent-list-header-label">Authors <span class="ent-list-count" id="author-list-count"></span></span>
+          </div>
+          <div class="ent-list-scroll" id="author-list-scroll"></div>
+          <div class="ent-list-pager">
+            <div class="pg-info" id="author-pg-info"></div>
+            <div class="pg-btns" id="author-pg-btns"></div>
+          </div>
         </div>
+        <div class="ent-detail-panel" id="author-detail-panel"></div>
       </div>
     </div>
   </div><!-- /main -->

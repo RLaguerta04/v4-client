@@ -133,7 +133,8 @@
             </div>
           </div>
         </div>
-        <button class="at-btn-new" style="flex-shrink:0;margin-top:4px" onclick="showCreate()"><i data-lucide="plus"></i> New activity</button>
+        <button id="tk-detail-return" class="ah-return-btn" style="display:none;flex-shrink:0;margin-top:4px" onclick="backToActivity()"><i data-lucide="arrow-left"></i> Back to activity</button>
+        <button id="tk-btn-new" class="at-btn-new" style="flex-shrink:0;margin-top:4px" onclick="showCreate()"><i data-lucide="plus"></i> New activity</button>
       </div>
 
       <!-- Split body -->
@@ -157,6 +158,10 @@
           </div>
           <div class="at-list-scroll" id="at-list-scroll">
             <!-- populated by renderTracker() -->
+          </div>
+          <div class="ent-list-pager" id="at-list-pager" style="display:none">
+            <div class="pg-info" id="at-pg-info"></div>
+            <div class="pg-btns" id="at-pg-btns"></div>
           </div>
         </div>
         <!-- Right: detail panel -->
@@ -230,6 +235,19 @@
           <div class="aa-pills" id="aa-pills"></div>
           <div id="addart-results"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- AI summary slide-over (tracker activity) -->
+    <div class="nl-overlay" id="aireport-overlay">
+      <div class="nl-panel">
+        <div class="nl-head">
+          <i data-lucide="sparkles" style="color:#181d26;width:16px;height:16px"></i>
+          <span class="nl-head-title">AI summary</span>
+          <button class="ai-rpt-regen" id="ai-rpt-regen" onclick="regenAISummary()" title="Regenerate"><i data-lucide="refresh-cw" style="width:13px;height:13px"></i></button>
+          <button onclick="closeAISummary()" style="background:none;border:none;cursor:pointer;color:#888;padding:4px"><i data-lucide="x"></i></button>
+        </div>
+        <div class="ai-rpt-body" id="ai-rpt-body"></div>
       </div>
     </div>
 

@@ -665,6 +665,15 @@ svg.lucide-chevron-down{width:18px!important;height:18px!important}
 .app-body{transition:margin-right 0.28s cubic-bezier(0.4,0,0.2,1)}
 body.addart-open .app-body{margin-right:var(--aa-w)}
 @media (max-width:1180px){body.addart-open .app-body{margin-right:0}} /* fall back to overlay when space is tight */
+/* AI summary slide-over (tracker) — mirrors addart push-drawer */
+#aireport-overlay{width:var(--aa-w)}
+body.aireport-open .app-body{margin-right:var(--aa-w)}
+@media (max-width:1180px){body.aireport-open .app-body{margin-right:0}}
+.ai-rpt-regen{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--muted);cursor:pointer;transition:background 0.12s,border-color 0.12s,color 0.12s}
+.ai-rpt-regen:hover{background:var(--canvas);border-color:var(--focus-border);color:var(--ink)}
+.ai-rpt-regen:disabled{opacity:0.45;cursor:not-allowed}
+.ai-rpt-regen.spin svg,.ai-rpt-regen.spin i{animation:spin 1s linear infinite}
+.ai-rpt-body{flex:1;overflow-y:auto;padding:18px 20px}
 /* Export modal */
 .exp-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:600;display:none;align-items:center;justify-content:center}
 .exp-overlay.open{display:flex;animation:fadeIn 0.2s ease}
@@ -1170,14 +1179,40 @@ body.rpt-open .app-right{transition:padding-right 0.28s cubic-bezier(0.4,0,0.2,1
 /* …and each KPI card has its own fadeIn — suppress it too on add */
 .detail-wrap.detail-no-anim .at-kpi-strip .ss{animation:none}
 /* On add, the "manually added" number counts up (JS) from its previous value */
-.detail-head{padding:13px 20px;border-bottom:none;display:flex;align-items:center;gap:10px;background:var(--surface);flex-shrink:0}
+.detail-head{padding:13px 20px;border-bottom:none;display:flex;align-items:center;gap:10px;background:var(--surface);flex-shrink:0;transition:padding 0.2s ease,gap 0.2s ease}
 .detail-head-body{flex:1;min-width:0}
-.detail-head-title{font-size:17px;font-weight:600;color:var(--ink);margin-bottom:5px;line-height:1.3;font-family:var(--font-display);letter-spacing:-0.01em}
-.detail-head-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.dh-date{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
-.dh-date i,.dh-date svg{width:12px;height:12px;color:var(--icon-hint)}
-.detail-head-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;opacity:0;pointer-events:none;transition:opacity 0.15s ease}
-.detail-head:hover .detail-head-actions,.detail-head-actions:focus-within{opacity:1;pointer-events:auto}
+.detail-head-title{font-size:17px;font-weight:600;color:var(--ink);margin-bottom:5px;line-height:1.3;font-family:var(--font-display);letter-spacing:-0.01em;transition:font-size 0.2s ease,margin-bottom 0.2s ease}
+.detail-head-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;transition:max-height 0.2s ease,opacity 0.15s ease,margin 0.2s ease;max-height:24px;overflow:hidden}
+.detail-head-desc{transition:max-height 0.2s ease,opacity 0.15s ease,margin 0.2s ease;max-height:22px;overflow:hidden}
+/* Sentinel — sits at the top of .dpane scroll area */
+.tk-scroll-sentinel{height:1px;width:100%;flex-shrink:0}
+/* Compact (scrolled) state — scoped to tracker detail panel only */
+.at-detail-panel .detail-head.scrolled{padding:8px 20px;gap:8px;align-items:center}
+.at-detail-panel .detail-head.scrolled .ac-icon--lg{align-self:center!important;margin-top:0!important}
+.at-detail-panel .detail-head.scrolled .ac-icon--lg{width:28px!important;height:28px!important}
+.at-detail-panel .detail-head.scrolled .ac-icon--lg i,.at-detail-panel .detail-head.scrolled .ac-icon--lg svg{width:13px!important;height:13px!important}
+.at-detail-panel .detail-head.scrolled .detail-head-body{display:flex;flex-direction:column;justify-content:center}
+.at-detail-panel .detail-head.scrolled .detail-head-title{font-size:14px;margin-bottom:0}
+.at-detail-panel .detail-head.scrolled .detail-head-desc{display:none}
+.at-detail-panel .detail-head.scrolled .detail-head-meta{display:none}
+.at-detail-panel .detail-head.scrolled .detail-head-body{min-height:0;line-height:1}
+.at-detail-panel .ac-icon--lg{transition:width 0.2s ease,height 0.2s ease}
+.at-detail-panel .ac-icon--lg i,.at-detail-panel .ac-icon--lg svg{transition:width 0.2s ease,height 0.2s ease}
+.dh-date{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.dh-date i,.dh-date svg{width:11px;height:11px;color:var(--icon-hint)}
+.detail-head-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;position:relative}
+.dh-kebab{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;border-radius:var(--radius-sm);color:var(--muted);cursor:pointer;transition:background 0.12s,border-color 0.12s,color 0.12s}
+.dh-kebab:hover,.dh-kebab.open{background:var(--canvas);border-color:var(--border);color:var(--ink)}
+.dh-kebab i,.dh-kebab svg{width:15px;height:15px}
+.dh-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 4px 20px rgba(24,29,38,0.1);z-index:100;min-width:180px;overflow:hidden;padding:4px}
+.dh-menu.open{display:block;animation:fadeIn 0.12s ease}
+.dh-menu-item{padding:7px 12px;font-size:12.5px;color:var(--ink);cursor:pointer;font-weight:500;display:flex;align-items:center;gap:9px;border-radius:var(--radius-sm)}
+.dh-menu-item:hover{background:var(--canvas)}
+.dh-menu-item i,.dh-menu-item svg{width:13px;height:13px;color:var(--muted)}
+.dh-menu-item.danger{color:#a32d2d}
+.dh-menu-item.danger:hover{background:#fdf2f2}
+.dh-menu-item.danger i,.dh-menu-item.danger svg{color:#a32d2d}
+.dh-menu-sep{height:1px;background:var(--border);margin:4px 0}
 /* Coverage snapshot */
 .dcoverage{display:flex;flex-direction:column;border-bottom:none;background:var(--surface);flex-shrink:0}
 /* Tracker KPI strip — overrides mentions.html colored tiles with neutral palette */
@@ -1398,6 +1433,7 @@ body.rpt-open .app-right{transition:padding-right 0.28s cubic-bezier(0.4,0,0.2,1
 /* Detail-mode table pagination bar */
 .tbl-detail-pager{display:none;align-items:center;justify-content:space-between;padding:7px 12px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0}
 #page-mentions.detail-open .tbl-detail-pager{display:flex}
+#page-mentions:not(.detail-open) .tbl-detail-pager{display:none}
 /* Narrow table: hide checkbox + non-essential columns (SV, AVE, Publication, Date) */
 #page-mentions.detail-open .tbl th:nth-child(1),
 #page-mentions.detail-open .tbl td:nth-child(1),
@@ -1438,8 +1474,14 @@ body.rpt-open .app-right{transition:padding-right 0.28s cubic-bezier(0.4,0,0.2,1
 .spot-why-txt{font-size:12px;color:var(--ink-2);line-height:1.6}
 .spot-panel-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
 .spot-cov-hd{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);padding:11px 0 8px;border-top:1px solid var(--border)}
+/* Coverage table card — wraps the tan-bar header + the list */
+.spot-cov-tbl{border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.spot-cov-pager{margin-top:10px;padding:0}
+/* Tan-bar column header above the coverage list (mentions-style HEADLINE / SENTIMENT) */
+.spot-cov-thd{display:flex;align-items:center;justify-content:space-between;background:#e3e1db;padding:11px 14px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted)}
+.spot-cov-match-cell{flex-shrink:0;margin-top:1px}
 .spot-cov-list{display:flex;flex-direction:column;gap:2px}
-.spot-cov-li{display:flex;align-items:flex-start;gap:10px;padding:9px 8px;border-radius:8px;cursor:pointer;transition:background 0.12s}
+.spot-cov-li{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;cursor:pointer;transition:background 0.12s}
 .spot-cov-li:hover{background:var(--canvas)}
 .spot-cov-li.active{background:rgba(124,58,237,0.08)}
 .spot-cov-li.active .spot-cov-hl{color:#7c3aed}
@@ -1692,6 +1734,84 @@ body.rpt-open .app-right{transition:padding-right 0.28s cubic-bezier(0.4,0,0.2,1
 .pub-sort:hover{border-color:var(--focus-border)}
 .pub-pg-info{font-size:12.5px;color:var(--muted)}
 .pub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;width:100%}
+/* Entity split-pane (publishers, authors) — mirrors activity tracker layout */
+.ent-page{padding:0!important;background:var(--canvas);width:100%;gap:0!important}
+.ent-body{flex:1;overflow:hidden;display:flex;gap:0;padding:0;min-height:0;background:var(--surface)}
+.ent-list-panel{width:380px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;background:var(--surface);border-right:1px solid rgba(24,29,38,0.08);box-shadow:2px 0 8px rgba(24,29,38,0.06)}
+.ent-list-header{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);flex-shrink:0;gap:8px}
+.ent-list-header-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink);display:flex;align-items:center;gap:6px}
+.ent-list-count{color:var(--muted);font-weight:500}
+.ent-list-scroll{flex:1;overflow-y:auto;overflow-y:overlay;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:transparent transparent}
+.ent-list-scroll:hover{scrollbar-color:rgba(24,29,38,0.18) transparent}
+.ent-list-scroll::-webkit-scrollbar{width:5px}
+.ent-list-scroll::-webkit-scrollbar-track{background:transparent}
+.ent-list-scroll::-webkit-scrollbar-thumb{background:transparent;border-radius:3px;transition:background-color 0.2s}
+.ent-list-scroll:hover::-webkit-scrollbar-thumb{background:rgba(24,29,38,0.18)}
+.ent-list-scroll::-webkit-scrollbar-thumb:hover{background:rgba(24,29,38,0.35)}
+.ent-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.12s;animation:fadeIn 0.2s ease}
+.ent-row:hover{background:var(--canvas)}
+.ent-row.selected{background:#ece8e1}
+.ent-row.selected:hover{background:#ece8e1}
+.ent-row-rank{font-size:11px;font-weight:600;color:var(--muted);width:22px;flex-shrink:0;text-align:right;font-variant-numeric:tabular-nums}
+.ent-row-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0}
+.ent-row-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ent-row-name{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ent-row-meta{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ent-row-score{font-size:13px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;flex-shrink:0;font-family:var(--font-display)}
+.ent-list-pager{padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0}
+.ent-detail-panel{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--canvas);position:relative}
+.ent-detail-panel::before{content:"";position:absolute;top:0;left:0;width:6px;height:100%;background:linear-gradient(to right,rgba(24,29,38,0.04),rgba(24,29,38,0));pointer-events:none;z-index:2}
+.ent-detail-head{padding:18px 24px;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:0 2px 6px rgba(24,29,38,0.04);display:flex;align-items:center;gap:16px;flex-shrink:0;flex-wrap:wrap;position:relative;z-index:1;transition:padding 0.2s ease,gap 0.2s ease}
+.ent-detail-avatar{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:20px;flex-shrink:0;transition:width 0.2s ease,height 0.2s ease,font-size 0.2s ease}
+.ent-detail-body-info{flex:1;min-width:0}
+.ent-detail-title{font-size:20px;font-weight:700;color:var(--ink);font-family:var(--font-display);letter-spacing:-0.01em;line-height:1.25;margin-bottom:10px;transition:font-size 0.2s ease,margin-bottom 0.2s ease}
+/* Sentinel sits at the top of the scroll area — when it leaves the viewport, the head gets .scrolled */
+.ent-scroll-sentinel{height:1px;width:100%;flex-shrink:0}
+/* Compact (scrolled) state */
+.ent-detail-head.scrolled{padding:10px 24px;gap:12px}
+.ent-detail-head.scrolled .ent-detail-avatar{width:32px;height:32px;font-size:13px}
+.ent-detail-head.scrolled .ent-detail-title{font-size:15px;margin-bottom:0}
+.ent-detail-head .md-socials{transition:gap 0.2s ease,margin 0.2s ease}
+.ent-detail-head .md-soc{transition:width 0.2s ease,height 0.2s ease}
+/* In compact mode, slot socials beside the title instead of below */
+.ent-detail-head.scrolled .ent-detail-body-info{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ent-detail-head.scrolled .md-socials{margin:0;gap:3px}
+.ent-detail-head.scrolled .md-soc{width:18px;height:18px}
+.ent-detail-head.scrolled .md-soc i{font-size:8px}
+.ent-detail-head.scrolled .ent-detail-stats{gap:8px}
+.ent-detail-head.scrolled .ent-stat-val{font-size:16px;margin-bottom:0}
+.ent-detail-head.scrolled .ent-stat-lbl{max-height:0;opacity:0;overflow:hidden;margin:0}
+.ent-detail-head .ent-stat-lbl{transition:max-height 0.2s ease,opacity 0.15s ease;max-height:14px;overflow:hidden}
+.ent-stat-val{transition:font-size 0.2s ease,margin-bottom 0.2s ease}
+.ent-detail-stats{transition:gap 0.2s ease}
+.ent-detail-title-link{display:inline-flex;align-items:center;gap:6px;text-decoration:none;cursor:pointer;transition:text-decoration 0.12s}
+.ent-detail-title-link:hover{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
+.ent-title-ext{width:14px;height:14px;color:var(--muted);opacity:0;transform:translateX(-4px);transition:opacity 0.12s,transform 0.12s}
+.ent-detail-title-link:hover .ent-title-ext{opacity:1;transform:translateX(0)}
+.ent-detail-body-info .md-socials{margin:0}
+.ent-detail-stats{display:flex;align-items:flex-start;gap:28px;flex-shrink:0;margin-left:auto}
+.ent-stat{display:flex;flex-direction:column;align-items:center;text-align:center}
+.ent-stat-val{font-size:22px;font-weight:700;color:var(--ink);font-family:var(--font-display);line-height:1.1;margin-bottom:5px;white-space:nowrap}
+.ent-stat-pre{font-size:12px;font-weight:500;color:var(--muted);margin-right:2px}
+.ent-stat-lbl{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap}
+.ent-detail-scroll{flex:1;overflow-y:auto;padding:8px 24px 24px}
+.ent-tbl-header{padding:12px 0 14px}
+.ent-tbl .ent-hl-clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
+/* Entity tabs (Articles / Performance / Entities) */
+.ent-tabs{padding:0 24px;background:var(--surface);flex-shrink:0;border-top:none}
+.ent-perf-range{display:inline-flex;padding:0;border:none;background:transparent;gap:4px;margin:18px 0 8px}
+.ent-perf-range .mm-tab{padding:6px 12px;font-size:12px;border-radius:var(--radius-sm);border:none;background:transparent;color:var(--muted)}
+.ent-perf-range .mm-tab.act{background:#ede9fe;color:#7c3aed;border-bottom:none;font-weight:600}
+.ent-perf-wrap{padding:6px 0 16px}
+.ent-perf-chart{width:100%;height:420px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;box-shadow:0 1px 3px rgba(24,29,38,0.04);margin-top:6px}
+.ent-entities-wrap{padding:18px 0 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 1px 3px rgba(24,29,38,0.04);margin-top:18px}
+.ent-entities-wrap .db-entmap{padding:0 16px}
+.ent-entities-wrap .db-ent-legend{padding:0 16px}
+.ent-pager{margin-top:12px;padding-top:12px}
+.ent-pager .pg-info{font-size:11px}
+.ent-detail-scroll::-webkit-scrollbar{width:6px}
+.ent-detail-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.ent-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font-size:12.5px;gap:8px;padding:40px}
 #page-publishers .page-inner{flex:1;justify-content:safe center}  /* center cards + pagination vertically (safe = no top clip on overflow) */
 #page-publishers{scrollbar-width:none}                            /* hide scrollbar (still scrollable as fallback) */
 #page-publishers::-webkit-scrollbar{display:none}

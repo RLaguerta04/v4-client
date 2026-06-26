@@ -860,13 +860,14 @@ function renderTableRows(){
   if(footer)footer.style.display=(isDetail||mentionsView==='cards')?'none':'flex';
   if(isDetail){
     const infoEl=document.getElementById('tbl-pg-info');
-    const numEl=document.getElementById('tbl-pg-num');
-    const prevEl=document.getElementById('tbl-pg-prev');
-    const nextEl=document.getElementById('tbl-pg-next');
     if(infoEl)infoEl.textContent=`${start+1}–${end} of ${total}`;
-    if(numEl)numEl.textContent=`${tblPage+1} / ${pages}`;
-    if(prevEl)prevEl.disabled=tblPage<=0;
-    if(nextEl)nextEl.disabled=tblPage>=pages-1;
+    const btnsEl=document.getElementById('tbl-detail-pg-btns');
+    if(btnsEl){
+      let h=`<button class="pgb arrow" onclick="goTblPage(tblPage-1)"${tblPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+      for(let p=0;p<pages;p++)h+=`<button class="pgb${p===tblPage?' on':''}" onclick="goTblPage(${p})">${p+1}</button>`;
+      h+=`<button class="pgb arrow" onclick="goTblPage(tblPage+1)"${tblPage>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+      btnsEl.innerHTML=h;
+    }
   }else{
     const infoEl=document.getElementById('tbl-list-pg-info');
     const btnsEl=document.getElementById('tbl-list-pg-btns');
@@ -958,10 +959,12 @@ function renderMentionList(){
     </div>
     <i data-lucide="chevron-right" class="md-li-chev"></i>
   </div>`;}).join('');
-  const pager=`<div class="md-list-pager">
-    <button class="md-pg-btn" onclick="gotoMdPage(${mdPage-1})" title="Previous page" ${mdPage<=0?'disabled':''}><i data-lucide="chevron-left"></i></button>
-    <span class="md-pg-info">${start+1}–${end} of ${total}</span>
-    <button class="md-pg-btn" onclick="gotoMdPage(${mdPage+1})" title="Next page" ${mdPage>=pages-1?'disabled':''}><i data-lucide="chevron-right"></i></button>
+  let pgBtns=`<button class="pgb arrow" onclick="gotoMdPage(${mdPage-1})"${mdPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+  for(let p=0;p<pages;p++)pgBtns+=`<button class="pgb${p===mdPage?' on':''}" onclick="gotoMdPage(${p})">${p+1}</button>`;
+  pgBtns+=`<button class="pgb arrow" onclick="gotoMdPage(${mdPage+1})"${mdPage>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+  const pager=`<div class="ent-list-pager md-list-pager-std">
+    <div class="pg-info">${start+1}–${end} of ${total}</div>
+    <div class="pg-btns">${pgBtns}</div>
   </div>`;
   return `<div class="md-list-header">Mentions · ${total}</div>${items}${pager}`;
 }
@@ -985,13 +988,29 @@ function openDetailFor(d,idx){
   const sb=document.querySelector('.sidebar');
   mdSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
   if(sb)sb.classList.add('collapsed');
-  const ret=document.getElementById('fc-detail-return');
-  if(ret){ret.style.display=mdSpotCtx?'none':'inline-flex';initIcons();}
+  _updateDetailReturnBtn();
   const page=document.getElementById('page-mentions');
   page.classList.add('detail-open');
   page.classList.toggle('spot-detail',!!mdSpotCtx);
   renderTableRows();
   renderInlineDetail(d);
+}
+// Contextual header-bar back button — label/handler swap based on whether the user is in
+// the spotlight preview flow (mdSpotCtx) or the plain article-detail flow.
+function _updateDetailReturnBtn(){
+  const ret=document.getElementById('fc-detail-return');
+  if(!ret)return;
+  if(mdSpotCtx){
+    ret.innerHTML=`<i data-lucide="arrow-left"></i> Back to spotlight`;
+  }else{
+    ret.innerHTML=`<i data-lucide="arrow-left"></i> Mentions feed`;
+  }
+  ret.style.display='inline-flex';
+  initIcons();
+}
+function detailReturn(){
+  if(mdSpotCtx)backToSpotlight();
+  else closeMention();
 }
 // Preview a coverage row (spotlight / trending list) in the mention-detail layout.
 // Real feed items open their full detail; spotlight-only items use a synthesized object.
@@ -1025,37 +1044,100 @@ function previewArticle(listId,hlEnc){
   vtOpen('#al-'+listId+' .match-tbl-row[data-hl="'+hlEnc+'"] .match-hl',
     ()=>openDetailFor(idx>=0?mentionData[idx]:spotToMention(a),idx>=0?idx:null));
 }
+// Coverage-list pagination (spotlight + tracker activity panels share the same component)
+const SPOT_COV_PER_PAGE=10;
+let spotCovPage={},actCovPage={};
+function _covPager(curr,total,pages,handler){
+  if(total<=SPOT_COV_PER_PAGE)return'';
+  const start=curr*SPOT_COV_PER_PAGE,end=Math.min(start+SPOT_COV_PER_PAGE,total);
+  let btns=`<button class="pgb arrow" onclick="${handler}(${curr-1})"${curr<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+  for(let p=0;p<pages;p++)btns+=`<button class="pgb${p===curr?' on':''}" onclick="${handler}(${p})">${p+1}</button>`;
+  btns+=`<button class="pgb arrow" onclick="${handler}(${curr+1})"${curr>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+  return `<div class="tbl-footer ent-pager spot-cov-pager"><div class="pg-info">${start+1}–${end} of ${total} results</div><div class="pg-btns">${btns}</div></div>`;
+}
+function rerenderSpotPanel(){
+  const col=document.getElementById('adp-col-left');
+  if(col&&mdSpotCtx){
+    // Find the currently rendered detail object — use the active list/hl for refresh
+    const listId=mdSpotArticle?mdSpotArticle.listId:'spot';
+    const arts=articlesForList(listId)||[];
+    const hl=mdSpotArticle?mdSpotArticle.hl:(arts[0]&&arts[0].hl);
+    const idx=hl?mentionData.findIndex(d=>d.title===hl):-1;
+    const d=idx>=0?mentionData[idx]:(hl?spotToMention(arts.find(x=>x.hl===hl)):{});
+    col.innerHTML=renderSpotPanel(d);
+    initIcons();
+  }
+}
+function goSpotCovPage(n){
+  const listId=mdSpotArticle?mdSpotArticle.listId:'spot';
+  const arts=articlesForList(listId)||[];
+  const pages=Math.max(1,Math.ceil(arts.length/SPOT_COV_PER_PAGE));
+  spotCovPage[listId]=Math.max(0,Math.min(n,pages-1));
+  rerenderSpotPanel();
+}
+function rerenderActPanel(){
+  const col=document.getElementById('adp-col-left');
+  if(col&&mdActCtx)col.innerHTML=renderActPanel();
+  initIcons();
+}
+function goActCovPage(n){
+  if(!mdActCtx)return;
+  const total=(mdActCtx.matches||[]).length;
+  const pages=Math.max(1,Math.ceil(total/SPOT_COV_PER_PAGE));
+  actCovPage[mdActCtx.id]=Math.max(0,Math.min(n,pages-1));
+  rerenderActPanel();
+}
 // Left column for spotlight-origin detail: story header + why + chips + scoped coverage list
 function renderSpotPanel(d){
   const s=mdSpotCtx;if(!s)return'';
   const listId=mdSpotArticle?mdSpotArticle.listId:'spot';
   const arts=articlesForList(listId)||[];
   const curHl=mdSpotArticle?mdSpotArticle.hl:d.title;
+  // If the active item isn't on the current page, flip to its page so the highlight is visible
+  if(curHl){
+    const activeIdx=arts.findIndex(x=>x.hl===curHl);
+    if(activeIdx>=0){
+      const activePage=Math.floor(activeIdx/SPOT_COV_PER_PAGE);
+      if(spotCovPage[listId]==null)spotCovPage[listId]=activePage;
+    }
+  }
+  const total=arts.length;
+  const pages=Math.max(1,Math.ceil(total/SPOT_COV_PER_PAGE));
+  let page=Math.max(0,Math.min(spotCovPage[listId]||0,pages-1));
+  spotCovPage[listId]=page;
+  const pageArts=arts.slice(page*SPOT_COV_PER_PAGE,page*SPOT_COV_PER_PAGE+SPOT_COV_PER_PAGE);
   const chips=(s.chips||[]).map(ch=>`<span class="chip ${ch.cls}">${ch.t}</span>`).join('');
-  const rows=arts.map(a=>{
+  const rows=pageArts.map(a=>{
     const ic=ATicn[a.media]||{cls:'type-online',icon:'newspaper'};
     const sc=a.score>=85?'sc-hi':a.score>=70?'sc-mid':'sc-lo';
     return `<div class="spot-cov-li${a.hl===curHl?' active':''}" onclick="selectSpotArticle('${encodeURIComponent(a.hl)}')">
       <span class="md-li-ico ${ic.cls}"><i data-lucide="${ic.icon}"></i></span>
       <div class="spot-cov-body"><div class="spot-cov-hl">${a.hl}</div><div class="spot-cov-meta">${a.source} · ${a.date}</div></div>
-      <span class="spot-cov-match ${sc}">${a.score}%</span>
+      <span class="spot-cov-match-cell"><span class="art-score-val ${sc}">${a.score}% match</span></span>
     </div>`;
   }).join('');
   return `<div class="spot-panel">
-    <button class="spot-back" onclick="backToSpotlight()"><i data-lucide="arrow-left"></i> Back to spotlight</button>
     <div class="spot-tier"><i data-lucide="star" class="icon-sm"></i> Tier 1 Spotlight</div>
     <div class="spot-panel-title">${s.hl}</div>
     <div class="spot-panel-why"><span class="spot-why-lbl"><i data-lucide="zap"></i> Why this was picked</span><span class="spot-why-txt">${s.why}</span></div>
     <div class="chips spot-panel-chips">${chips}</div>
     <div class="spot-cov-hd">Coverage · ${arts.length} articles</div>
-    <div class="spot-cov-list">${rows}</div>
+    <div class="spot-cov-tbl">
+      <div class="spot-cov-thd"><span>Headline</span><span>Match</span></div>
+      <div class="spot-cov-list">${rows}</div>
+    </div>
+    ${_covPager(page,total,pages,'goSpotCovPage')}
   </div>`;
 }
 function selectSpotArticle(hlEnc){
   const hl=decodeURIComponent(hlEnc);
   const listId=mdSpotArticle?mdSpotArticle.listId:'spot';
-  const a=(articlesForList(listId)||[]).find(x=>x.hl===hl);if(!a)return;
+  const arts=articlesForList(listId)||[];
+  const a=arts.find(x=>x.hl===hl);if(!a)return;
   mdSpotArticle={listId,hl};
+  // Flip to the page containing the new active item if it's not currently visible
+  const activeIdx=arts.findIndex(x=>x.hl===hl);
+  if(activeIdx>=0)spotCovPage[listId]=Math.floor(activeIdx/SPOT_COV_PER_PAGE);
   const idx=mentionData.findIndex(d=>d.title===hl);
   mdActive=(idx>=0?idx:-1);
   renderInlineDetail(idx>=0?mentionData[idx]:spotToMention(a));
@@ -1106,13 +1188,27 @@ function previewMatch(actId,matchId){
     if(page)page.classList.add('tk-detail-open');
     const panel=document.getElementById('article-detail-panel');
     if(panel)panel.style.setProperty('--ctx-accent',TYPE_ACCENT[a.type]||'#7c3aed');
+    _updateTrackerReturnBtn(true);
     renderInlineDetail(matchToMention(m));
   });
 }
+// Header back-button toggle for the tracker activity-preview flow.
+// Swap: hide "New activity" + show "Back to activity" when previewing.
+function _updateTrackerReturnBtn(inDetail){
+  const ret=document.getElementById('tk-detail-return');
+  const newBtn=document.getElementById('tk-btn-new');
+  if(ret)ret.style.display=inDetail?'inline-flex':'none';
+  if(newBtn)newBtn.style.display=inDetail?'none':'inline-flex';
+  if(inDetail)initIcons();
+}
 function selectActMatch(matchId){
   if(!mdActCtx)return;
-  const m=(mdActCtx.matches||[]).find(x=>x.id===matchId);if(!m)return;
+  const matches=mdActCtx.matches||[];
+  const m=matches.find(x=>x.id===matchId);if(!m)return;
   mdActMatch=matchId;
+  // Flip to the page containing the new active match
+  const idx=matches.findIndex(x=>x.id===matchId);
+  if(idx>=0)actCovPage[mdActCtx.id]=Math.floor(idx/SPOT_COV_PER_PAGE);
   renderInlineDetail(matchToMention(m));
 }
 function backToActivity(){
@@ -1121,6 +1217,7 @@ function backToActivity(){
   if(page)page.classList.remove('tk-detail-open');
   const sb=document.querySelector('.sidebar');
   if(sb&&!mdSidebarWasCollapsed)sb.classList.remove('collapsed');
+  _updateTrackerReturnBtn(false);
 }
 document.addEventListener('keydown',function(e){
   if(e.key!=='Escape'||!mdActCtx)return;
@@ -1131,23 +1228,37 @@ document.addEventListener('keydown',function(e){
 function renderActPanel(){
   const a=mdActCtx;if(!a)return'';
   const tc=(typeof TC!=='undefined'&&TC[a.type])?TC[a.type]:{icon:'flame'};
-  const rows=(a.matches||[]).map(m=>{
+  const matches=a.matches||[];
+  // Auto-flip to the page containing the active match (first render only — selectActMatch sets it explicitly thereafter)
+  if(mdActMatch&&actCovPage[a.id]==null){
+    const idx=matches.findIndex(m=>m.id===mdActMatch);
+    if(idx>=0)actCovPage[a.id]=Math.floor(idx/SPOT_COV_PER_PAGE);
+  }
+  const total=matches.length;
+  const pages=Math.max(1,Math.ceil(total/SPOT_COV_PER_PAGE));
+  let page=Math.max(0,Math.min(actCovPage[a.id]||0,pages-1));
+  actCovPage[a.id]=page;
+  const pageMatches=matches.slice(page*SPOT_COV_PER_PAGE,page*SPOT_COV_PER_PAGE+SPOT_COV_PER_PAGE);
+  const rows=pageMatches.map(m=>{
     const ic=ATicn[m.media]||{cls:'type-online',icon:'newspaper'};
     const pct=m.score?Math.round(m.score*100):null;
     const sc=pct>=85?'sc-hi':pct>=70?'sc-mid':'sc-lo';
     return `<div class="spot-cov-li${m.id===mdActMatch?' active':''}" onclick="selectActMatch('${m.id}')">
       <span class="md-li-ico ${ic.cls}"><i data-lucide="${ic.icon}"></i></span>
       <div class="spot-cov-body"><div class="spot-cov-hl">${m.title}</div><div class="spot-cov-meta">${m.source} · ${m.date}</div></div>
-      ${pct?`<span class="spot-cov-match ${sc}">${pct}%</span>`:''}
+      ${pct?`<span class="spot-cov-match-cell"><span class="art-score-val ${sc}">${pct}% match</span></span>`:''}
     </div>`;
   }).join('');
   return `<div class="spot-panel ctx-act">
-    <button class="spot-back" onclick="backToActivity()"><i data-lucide="arrow-left"></i> Back to activity</button>
     <div class="spot-tier ctx-tier"><i data-lucide="${tc.icon}" class="icon-sm"></i> ${a.type}</div>
     <div class="spot-panel-title">${a.title}</div>
     ${a.content?`<div class="spot-panel-why"><span class="spot-why-lbl"><i data-lucide="zap"></i> Activity context</span><span class="spot-why-txt">${a.content.length>180?a.content.slice(0,180)+'…':a.content}</span></div>`:''}
-    <div class="spot-cov-hd">Matched articles · ${(a.matches||[]).length}</div>
-    <div class="spot-cov-list">${rows}</div>
+    <div class="spot-cov-hd">Matched articles · ${total}</div>
+    <div class="spot-cov-tbl">
+      <div class="spot-cov-thd"><span>Headline</span><span>Match</span></div>
+      <div class="spot-cov-list">${rows}</div>
+    </div>
+    ${_covPager(page,total,pages,'goActCovPage')}
   </div>`;
 }
 function selectMention(i){
@@ -2097,7 +2208,11 @@ let acts=[
     {id:'m9',media:'TV',source:'ABS-CBN News',title:'Telco war escalates: Jimenez vs. Reyes feud explained',date:'May 25, 2026',value:890000,score:0.83,manual:false},
   ]},
 ];
-let atNid=3,trackerSel=null,trackerTabs={},msQ={},msF={},msR={},aiCache={},atTypeFilter='',atSearchFilter='',atAddOpen={},artFilter={},artSort={},freshTrack={},scanKwOff={};
+let atNid=3,trackerSel=null,trackerTabs={},msQ={},msF={},msR={},aiCache={},atTypeFilter='',atSearchFilter='',atAddOpen={},artFilter={},artSort={},artPage={},freshTrack={},scanKwOff={};
+let trackerListPage=0;
+const TRACKER_PER_PAGE=15;
+function gotoTrackerListPage(n){trackerListPage=n;renderTracker();const sc=document.getElementById('at-list-scroll');if(sc)sc.scrollTop=0;}
+const ART_PER_PAGE=10;
 let atSelectMode=false,atSelected=new Set();
 // Merge stories tracked from other pages (persisted in localStorage) into the activity list
 (function mergeTrackedExtras(){
@@ -2144,6 +2259,7 @@ function setAtFilter(k,v){
   } else {
     atSearchFilter=v;
   }
+  trackerListPage=0;
   renderTracker();
 }
 
@@ -2156,12 +2272,34 @@ function renderTracker(){
   if(atTypeFilter) visible=visible.filter(a=>a.type===atTypeFilter);
   if(atSearchFilter) visible=visible.filter(a=>a.title.toLowerCase().includes(atSearchFilter.toLowerCase())||a.content.toLowerCase().includes(atSearchFilter.toLowerCase()));
 
+  // Pagination — standardized .ent-list-pager footer (hidden when not needed)
+  const totalAt=visible.length;
+  const pagesAt=Math.max(1,Math.ceil(totalAt/TRACKER_PER_PAGE));
+  trackerListPage=Math.max(0,Math.min(trackerListPage,pagesAt-1));
+  const startAt=trackerListPage*TRACKER_PER_PAGE,endAt=Math.min(startAt+TRACKER_PER_PAGE,totalAt);
+  const pageVisible=visible.slice(startAt,endAt);
+  const pagerEl=document.getElementById('at-list-pager');
+  if(pagerEl){
+    if(totalAt<=TRACKER_PER_PAGE){pagerEl.style.display='none';}
+    else{
+      pagerEl.style.display='flex';
+      const info=document.getElementById('at-pg-info');if(info)info.textContent=`${startAt+1}–${endAt} of ${totalAt}`;
+      const btns=document.getElementById('at-pg-btns');
+      if(btns){
+        let h=`<button class="pgb arrow" onclick="gotoTrackerListPage(${trackerListPage-1})"${trackerListPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+        for(let p=0;p<pagesAt;p++)h+=`<button class="pgb${p===trackerListPage?' on':''}" onclick="gotoTrackerListPage(${p})">${p+1}</button>`;
+        h+=`<button class="pgb arrow" onclick="gotoTrackerListPage(${trackerListPage+1})"${trackerListPage>=pagesAt-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+        btns.innerHTML=h;
+      }
+    }
+  }
+
   const listEl=document.getElementById('at-list-scroll');
   if(!listEl)return;
-  if(visible.length===0){
+  if(pageVisible.length===0){
     listEl.innerHTML=`<div style="text-align:center;padding:40px 20px;color:#ccc;font-size:12px"><i data-lucide="search" style="width:20px;height:20px;display:block;margin-bottom:10px"></i>${atTypeFilter||atSearchFilter?'No activities match your filter.':'No activities yet. Click + New activity to get started.'}</div>`;
   } else {
-    listEl.innerHTML=visible.map((a,i)=>{
+    listEl.innerHTML=pageVisible.map((a,i)=>{
       const tc=TC[a.type]||TC['Press Release'];
       const barCls=TBAR[a.type]||'bar-pr';
       const isChecked=atSelected.has(a.id);
@@ -2261,17 +2399,22 @@ function renderDetailInner(a){
     </div>
     <!-- Header -->
     <div class="detail-head">
-      <div class="ac-icon ac-icon--lg ${tc.icls}" style="flex-shrink:0;align-self:flex-start;margin-top:2px" data-btip="${_makeTip({label:a.type})}"><i data-lucide="${tc.icon}"></i></div>
+      <div class="ac-icon ac-icon--lg ${tc.icls}" style="flex-shrink:0;align-self:flex-start" data-btip="${_makeTip({label:a.type})}"><i data-lucide="${tc.icon}"></i></div>
       <div class="detail-head-body">
         <div class="detail-head-title">${a.title}</div>
-        <div class="detail-head-meta">
+        ${(!freshTrack[a.id]&&a.content)?`<div class="detail-head-desc" style="font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;cursor:default" data-btip="${_makeTip({detail:a.content})}">${a.content.length>100?a.content.slice(0,100)+'…':a.content}</div>`:''}
+        <div class="detail-head-meta" style="margin-top:6px">
           <span class="dh-date"><i data-lucide="calendar"></i> ${fmtActDate(a.date)}</span>
         </div>
-        ${(!freshTrack[a.id]&&a.content)?`<div style="font-size:11.5px;color:#9090a0;line-height:1.5;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;cursor:default" data-btip="${_makeTip({detail:a.content})}">${a.content.length>100?a.content.slice(0,100)+'…':a.content}</div>`:''}
       </div>
       <div class="detail-head-actions">
-        ${!freshTrack[a.id]?`<button class="at-btn-edit" onclick="showEdit(${a.id})"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit</button>`:''}
-        <button class="at-btn-ghost" onclick="closeDetail()" title="Close"><i data-lucide="x" style="width:12px;height:12px"></i></button>
+        <button class="dh-kebab" id="dh-kebab-${a.id}" onclick="toggleDhMenu(event,${a.id})" title="More actions" aria-label="More actions"><i data-lucide="more-horizontal"></i></button>
+        <div class="dh-menu" id="dh-menu-${a.id}">
+          ${!freshTrack[a.id]?`<div class="dh-menu-item" onclick="dhAction(event,${a.id},'edit')"><i data-lucide="pencil"></i> Edit activity</div>
+          <div class="dh-menu-item" onclick="dhAction(event,${a.id},'csv')"><i data-lucide="download"></i> Download CSV</div>
+          <div class="dh-menu-sep"></div>`:''}
+          <div class="dh-menu-item danger" onclick="dhAction(event,${a.id},'delete')"><i data-lucide="trash-2"></i> Delete activity</div>
+        </div>
       </div>
     </div>
 
@@ -2307,11 +2450,15 @@ function renderDetailInner(a){
 
     <!-- Unified scrollable pane -->
     <div class="dpane">
+      <div class="tk-scroll-sentinel"></div>
 
       <!-- Section header + filter bar: hidden before scan -->
       ${!freshTrack[a.id]?`<div class="dpane-section-hd">
         <span class="dpane-section-hd-label"><i data-lucide="newspaper" style="color:#181d26"></i> Matched articles</span>
-        <button class="at-btn-outline" onclick="openAddArt(${a.id})"><i data-lucide="plus" style="width:12px;height:12px"></i> Add article</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="at-btn-outline" onclick="openAISummary(${a.id})"><i data-lucide="sparkles" style="width:12px;height:12px"></i> AI summary</button>
+          <button class="at-btn-outline" onclick="openAddArt(${a.id})"><i data-lucide="plus" style="width:12px;height:12px"></i> Add article</button>
+        </div>
       </div>
       <div class="art-filter-bar">
         <div class="at-type-dd" id="art-sort-dd">
@@ -2331,16 +2478,7 @@ function renderDetailInner(a){
       <!-- Article list (filtered + sorted) — re-rendered in isolation on filter/sort -->
       <div id="art-list-region" class="art-list-region">${buildArtList(a)}</div>
 
-      <!-- AI report target -->
-      <div id="ai-report-${a.id}"></div>
-
     </div>
-
-    <!-- Action bar: hidden before scan -->
-    ${!freshTrack[a.id]?`<div class="at-action-bar">
-      <button class="at-btn-csv" onclick="dlCSV(${a.id})"><i data-lucide="file-spreadsheet" style="width:12px;height:12px"></i> Download CSV</button>
-      <button class="at-btn-ai" id="ai-btn-${a.id}" onclick="genAI(${a.id})"><i data-lucide="sparkles" style="width:12px;height:12px"></i> Generate AI summary</button>
-    </div>`:''}
   `;
 }
 
@@ -2407,6 +2545,21 @@ function buildArtList(a){
       <button class="match-del-btn" onclick="confirmMatchBulkDelete(${a.id})"><i data-lucide="trash-2" style="width:10px;height:10px"></i> Delete</button>
     </div>
   </div>`:'';
+  // Pagination — slice the list, build a footer that matches mentions.html
+  const total=list.length;
+  const pages=Math.max(1,Math.ceil(total/ART_PER_PAGE));
+  let page=Math.max(0,Math.min(artPage[a.id]||0,pages-1));
+  artPage[a.id]=page;
+  const start=page*ART_PER_PAGE;
+  const end=Math.min(start+ART_PER_PAGE,total);
+  const pageList=list.slice(start,end);
+  let pager='';
+  if(total>ART_PER_PAGE){
+    let btns=`<button class="pgb arrow" onclick="goArtPage(${a.id},${page-1})"${page<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+    for(let p=0;p<pages;p++){btns+=`<button class="pgb${p===page?' on':''}" onclick="goArtPage(${a.id},${p})">${p+1}</button>`;}
+    btns+=`<button class="pgb arrow" onclick="goArtPage(${a.id},${page+1})"${page>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+    pager=`<div class="tbl-footer"><div class="pg-info">${start+1}–${end} of ${total} results</div><div class="pg-btns">${btns}</div></div>`;
+  }
   return`${delBar}<table class="tbl match-tbl"><thead><tr>
     <th style="width:32px;text-align:center"><span class="tcb${allChecked?' tcb-on':''}" style="${someChecked?'background:var(--ink-2);border-color:var(--ink-2)':''}" onclick="toggleMatchSelAll(${a.id})">${allChecked?'<i data-lucide="check" style="width:9px;height:9px;color:#fff"></i>':someChecked?'<i data-lucide="minus" style="width:9px;height:9px;color:#fff"></i>':''}</span></th>
     <th>Headline</th>
@@ -2415,7 +2568,17 @@ function buildArtList(a){
     <th style="width:120px">Match</th>
     <th style="width:90px;white-space:nowrap">Date</th>
     <th style="width:36px"></th>
-  </tr></thead><tbody>${list.map((m,i)=>renderMatchRow(m,i)).join('')}</tbody></table>`;
+  </tr></thead><tbody>${pageList.map((m,i)=>renderMatchRow(m,i)).join('')}</tbody></table>${pager}`;
+}
+function goArtPage(id,n){
+  const a=acts.find(x=>x.id===id);if(!a)return;
+  const af=artFilter[id]||[];
+  const total=a.matches.filter(m=>af.length===0||af.includes(m.media)).length;
+  const pages=Math.max(1,Math.ceil(total/ART_PER_PAGE));
+  artPage[id]=Math.max(0,Math.min(n,pages-1));
+  renderArtListOnly(id);
+  const region=document.getElementById('art-list-region');
+  if(region)region.scrollIntoView({block:'nearest',behavior:'smooth'});
 }
 
 // Re-render ONLY the article list + pills (smooth — no full-section reload)
@@ -2429,23 +2592,58 @@ function renderArtListOnly(id){
   initIcons();
 }
 
-function genAI(id){
+// ── AI summary slide-over (tracker activity) ──
+let _aiCurId=null,_aiSidebarWasCollapsed=false;
+function openAISummary(id){
   const a=acts.find(x=>x.id===id);if(!a)return;
-  const btn=document.getElementById(`ai-btn-${id}`);
-  const rpt=document.getElementById(`ai-report-${id}`);
-  if(!rpt)return;
-  if(aiCache[id]){rpt.innerHTML=buildAIPanel(aiCache[id]);return;}
-  if(btn){btn.disabled=true;btn.innerHTML=`<i data-lucide="loader-2" style="width:12px;height:12px;animation:spin 1s linear infinite"></i> Generating...`;}
-  rpt.innerHTML=`<div class="ai-report-panel"><div class="ai-report-lbl"><i data-lucide="sparkles" style="width:12px;height:12px"></i> AI summary report</div><div class="ai-report-txt loading">Analysing coverage patterns and writing your summary...</div></div>`;
+  _aiCurId=id;
+  const ov=document.getElementById('aireport-overlay');if(!ov)return;
+  const sb=document.getElementById('sidebar');
+  _aiSidebarWasCollapsed=!!(sb&&sb.classList.contains('collapsed'));
+  if(sb)sb.classList.add('collapsed');
+  renderAISummary();
+  ov.style.display='block';
+  requestAnimationFrame(()=>{ov.classList.add('open');document.body.classList.add('aireport-open');});
+  initIcons();
+}
+function closeAISummary(){
+  const ov=document.getElementById('aireport-overlay');if(!ov)return;
+  ov.classList.remove('open');
+  document.body.classList.remove('aireport-open');
+  const sb=document.getElementById('sidebar');
+  if(sb&&!_aiSidebarWasCollapsed)sb.classList.remove('collapsed');
+  setTimeout(()=>{ov.style.display='none';},280);
+}
+function regenAISummary(){
+  if(_aiCurId==null)return;
+  delete aiCache[_aiCurId];
+  renderAISummary();
+}
+function renderAISummary(){
+  const id=_aiCurId;const a=acts.find(x=>x.id===id);if(!a)return;
+  const body=document.getElementById('ai-rpt-body');if(!body)return;
+  const regen=document.getElementById('ai-rpt-regen');
+  if(aiCache[id]){
+    body.innerHTML=buildAIPanel(aiCache[id]);
+    if(regen){regen.disabled=false;regen.classList.remove('spin');}
+    initIcons();
+    return;
+  }
+  if(regen){regen.disabled=true;regen.classList.add('spin');}
+  body.innerHTML=`<div class="ai-report-panel"><div class="ai-report-lbl"><i data-lucide="sparkles" style="width:12px;height:12px"></i> AI summary report</div><div class="ai-report-txt loading">Analysing coverage patterns and writing your summary...</div></div>`;
   initIcons();
   setTimeout(()=>{
     const txt=`Today's coverage of "${a.title}" generated ${a.matches.length} matched articles across ${[...new Set(a.matches.map(m=>m.media))].join(', ')} with a combined AVE of ${tAve(a.matches)}.\n\nThe AI-matched articles show strong thematic alignment with the source content, particularly around the core narrative. Sentiment across outlets trends neutral to positive, with Tier 1 publications providing the highest-value pickup.\n\nRecommendation: Prioritise amplification through Online and Print channels where engagement is highest. Monitor TV pickup for the next 24 hours.`;
     aiCache[id]=txt;
-    if(btn){btn.disabled=false;btn.innerHTML=`<i data-lucide="sparkles" style="width:12px;height:12px"></i> Regenerate AI summary`;}
-    const rp=document.getElementById(`ai-report-${id}`);if(rp)rp.innerHTML=buildAIPanel(txt);
+    if(_aiCurId!==id)return;
+    const b=document.getElementById('ai-rpt-body');if(b)b.innerHTML=buildAIPanel(txt);
+    const r=document.getElementById('ai-rpt-regen');if(r){r.disabled=false;r.classList.remove('spin');}
     initIcons();
   },1200);
 }
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&document.getElementById('aireport-overlay')?.classList.contains('open'))closeAISummary();
+});
 
 function buildAIPanel(txt){
   const paras=txt.split(/\n\n+/).filter(p=>p.trim());
@@ -2513,7 +2711,87 @@ function rmMatch(aid,mid){
 }
 function selAct(id){trackerSel=id;if(!trackerTabs[id])trackerTabs[id]='matches';renderDetailOnly();}
 function closeDetail(){trackerSel=null;renderDetailOnly();}
+
+function toggleDhMenu(e,id){
+  e.stopPropagation();
+  const menu=document.getElementById('dh-menu-'+id),btn=document.getElementById('dh-kebab-'+id);
+  if(!menu)return;
+  const wasOpen=menu.classList.contains('open');
+  document.querySelectorAll('.dh-menu.open').forEach(m=>m.classList.remove('open'));
+  document.querySelectorAll('.dh-kebab.open').forEach(b=>b.classList.remove('open'));
+  if(!wasOpen){menu.classList.add('open');btn&&btn.classList.add('open');}
+}
+document.addEventListener('click',function(){
+  document.querySelectorAll('.dh-menu.open').forEach(m=>m.classList.remove('open'));
+  document.querySelectorAll('.dh-kebab.open').forEach(b=>b.classList.remove('open'));
+});
+function dhAction(e,id,action){
+  e.stopPropagation();
+  document.querySelectorAll('.dh-menu.open').forEach(m=>m.classList.remove('open'));
+  document.querySelectorAll('.dh-kebab.open').forEach(b=>b.classList.remove('open'));
+  if(action==='edit')showEdit(id);
+  else if(action==='csv')downloadActivityCsv(id);
+  else if(action==='delete')confirmDeleteActivity(id);
+}
+function confirmDeleteActivity(id){
+  const a=acts.find(x=>x.id===id);if(!a)return;
+  const ov=document.getElementById('confirm-overlay'),box=document.getElementById('confirm-box');
+  ov.style.display='flex';
+  box.innerHTML=`<div>
+    <div class="confirm-title"><i data-lucide="alert-triangle" style="width:14px;height:14px;color:#a32d2d"></i> Delete activity?</div>
+    <div class="confirm-body">Permanently delete <strong>${a.title}</strong> and all its matched articles.<br><br><span style="color:#a32d2d;font-weight:500">This cannot be undone.</span></div>
+    <div class="confirm-actions">
+      <button class="at-btn-outline" onclick="closeConfirm()">Cancel</button>
+      <button style="font-size:12px;padding:7px 16px;background:#a32d2d;color:#fff;border:none;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-weight:500;font-family:inherit" onclick="doDeleteActivity(${id})"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete</button>
+    </div>
+  </div>`;
+  initIcons();
+}
+function doDeleteActivity(id){
+  closeConfirm();
+  const idx=acts.findIndex(x=>x.id===id);
+  if(idx<0)return;
+  acts.splice(idx,1);
+  delete trackerTabs[id];delete msQ[id];delete msF[id];delete msR[id];delete aiCache[id];delete matchSel[id];
+  if(trackerSel===id){
+    const next=acts[idx]||acts[idx-1]||acts[0];
+    trackerSel=next?next.id:null;
+    if(next&&!trackerTabs[next.id])trackerTabs[next.id]='matches';
+  }
+  renderTracker();renderDetailOnly();
+}
+function downloadActivityCsv(id){
+  const a=acts.find(x=>x.id===id);if(!a)return;
+  const rows=[['Title','Source','Media','Date','AVE','Similarity','Manual']];
+  (a.matches||[]).forEach(m=>{
+    const sim=m.score!=null?Math.round(m.score*100)+'%':'';
+    rows.push([m.title||'',m.source||'',m.media||'',m.date||'',m.value||0,sim,m.manual?'Yes':'No']);
+  });
+  const csv=rows.map(r=>r.map(c=>{const s=String(c==null?'':c);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;link.download=(a.title||'activity').replace(/[^a-z0-9-_ ]/gi,'').slice(0,60)+' - matches.csv';
+  document.body.appendChild(link);link.click();document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 function setTab(t){renderDetailOnly();}
+// Per-panel observer for the tracker detail header shrink-on-scroll behavior
+const _tkShrinkObs=new WeakMap();
+function _wireTrackerShrinkObserver(panel){
+  if(!panel||!('IntersectionObserver'in window))return;
+  const head=panel.querySelector('.detail-head');
+  const sentinel=panel.querySelector('.tk-scroll-sentinel');
+  const scroller=panel.querySelector('.dpane');
+  const prev=_tkShrinkObs.get(panel);if(prev)prev.disconnect();
+  if(!head||!sentinel||!scroller)return;
+  const obs=new IntersectionObserver(entries=>{
+    head.classList.toggle('scrolled',!entries[0].isIntersecting);
+  },{root:scroller,threshold:0});
+  obs.observe(sentinel);
+  _tkShrinkObs.set(panel,obs);
+}
+
 function renderDetailOnly(){
   const detailEl=document.getElementById('at-detail-panel');
   if(!detailEl)return;
@@ -2534,6 +2812,7 @@ function renderDetailOnly(){
   }
   initIcons();
   wireKpiTooltips();
+  _wireTrackerShrinkObserver(detailEl);
   // update selected state on list cards
   document.querySelectorAll('.activity-card').forEach(c=>{
     const id=parseInt(c.getAttribute('data-id'));
@@ -2677,11 +2956,12 @@ function runScan(id){
   tick();
 }
 
-function clearArtFilter(id){artFilter[id]=[];renderArtListOnly(id);}
-function toggleArtFilter(id,val){const a=artFilter[id]||(artFilter[id]=[]);const i=a.indexOf(val);if(i>=0)a.splice(i,1);else a.push(val);renderArtListOnly(id);}
+function clearArtFilter(id){artFilter[id]=[];artPage[id]=0;renderArtListOnly(id);}
+function toggleArtFilter(id,val){const a=artFilter[id]||(artFilter[id]=[]);const i=a.indexOf(val);if(i>=0)a.splice(i,1);else a.push(val);artPage[id]=0;renderArtListOnly(id);}
 function toggleSortDD(e){e.stopPropagation();const m=document.getElementById('art-sort-menu');if(m)m.classList.toggle('open');}
 function setArtSort(id,val){
   artSort[id]=val;
+  artPage[id]=0;
   // The sort dropdown lives in the filter bar (outside the re-rendered list region),
   // so update its label + active state directly, then close — mirrors setAtFilter('type').
   const lbl=document.getElementById('art-sort-label');
@@ -2699,6 +2979,7 @@ function addMan(aid,title,value,media,source,date){
   const oldMn=a.matches.filter(m=>m.manual).length;   // previous count — tween from here, not 0
   const newId='man'+Date.now();
   a.matches.unshift({id:newId,media,source,title,date,value,score:null,manual:true});
+  artPage[aid]=0;                 // jump to first page so the new row is visible
   _addAnimNewId=newId;            // gate animation to just the new row for this render
   renderDetailOnly();
   _addAnimNewId=null;
@@ -2959,15 +3240,15 @@ function showCreate(){
         <div class="dr-progress"><div class="dr-bar" id="dr-bar-create"></div></div>
       </div>
     </div>
-    <div class="detail-head">
-      <span style="font-size:13px;font-weight:600;color:#181d26;display:flex;align-items:center;gap:7px;flex:1"><i data-lucide="plus" style="color:#181d26"></i> New activity</span>
-      <button class="at-btn-ghost" onclick="renderDetailOnly()"><i data-lucide="x" style="width:12px;height:12px"></i> Cancel</button>
-    </div>
-    <div class="dpane" style="overflow-y:auto;padding-top:24px">
-      <div style="font-size:12px;color:#41454d;margin-bottom:18px;padding:9px 11px;background:#f7f8fa;border-radius:0 5px 5px 0;border-left:3px solid #181d26"><i data-lucide="sparkles" style="width:12px;height:12px;color:#181d26;margin-right:4px"></i>Fill in the details below. Click <strong>Scan for matches</strong> to find related coverage.</div>
+    <div class="dpane" style="overflow-y:auto;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div style="max-width:720px;width:100%">
+      <div style="margin-bottom:24px">
+        <div style="font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-0.01em">New activity</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:4px">Add details about your activity to find related coverage.</div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div style="grid-column:1/-1"><label class="form-label">Title</label><input class="form-input" type="text" id="f-title" placeholder="e.g. DITO 5G Launch Press Release"></div>
-        <div><label class="form-label">Type</label>
+        <div style="grid-column:1/-1"><label class="form-label">Title <span style="color:var(--s-coral)">*</span></label><input class="form-input" type="text" id="f-title" placeholder="e.g. DITO 5G Launch Press Release"></div>
+        <div><label class="form-label">Type <span style="color:var(--s-coral)">*</span></label>
           <div class="at-type-dd ft-dd">
             <div class="form-select ft-trigger" id="ft-trigger" onclick="ftToggle(event)"><span id="ft-label" class="ft-ph">Select type...</span></div>
             <div class="at-type-menu ft-menu" id="ft-menu">${['Press Release','Event','Crisis','Trending','Product'].map(t=>`<div class="at-type-opt" onclick="ftPick('${t}')"><span>${t}</span></div>`).join('')}</div>
@@ -2975,17 +3256,19 @@ function showCreate(){
           </div>
         </div>
         <div><label class="form-label">Date released</label><input class="form-input" type="date" id="f-date" value="${new Date().toISOString().split('T')[0]}"></div>
-        <div style="grid-column:1/-1"><label class="form-label">Content</label><textarea class="form-textarea" id="f-content" placeholder="Paste your press release or activity summary here..."></textarea><div style="font-size:11px;color:#bbb;margin-top:4px;text-align:right" id="cc">0 characters</div></div>
+        <div style="grid-column:1/-1"><label class="form-label">Content <span style="color:var(--s-coral)">*</span></label><textarea class="form-textarea" id="f-content" placeholder="Paste your press release or activity summary here..." style="min-height:160px"></textarea></div>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:14px;border-top:1px solid #f0f0f6">
-        <span style="font-size:12px;color:#aaa"><i data-lucide="database" style="width:12px;height:12px;margin-right:3px"></i>Will scan across 3,437 articles</span>
-        <button class="at-btn-scan" onclick="startScan()"><i data-lucide="search" style="width:14px;height:14px"></i> Scan for matches</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px">
+        <span style="font-size:12px;color:var(--muted)"><i data-lucide="database" style="width:12px;height:12px;margin-right:3px"></i>Will scan across 3,437 articles</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-ghost" onclick="renderDetailOnly()"><i data-lucide="x" style="width:12px;height:12px"></i> Cancel</button>
+          <button class="at-btn-scan" onclick="startScan()"><i data-lucide="search" style="width:14px;height:14px"></i> Scan for matches</button>
+        </div>
+      </div>
       </div>
     </div>
   </div>`;
   initIcons();
-  const fc=document.getElementById('f-content');
-  if(fc) fc.addEventListener('input',function(){const cc=document.getElementById('cc');if(cc)cc.textContent=this.value.length+' characters';});
 }
 
 // Custom "Type" dropdown (replaces the native select; writes to hidden #f-type)
@@ -4229,37 +4512,368 @@ function gotoPubPage(n){
   pubPage=Math.max(0,Math.min(n,pages-1));renderPublishers();
   const sc=document.querySelector('.app-body');if(sc)sc.scrollTop=0;
 }
+let pubSel=null;
+const ENT_PER_PAGE=10;
+let pubDetPage={},authorDetPage={};
+// JSON-stringify a value for safe embedding inside a double-quoted HTML attribute (escapes inner `"` to `&quot;`)
+function attrJson(v){return JSON.stringify(v).replace(/"/g,'&quot;');}
+// Known publisher homepages — fall back to a Google search if unknown so the link always resolves.
+const PUB_URLS={
+  'ANC 24/7':'https://news.abs-cbn.com/anc','ABS-CBN News':'https://news.abs-cbn.com','CNN Philippines':'https://www.cnnphilippines.com',
+  'Philippine Daily Inquirer':'https://www.inquirer.net','Inquirer Online':'https://www.inquirer.net','INQUIRER PLUS':'https://plus.inquirer.net',
+  'Philstar Online':'https://www.philstar.com','BusinessWorld':'https://www.bworldonline.com','Manila Bulletin':'https://mb.com.ph',
+  'BusinessMirror':'https://businessmirror.com.ph','Business Mirror':'https://businessmirror.com.ph','Business World Online':'https://www.bworldonline.com',
+  'Daily Tribune':'https://tribune.net.ph','Manila Standard':'https://manilastandard.net','Rappler':'https://www.rappler.com',
+  'SunStar Cebu':'https://www.sunstar.com.ph','GMA News Online':'https://www.gmanetwork.com/news','GMA News':'https://www.gmanetwork.com/news',
+  'DZRH News':'https://dzrh.com.ph','Yahoo Philippines':'https://ph.news.yahoo.com','Tech in Asia':'https://www.techinasia.com',
+  'Esquire Philippines':'https://www.esquiremag.ph','Manila Shaker Philippines':'https://www.manilashaker.com','Insider Ph':'https://insider.ph',
+  'Bulgar':'https://bulgar.com.ph','The Manila Times':'https://www.manilatimes.net','Manila Times Online':'https://www.manilatimes.net',
+};
+function pubUrl(name){return PUB_URLS[name]||('https://www.google.com/search?q='+encodeURIComponent(name+' philippines'));}
+let pubTab={},authorTab={};                   // 'articles' | 'perf' | 'ent', keyed by name
+let entPerfRange={};                          // 3 | 7 | 15 | 30, keyed by `${kind}:${name}`
+function selPub(name){if(pubSel!==name){pubDetPage[name]=0;pubTab[name]=pubTab[name]||'articles';}pubSel=name;renderPublishers();}
+function selEntityTab(kind,name,tab){
+  const map=kind==='pub'?pubTab:authorTab;
+  map[name]=tab;
+  renderEntityDetail(kind,name);
+}
+function setEntPerfRange(kind,name,days){
+  entPerfRange[kind+':'+name]=days;
+  mountEntityChart(kind,name);
+  // Update active pill state without full re-render
+  document.querySelectorAll('.ent-perf-range .mm-tab').forEach(el=>{
+    el.classList.toggle('act',+el.dataset.days===days);
+  });
+}
+function goEntityPage(kind,name,n){
+  const map=kind==='pub'?pubDetPage:authorDetPage;
+  const total=getEntityArticles(kind,name).length;
+  const pages=Math.max(1,Math.ceil(total/ENT_PER_PAGE));
+  map[name]=Math.max(0,Math.min(n,pages-1));
+  renderEntityDetail(kind,name);
+}
+// Generic-but-plausible synthetic articles, padded to a minimum of 24 per entity for demo richness
+const ENT_TITLE_POOL=[
+  'Telco roundup: Q3 trends across the Visayas',
+  'Op-ed: what the 5G rollout really means for SMEs',
+  'Analyst note: ARPU pressure mounts in the second half',
+  'Subscriber growth slows as competition intensifies',
+  'Regulator weighs new spectrum auction framework',
+  'Fiber expansion reaches three more provincial capitals',
+  'Carriers eye AI-driven network optimization',
+  'Consumer groups call for clearer data-plan disclosures',
+  'Industry brief: handset financing programs gain ground',
+  'Cloud partnerships reshape enterprise telco offerings',
+  'Cybersecurity spending climbs across major operators',
+  'Quarterly earnings preview: what to watch from the top three',
+  'Field report: rural connectivity initiatives show mixed results',
+  'Sustainability push reframes tower-sharing economics',
+  'M&A chatter resurfaces among regional ISPs',
+  'Roaming reforms take effect across ASEAN corridors',
+  'Wholesale rates ease as backhaul capacity expands',
+  'Customer-experience scores tighten across the sector',
+  'Smart-home bundles open new revenue lane',
+  'Spectrum efficiency becomes the next competitive front',
+  'Mobile money interoperability inches forward',
+  'Postpaid churn data hints at loyalty fatigue',
+  'IPO watch: tower-co spin-offs draw investor interest',
+  'Pricing watch: data caps tighten across budget plans',
+];
+function _entHash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+const ENT_AUTHOR_POOL=['Patricia Reyes','John Rey Saavedra','Ashley Erika O. Jose','Lawrence Agcaoili','Maria Santos','Ramon Castillo','Elijah Tubayan','Mon Jocson','Daxim L. Lucas','Rico Hizon'];
+const ENT_OUTLET_POOL=[
+  {sub:'BusinessWorld',section:'Business'},
+  {sub:'Manila Bulletin',section:'News'},
+  {sub:'Philstar Online',section:'News'},
+  {sub:'Rappler',section:'Business'},
+  {sub:'CNN Philippines',section:'News'},
+  {sub:'ABS-CBN News',section:'News'},
+  {sub:'Inquirer Online',section:'News'},
+  {sub:'BusinessMirror',section:'Economy'},
+  {sub:'Daily Tribune',section:'Business'},
+  {sub:'Tech in Asia',section:'Tech'},
+];
+const ENT_TYPE_POOL=['online','online','online','tv','broadsheet','radio'];
+const ENT_BRAND_POOL=['positive','positive','neutral','neutral','negative'];
+function _synthArticles(seedName,realCount,need){
+  const out=[];const h0=_entHash(seedName);
+  const months=['Jun 12, 2026','Jun 09, 2026','Jun 05, 2026','May 30, 2026','May 27, 2026','May 24, 2026','May 21, 2026','May 18, 2026','May 15, 2026','May 12, 2026','May 08, 2026','May 04, 2026','Apr 30, 2026','Apr 26, 2026','Apr 22, 2026','Apr 18, 2026','Apr 14, 2026','Apr 10, 2026','Apr 06, 2026','Apr 02, 2026','Mar 29, 2026','Mar 25, 2026','Mar 20, 2026','Mar 15, 2026'];
+  const agos=['4d ago','7d ago','11d ago','17d ago','3w ago','3w ago','4w ago','5w ago','5w ago','6w ago','7w ago','7w ago','8w ago','8w ago','9w ago','9w ago','10w ago','10w ago','11w ago','11w ago','12w ago','12w ago','13w ago','14w ago'];
+  for(let i=0;i<need;i++){
+    const h=(h0+i*2654435761)>>>0;
+    const title=ENT_TITLE_POOL[h%ENT_TITLE_POOL.length];
+    const sv=+(0.8+((h>>>3)%520)/100).toFixed(2);                 // 0.80–5.99
+    const aveK=(40+((h>>>5)%760)/10).toFixed(1);                  // always 1 decimal — "40.0K" etc.
+    const idx=Math.min(months.length-1,realCount+i);
+    const outlet=ENT_OUTLET_POOL[(h>>>7)%ENT_OUTLET_POOL.length];
+    out.push({
+      sv,ave:'PHP '+aveK+'K',title,date:months[idx],ago:agos[idx],
+      type:ENT_TYPE_POOL[(h>>>11)%ENT_TYPE_POOL.length],
+      brand:ENT_BRAND_POOL[(h>>>13)%ENT_BRAND_POOL.length],
+      author:ENT_AUTHOR_POOL[(h>>>17)%ENT_AUTHOR_POOL.length],
+      sub:outlet.sub,section:outlet.section,
+      _synth:true
+    });
+  }
+  return out;
+}
+function getEntityArticles(kind,name){
+  if(!name)return[];
+  const real=mentionData.filter(d=>kind==='pub'?d.sub===name:d.author===name).map(d=>({...d}));
+  const min=24;
+  if(real.length>=min)return _sortEntArticles(real);
+  const synth=_synthArticles((kind==='pub'?'p:':'a:')+name,real.length,min-real.length);
+  return _sortEntArticles(real.concat(synth));
+}
+function _sortEntArticles(list){
+  return list.slice().sort((a,b)=>{
+    const da=new Date(a.date||'').getTime()||0,db=new Date(b.date||'').getTime()||0;
+    return db-da;
+  });
+}
 function renderPublishers(){
-  const grid=document.getElementById('pub-grid');if(!grid)return;
+  const scroll=document.getElementById('pub-list-scroll');if(!scroll)return;
   const q=pubSearch.trim().toLowerCase();
   const all=buildPublishers().filter(p=>!q||p.name.toLowerCase().includes(q));
   const total=all.length,pages=Math.max(1,Math.ceil(total/PUB_PER_PAGE));
   pubPage=Math.max(0,Math.min(pubPage,pages-1));
   const start=pubPage*PUB_PER_PAGE,end=Math.min(start+PUB_PER_PAGE,total);
-  grid.innerHTML=all.slice(start,end).map((p,i)=>`
-    <div class="pub-card">
-      <div class="pub-card-hd">
-        <div class="pub-name" title="${p.name}">${p.name}</div>
-        <div class="pub-avatar" style="background:${pubColor(p.name).bg};color:${pubColor(p.name).fg}">${p.name.charAt(0)}<span class="pub-rank">${start+i+1}</span></div>
+  const page=all.slice(start,end);
+  if(pubSel===null||!all.find(p=>p.name===pubSel))pubSel=all[0]?all[0].name:null;
+  scroll.innerHTML=page.map((p,i)=>{
+    const c=pubColor(p.name),sel=p.name===pubSel?' selected':'';
+    return`<div class="ent-row${sel}" onclick="selPub(${attrJson(p.name)})">
+      <span class="ent-row-avatar" style="background:${c.bg};color:${c.fg}">${p.name.charAt(0)}</span>
+      <div class="ent-row-body">
+        <div class="ent-row-name" title="${p.name}">${p.name}</div>
+        <div class="ent-row-meta">${p.count} article${p.count!==1?'s':''}</div>
       </div>
-      ${renderSocialIcons()}
-      <div class="pub-stats">
-        <div class="pub-stat"><div class="pub-stat-lbl">Pub Score</div><div class="pub-stat-val">${p.score.toFixed(2)}</div></div>
-        <div class="pub-stat"><div class="pub-stat-lbl">Articles</div><div class="pub-stat-val">${p.count}</div></div>
-        <div class="pub-stat"><div class="pub-stat-lbl">Total SValue</div><div class="pub-stat-val">${p.totalSV.toFixed(2)}</div></div>
-      </div>
-    </div>`).join('');
-  const info=`${start+1}–${end} of ${total} items`;
+      <span class="ent-row-score">${p.score.toFixed(2)}</span>
+    </div>`;
+  }).join('');
+  const countEl=document.getElementById('pub-list-count');if(countEl)countEl.textContent=total;
+  const info=total?`${start+1}–${end} of ${total}`:'0 of 0';
   const top=document.getElementById('pub-pg-info-top'),bot=document.getElementById('pub-pg-info');
   if(top)top.textContent=info;if(bot)bot.textContent=info;
   const btns=document.getElementById('pub-pg-btns');
   if(btns){
-    let h=`<button class="pgb arrow" onclick="gotoPubPage(pubPage-1)"${pubPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
-    for(let p=0;p<pages;p++)h+=`<button class="pgb${p===pubPage?' on':''}" onclick="gotoPubPage(${p})">${p+1}</button>`;
-    h+=`<button class="pgb arrow" onclick="gotoPubPage(pubPage+1)"${pubPage>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
-    btns.innerHTML=h;
+    if(total<=PUB_PER_PAGE){btns.innerHTML='';}
+    else{
+      let h=`<button class="pgb arrow" onclick="gotoPubPage(pubPage-1)"${pubPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+      for(let p=0;p<pages;p++)h+=`<button class="pgb${p===pubPage?' on':''}" onclick="gotoPubPage(${p})">${p+1}</button>`;
+      h+=`<button class="pgb arrow" onclick="gotoPubPage(pubPage+1)"${pubPage>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+      btns.innerHTML=h;
+    }
   }
+  renderEntityDetail('pub',pubSel);
   initIcons();
+}
+// Detail renderer — used by both publishers and authors
+function renderEntityDetail(kind,name){
+  const panelId=kind==='pub'?'pub-detail-panel':'author-detail-panel';
+  const panel=document.getElementById(panelId);if(!panel)return;
+  if(!name){panel.innerHTML=`<div class="ent-empty"><i data-lucide="${kind==='pub'?'building-2':'user'}" style="width:24px;height:24px;color:#ddd"></i><div>Select ${kind==='pub'?'a publisher':'an author'} to view its articles</div></div>`;initIcons();return;}
+  const articles=getEntityArticles(kind,name);
+  const totalAve=articles.reduce((s,d)=>{const m=String(d.ave||'').match(/[\d.]+/);return s+(m?parseFloat(m[0]):0);},0);
+  const avgSv=articles.length?(articles.reduce((s,d)=>s+(d.sv||0),0)/articles.length):0;
+  const score=(avgSv*2).toFixed(2);
+  const colorFn=kind==='pub'?pubColor:authColor;
+  const c=colorFn(name);
+  const scoreLabel=kind==='pub'?'Pub score':'Author score';
+  const aveNum=totalAve>=1000?(totalAve/1000).toFixed(1)+'K':totalAve.toFixed(0);
+  const aveDisp=`<span class="ent-stat-pre">PHP</span> ${aveNum}`;
+  const tabMap=kind==='pub'?pubTab:authorTab;
+  const activeTab=tabMap[name]||'articles';
+  const tabBar=`<div class="mm-tabs ent-tabs">
+    ${[['articles','Articles'],['perf','Performance Charts'],['ent','Entities']].map(([id,lbl])=>
+      `<div class="mm-tab${activeTab===id?' act':''}" onclick="selEntityTab('${kind}',${attrJson(name)},'${id}')">${lbl}</div>`
+    ).join('')}
+  </div>`;
+  let paneHtml='';
+  if(activeTab==='articles')      paneHtml=_paneArticles(kind,name,articles);
+  else if(activeTab==='perf')     paneHtml=_panePerf(kind,name);
+  else if(activeTab==='ent')      paneHtml=_paneEntities(kind,name);
+  const titleHtml=kind==='pub'
+    ? `<a class="ent-detail-title ent-detail-title-link" href="${pubUrl(name)}" target="_blank" rel="noopener noreferrer" title="Visit publisher website">${name}<i data-lucide="external-link" class="ent-title-ext"></i></a>`
+    : `<div class="ent-detail-title">${name}</div>`;
+  panel.innerHTML=`<div class="ent-detail-head">
+      <span class="ent-detail-avatar" style="background:${c.bg};color:${c.fg}">${name.charAt(0)}</span>
+      <div class="ent-detail-body-info">
+        ${titleHtml}
+        ${renderSocialIcons()}
+      </div>
+      <div class="ent-detail-stats">
+        <div class="ent-stat" data-btip="${_makeTip({label:scoreLabel+': '+score})}"><div class="ent-stat-val">${score}</div><div class="ent-stat-lbl">${scoreLabel}</div></div>
+        <div class="ent-stat" data-btip="${_makeTip({label:'Articles: '+articles.length})}"><div class="ent-stat-val">${articles.length}</div><div class="ent-stat-lbl">Articles</div></div>
+        <div class="ent-stat" data-btip="${_makeTip({label:'Total AVE: PHP '+aveNum})}"><div class="ent-stat-val">${aveDisp}</div><div class="ent-stat-lbl">Total AVE</div></div>
+      </div>
+    </div>
+    ${tabBar}
+    <div class="ent-detail-scroll"><div class="ent-scroll-sentinel"></div>${paneHtml}</div>`;
+  initIcons();
+  _wireEntityShrinkObserver(panel);
+  if(activeTab==='perf') mountEntityChart(kind,name);
+}
+// Track per-panel observer so we can disconnect on re-render
+const _entShrinkObs=new WeakMap();
+function _wireEntityShrinkObserver(panel){
+  const head=panel.querySelector('.ent-detail-head');
+  const sentinel=panel.querySelector('.ent-scroll-sentinel');
+  const scroller=panel.querySelector('.ent-detail-scroll');
+  if(!head||!sentinel||!scroller||!('IntersectionObserver'in window))return;
+  const prev=_entShrinkObs.get(panel);if(prev)prev.disconnect();
+  const obs=new IntersectionObserver(entries=>{
+    head.classList.toggle('scrolled',!entries[0].isIntersecting);
+  },{root:scroller,threshold:0});
+  obs.observe(sentinel);
+  _entShrinkObs.set(panel,obs);
+}
+
+// ── Pane: Articles (default) ──
+function _paneArticles(kind,name,articles){
+  const pageMap=kind==='pub'?pubDetPage:authorDetPage;
+  const total=articles.length;
+  const pages=Math.max(1,Math.ceil(total/ENT_PER_PAGE));
+  let page=Math.max(0,Math.min(pageMap[name]||0,pages-1));
+  pageMap[name]=page;
+  const start=page*ENT_PER_PAGE,end=Math.min(start+ENT_PER_PAGE,total);
+  const pageRows=articles.slice(start,end);
+  let pagerHtml='';
+  if(total>ENT_PER_PAGE){
+    let btns=`<button class="pgb arrow" onclick="goEntityPage('${kind}',${attrJson(name)},${page-1})"${page<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+    for(let p=0;p<pages;p++)btns+=`<button class="pgb${p===page?' on':''}" onclick="goEntityPage('${kind}',${attrJson(name)},${p})">${p+1}</button>`;
+    btns+=`<button class="pgb arrow" onclick="goEntityPage('${kind}',${attrJson(name)},${page+1})"${page>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+    pagerHtml=`<div class="tbl-footer ent-pager"><div class="pg-info">${start+1}–${end} of ${total} results</div><div class="pg-btns">${btns}</div></div>`;
+  }
+  return `<div class="tbl-header ent-tbl-header">
+      <div class="tbl-header-left">
+        <div class="tbl-select"><select>
+          <option>Newest Articles</option>
+          <option>Oldest Articles</option>
+          <option>Highest Value</option>
+          <option>Lowest Value</option>
+        </select></div>
+        <div class="tbl-select"><select>
+          <option>Saved Articles</option>
+          <option>All Articles</option>
+          <option>Unsaved Articles</option>
+        </select></div>
+      </div>
+      <div class="tbl-header-right">
+        <button class="icon-action" title="View"><i data-lucide="eye"></i></button>
+        <button class="icon-action" title="Save"><i data-lucide="bookmark"></i></button>
+        <button class="icon-action" title="Analytics"><i data-lucide="pie-chart"></i></button>
+        <button class="icon-action" title="Settings"><i data-lucide="settings"></i></button>
+        <button class="btn-export">Export</button>
+      </div>
+    </div>
+    <div class="tbl-card">
+      <div class="tbl-scroll">
+        <table class="tbl ent-tbl">
+          <thead><tr>
+            <th style="width:46px"><span class="tcb"></span></th>
+            <th style="width:130px"><span class="th-inner">Story Value <i data-lucide="info" class="info-i"></i></span></th>
+            <th style="width:130px">AVE</th>
+            <th>Headline</th>
+            <th style="width:220px"><span class="th-inner">Media Outlet <i data-lucide="filter" class="th-filter icon-sm"></i></span></th>
+            <th style="width:130px">Sentiment</th>
+            <th style="width:170px">Date Published</th>
+            <th style="width:40px"></th>
+          </tr></thead>
+          <tbody>
+            ${pageRows.length===0?`<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);font-size:12.5px">No articles found</td></tr>`:pageRows.map(d=>`<tr>
+              <td><span class="tcb"></span></td>
+              <td><span class="sv-val">${(d.sv||0).toFixed(2)}</span></td>
+              <td><span class="ave-val">${d.ave||'—'}</span></td>
+              <td><div class="hl-cell"><span class="hl-icon type-${articleType(d)}" data-btip="${_makeTip({label:typeLabel(d)})}"><i data-lucide="${typeIcon(d)}"></i></span><span class="hl-text ent-hl-clamp">${d.title}</span></div></td>
+              <td><div class="pub-name">${kind==='pub'?name:(d.sub||'—')}</div><div class="pub-cat">${d.section||''}</div></td>
+              <td class="tbl-sent-cell">${sentimentCellHtml(d.brand)}</td>
+              <td><div class="date-main">${d.date||'—'}</div><div class="date-ago">${d.ago||''}</div></td>
+              <td><span class="row-dots">⋯</span></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    ${pagerHtml}`;
+}
+
+// ── Pane: Performance Charts ──
+function _panePerf(kind,name){
+  const days=entPerfRange[kind+':'+name]||7;
+  const ranges=[[3,'3D'],[7,'7D'],[15,'15D'],[30,'1M']];
+  return `<div class="ent-perf-wrap">
+    <div class="ent-perf-range mm-tabs">
+      ${ranges.map(([d,lbl])=>`<div class="mm-tab${d===days?' act':''}" data-days="${d}" onclick="setEntPerfRange('${kind}',${attrJson(name)},${d})">${lbl}</div>`).join('')}
+    </div>
+    <div class="ent-perf-chart" id="ent-perf-chart-${kind}"></div>
+  </div>`;
+}
+function mountEntityChart(kind,name){
+  if(!window.Recharts||!window.Recharts.ResponsiveContainer)return;
+  const{ResponsiveContainer,ComposedChart,Area,Line,Bar,XAxis,YAxis,CartesianGrid,Tooltip,Legend,Cell}=window.Recharts;
+  const days=entPerfRange[kind+':'+name]||7;
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // Hash-seeded series so each entity has stable shape
+  const h0=_entHash((kind==='pub'?'p:':'a:')+name);
+  const end=new Date(2026,5,25);
+  const data=[];
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(end);d.setDate(end.getDate()-i);
+    const h=(h0+i*2654435761)>>>0;
+    const sv=+(((h%900)/100-3)).toFixed(2);              // -3 to 6
+    const results=(h>>>5)%4;                              // 0–3 articles
+    const band=[sv-2,sv+2];
+    data.push({date:`${d.getDate()}. ${MONTHS[d.getMonth()]}`,storyValue:sv,projAvg:0,band,results});
+  }
+  const maxR=Math.max(...data.map(d=>d.results),3);
+  dbMount('ent-perf-chart-'+kind,RC(ResponsiveContainer,{width:'100%',height:'100%'},
+    RC(ComposedChart,{data,margin:{top:14,right:18,bottom:8,left:36}},
+      RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
+      RC(XAxis,{dataKey:'date',scale:'point',padding:{left:30,right:30},tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
+      RC(YAxis,{yAxisId:'v',orientation:'left',domain:[-6,8],tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:30}),
+      RC(YAxis,{yAxisId:'r',orientation:'right',domain:[0,Math.ceil(maxR*1.5)],hide:true}),
+      RC(Tooltip,{contentStyle:{background:'#181d26',border:'none',borderRadius:6,padding:'8px 12px'},itemStyle:{color:'#fff',fontSize:12},labelStyle:{color:'#fff',fontSize:12}}),
+      RC(Legend,{verticalAlign:'bottom',height:34,iconSize:10,wrapperStyle:{fontSize:11,color:'#6b7280',paddingTop:10}}),
+      RC(Area,{yAxisId:'v',type:'monotone',dataKey:'band',name:'Bollinger Bands',stroke:'none',fill:'#b9a4f7',fillOpacity:0.22,legendType:'circle',dot:false,activeDot:false}),
+      RC(Bar,{yAxisId:'r',dataKey:'results',name:'Total Results Bar',fill:'#16a34a',maxBarSize:36,radius:[3,3,0,0],legendType:'circle'},
+        data.map((d,i)=>RC(Cell,{key:'c'+i,fill:'#16a34a'}))),
+      RC(Line,{yAxisId:'v',type:'linear',dataKey:'projAvg',name:'Projected Average',stroke:'#9ca3af',strokeWidth:1.5,strokeDasharray:'4 3',dot:false,activeDot:false,legendType:'plainline'}),
+      RC(Line,{yAxisId:'v',type:'linear',dataKey:'storyValue',name:'Total Story Value',stroke:'#b9a4f7',strokeWidth:1.75,dot:{r:3,fill:'#b9a4f7',stroke:'#fff',strokeWidth:1},activeDot:{r:5,fill:'#b9a4f7'},legendType:'plainline'})
+    )));
+}
+
+// ── Pane: Entities (flexbox treemap, hash-seeded distribution) ──
+function _paneEntities(kind,name){
+  const h0=_entHash((kind==='pub'?'p:':'a:')+name);
+  // Six fixed entity types, percentages hash-seeded but normalized to 100
+  const TYPES=[
+    {name:'ORG',color:'#8d7ba8',desc:'Organization Entities: An organized body of people with a particular purpose.'},
+    {name:'GPE',color:'#6bb0bd',desc:'Geopolitical Entities: Countries, cities, or states.'},
+    {name:'NORP',color:'#5fb088',desc:'Nationalities or religious / political groups.'},
+    {name:'PERSON',color:'#6b7fb0',desc:'Names of people, including fictional characters.'},
+    {name:'LAW',color:'#d9b864',desc:'Named documents made into laws.'},
+    {name:'LOC',color:'#7cc28a',desc:'Non-GPE locations, mountain ranges, bodies of water.'},
+  ];
+  // Weighted: ORG dominates, PERSON second, others smaller — varied by seed
+  const weights=[50+((h0>>>3)%30), 6+((h0>>>7)%10), 4+((h0>>>11)%8), 8+((h0>>>13)%14), 1+((h0>>>17)%4), 1+((h0>>>19)%4)];
+  const sum=weights.reduce((a,b)=>a+b,0);
+  const data=TYPES.map((t,i)=>({...t,value:+(weights[i]/sum*100).toFixed(2)}));
+  data.sort((a,b)=>b.value-a.value);
+  // Two-column layout: largest in left column, rest in right column
+  const left=[data[0]];
+  const right=data.slice(1);
+  const cell=e=>`<div class="db-entmap-cell" style="flex:${e.value};background:${e.color}" data-btip="${_makeTip({label:e.name+' ('+e.value.toFixed(2)+'%)',detail:e.desc})}">${e.name} (${e.value.toFixed(2)}%)</div>`;
+  const leftSum=left.reduce((s,e)=>s+e.value,0);
+  const rightSum=right.reduce((s,e)=>s+e.value,0);
+  return `<div class="ent-entities-wrap">
+    <div class="db-entmap">
+      <div class="db-entmap-col" style="flex:${leftSum}">${left.map(cell).join('')}</div>
+      <div class="db-entmap-col" style="flex:${rightSum}">${right.map(cell).join('')}</div>
+    </div>
+    <div class="db-ent-legend">${data.map(e=>`<span class="db-ent-leg-item"><span class="sq" style="background:${e.color}"></span>${e.name}</span>`).join('')}</div>
+  </div>`;
 }
 // ── AUTHORS PAGE ──
 let authSort='score',authPage=0,authSearch='';
@@ -4292,36 +4906,43 @@ function gotoAuthorPage(n){
   authPage=Math.max(0,Math.min(n,pages-1));renderAuthors();
   const sc=document.querySelector('.app-body');if(sc)sc.scrollTop=0;
 }
+let authorSel=null;
+function selAuthor(name){if(authorSel!==name){authorDetPage[name]=0;authorTab[name]=authorTab[name]||'articles';}authorSel=name;renderAuthors();}
 function renderAuthors(){
-  const grid=document.getElementById('author-grid');if(!grid)return;
+  const scroll=document.getElementById('author-list-scroll');if(!scroll)return;
   const q=authSearch.trim().toLowerCase();
   const all=buildAuthors().filter(p=>!q||p.name.toLowerCase().includes(q));
   const total=all.length,pages=Math.max(1,Math.ceil(total/AUTH_PER_PAGE));
   authPage=Math.max(0,Math.min(authPage,pages-1));
   const start=authPage*AUTH_PER_PAGE,end=Math.min(start+AUTH_PER_PAGE,total);
-  grid.innerHTML=all.slice(start,end).map((p,i)=>`
-    <div class="pub-card">
-      <div class="pub-card-hd">
-        <div class="pub-name" title="${p.name}">${p.name}</div>
-        <div class="pub-avatar" style="background:${authColor(p.name).bg};color:${authColor(p.name).fg}">${p.name.charAt(0)}<span class="pub-rank">${start+i+1}</span></div>
+  const page=all.slice(start,end);
+  if(authorSel===null||!all.find(p=>p.name===authorSel))authorSel=all[0]?all[0].name:null;
+  scroll.innerHTML=page.map((p,i)=>{
+    const c=authColor(p.name),sel=p.name===authorSel?' selected':'';
+    return`<div class="ent-row${sel}" onclick="selAuthor(${attrJson(p.name)})">
+      <span class="ent-row-avatar" style="background:${c.bg};color:${c.fg}">${p.name.charAt(0)}</span>
+      <div class="ent-row-body">
+        <div class="ent-row-name" title="${p.name}">${p.name}</div>
+        <div class="ent-row-meta">${p.count} article${p.count!==1?'s':''}</div>
       </div>
-      ${renderSocialIcons()}
-      <div class="pub-stats">
-        <div class="pub-stat"><div class="pub-stat-lbl">Author Score</div><div class="pub-stat-val">${p.score.toFixed(2)}</div></div>
-        <div class="pub-stat"><div class="pub-stat-lbl">Articles</div><div class="pub-stat-val">${p.count}</div></div>
-        <div class="pub-stat"><div class="pub-stat-lbl">Total SValue</div><div class="pub-stat-val">${p.totalSV.toFixed(2)}</div></div>
-      </div>
-    </div>`).join('');
-  const info=`${start+1}–${end} of ${total} items`;
+      <span class="ent-row-score">${p.score.toFixed(2)}</span>
+    </div>`;
+  }).join('');
+  const countEl=document.getElementById('author-list-count');if(countEl)countEl.textContent=total;
+  const info=total?`${start+1}–${end} of ${total}`:'0 of 0';
   const bot=document.getElementById('author-pg-info');
   if(bot)bot.textContent=info;
   const btns=document.getElementById('author-pg-btns');
   if(btns){
-    let h=`<button class="pgb arrow" onclick="gotoAuthorPage(authPage-1)"${authPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
-    for(let p=0;p<pages;p++)h+=`<button class="pgb${p===authPage?' on':''}" onclick="gotoAuthorPage(${p})">${p+1}</button>`;
-    h+=`<button class="pgb arrow" onclick="gotoAuthorPage(authPage+1)"${authPage>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
-    btns.innerHTML=h;
+    if(total<=AUTH_PER_PAGE){btns.innerHTML='';}
+    else{
+      let h=`<button class="pgb arrow" onclick="gotoAuthorPage(authPage-1)"${authPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+      for(let p=0;p<pages;p++)h+=`<button class="pgb${p===authPage?' on':''}" onclick="gotoAuthorPage(${p})">${p+1}</button>`;
+      h+=`<button class="pgb arrow" onclick="gotoAuthorPage(authPage+1)"${authPage>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+      btns.innerHTML=h;
+    }
   }
+  renderEntityDetail('author',authorSel);
   initIcons();
 }
 // ── CATEGORIES PAGE ──

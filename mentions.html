@@ -181,7 +181,7 @@
           <div id="sf-menu" class="sf-menu" style="display:none"></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
-          <button id="fc-detail-return" class="ah-return-btn" style="display:none" onclick="closeMention()"><i data-lucide="arrow-left"></i> Mentions feed</button>
+          <button id="fc-detail-return" class="ah-return-btn" style="display:none" onclick="detailReturn()"><i data-lucide="arrow-left"></i> Mentions feed</button>
           <div class="fc-search">
             <i data-lucide="search" class="fc-search-icon"></i>
             <input type="text" placeholder="Search articles, topics, sources…">
@@ -599,14 +599,10 @@
         </div>
         <div id="mentions-cards" style="display:none"></div>
 
-        <!-- detail-mode pagination bar -->
-        <div class="tbl-detail-pager" id="tbl-detail-pager">
+        <!-- detail-mode pagination bar — numeric, mirrors .ent-list-pager style -->
+        <div class="tbl-detail-pager ent-list-pager" id="tbl-detail-pager">
           <div class="pg-info" id="tbl-pg-info"></div>
-          <div class="pg-btns">
-            <button class="pgb arrow" id="tbl-pg-prev" onclick="goTblPage(tblPage-1)"><i data-lucide="chevron-left"></i></button>
-            <span id="tbl-pg-num" style="font-size:11px;color:var(--muted);font-weight:500;padding:0 6px"></span>
-            <button class="pgb arrow" id="tbl-pg-next" onclick="goTblPage(tblPage+1)"><i data-lucide="chevron-right"></i></button>
-          </div>
+          <div class="pg-btns" id="tbl-detail-pg-btns"></div>
         </div>
 
         <!-- bottom pagination (list mode) — populated by renderTableRows -->
