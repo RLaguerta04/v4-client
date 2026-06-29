@@ -1,0 +1,835 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Media Meter — MediaWatch (Study 8)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="../css/colors_and_type.css">
+<link rel="stylesheet" href="../css/app.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ── SIDEBAR (full-height, left column) ── -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Logo -->
+    <div class="sb-logo">
+      <img class="sb-logo-full" src="../mmi-logo-purple.svg" alt="media meter">
+      <img class="sb-logo-mini" src="../mmi-logo-purple  minimize.svg" alt="media meter">
+    </div>
+
+    <!-- Workspace selector -->
+    <div class="sb-selector" onclick="if(document.getElementById('sidebar').classList.contains('collapsed'))toggleSidebar()">
+      <i data-lucide="layout-grid" style="width:15px;height:15px;flex-shrink:0"></i>
+      <span class="sb-selector-label">SharedView</span>
+      <i data-lucide="chevron-down" class="sb-selector-chev"></i>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="nav-section">
+      <div class="nav-i act" id="nav-mentions" data-label="Mentions" onclick="goPage('mentions')"><i data-lucide="message-circle" class="icon-lg"></i><span class="nav-label">Mentions</span></div>
+      <div class="nav-i" id="nav-tracker" data-label="Activity Tracker" onclick="goPage('tracker')"><i data-lucide="megaphone" class="icon-lg"></i><span class="nav-label">Activity Tracker</span><span class="nav-badge-at" id="nb-tracker">2</span></div>
+      <div class="nav-i" id="nav-dashboard" data-label="Dashboard" onclick="goPage('dashboard')"><i data-lucide="layout-dashboard" class="icon-lg"></i><span class="nav-label">Dashboard</span></div>
+      <div class="nav-i" id="nav-influencers" data-label="Influencers" onclick="goPage('influencers')"><i data-lucide="star" class="icon-lg"></i><span class="nav-label">Influencers</span></div>
+      <div class="nav-i" id="nav-categories" data-label="Categories" onclick="goPage('categories')"><i data-lucide="folder" class="icon-lg"></i><span class="nav-label">Categories</span></div>
+    </nav>
+
+    <!-- User profile -->
+    <div class="sb-profile">
+      <div class="sb-profile-avatar">C</div>
+      <div class="sb-profile-info">
+        <div class="sb-profile-name">Rogie Laguerta</div>
+        <div class="sb-profile-role">rogie.laguerta@seven-gen.com</div>
+      </div>
+    </div>
+
+    <!-- Subscription footer -->
+    <div class="sb-footer">
+      <div class="sb-sub-label">Subscription — Custom Plan</div>
+      <div class="sb-progress-row">
+        <div class="sb-progress"><div class="sb-progress-fill"></div></div>
+        <div class="sb-progress-label">18%</div>
+      </div>
+      <div class="sb-dates">Apr 1, 2026 – Mar 31, 2027</div>
+    </div>
+
+    <!-- Collapse / expand toggle -->
+    <div class="sb-collapse-btn" onclick="toggleSidebar()" title="Toggle navigation" aria-label="Toggle navigation">
+      <i data-lucide="chevrons-left" class="icon-expanded"></i>
+      <i data-lucide="chevrons-right" class="icon-collapsed"></i>
+    </div>
+
+  </aside>
+
+  <!-- ── RIGHT COLUMN (header + content) ── -->
+  <div class="app-right">
+
+  <!-- reader controls (hidden until reader mode) -->
+  <div id="ah-reader-ctrls" style="display:none;background:#fff;padding:8px;z-index:10;position:relative;justify-content:flex-end;align-items:center;gap:6px;width:100%"></div>
+
+  <div class="app-body">
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <!-- PAGE: MENTIONS -->
+    <div class="page" id="page-mentions">
+      <div class="header-card" style="padding:12px 24px">
+        <!-- FILTERS -->
+        <div class="filter-bar">
+        <div class="fc" id="fc-filters-btn" onclick="openAllFilters()" style="position:relative">
+          <span id="fc-cat-label">Company News - DITO Telecommunity</span>
+          <span class="fc-filters-badge" id="fc-filters-badge" style="display:none"></span>
+          <i data-lucide="chevron-down"></i>
+        </div>
+        <div class="fc-date" id="fc-date-btn" onclick="drToggle()">
+          <span id="dr-label-start">May 18, 2026</span>
+          <span class="arrow"><i data-lucide="arrow-right" style="width:10px;height:10px"></i></span>
+          <span id="dr-label-end">May 25, 2026</span>
+          <i data-lucide="calendar" class="icon-lg"></i>
+        </div>
+        <!-- Date range picker -->
+        <div id="dr-picker" class="dr-picker" style="display:none">
+          <div class="dr-hint" id="dr-hint"></div>
+          <div class="dr-calendars">
+            <div class="dr-cal" id="dr-cal-left"></div>
+            <div class="dr-cal" id="dr-cal-right"></div>
+          </div>
+          <div class="dr-footer">
+            <div class="dr-presets">
+              <button class="dr-preset" onclick="drPreset(7)">7D</button>
+              <button class="dr-preset" onclick="drPreset(30)">1M</button>
+              <button class="dr-preset" onclick="drPreset(90)">3M</button>
+              <button class="dr-preset" onclick="drPreset(180)">6M</button>
+              <button class="dr-preset" onclick="drPreset(365)">1Y</button>
+            </div>
+            <button class="dr-apply" onclick="drApply()">Apply</button>
+          </div>
+        </div>
+        <div class="fc-ms-wrap" style="position:relative">
+          <div class="fc-tag fc-ms" id="ms-btn" onclick="msToggle(event)">
+            <span id="ms-label">All media</span>
+            <i data-lucide="chevron-down" style="width:13px;height:13px"></i>
+          </div>
+          <div id="ms-menu" class="ms-menu" style="display:none"></div>
+        </div>
+        <div class="fc-tag">PHILIPPINES <span class="x"><i data-lucide="x" class="icon-lg"></i></span></div>
+        <div class="afx-wrap" style="position:relative">
+          <div class="fc-tag afx-trigger" id="afx-btn" onclick="afxToggle(event)">
+            <i data-lucide="sliders-horizontal" style="width:13px;height:13px"></i>
+            <span>All Filters</span>
+            <span class="afx-badge" id="afx-badge" style="display:none"></span>
+            <i data-lucide="chevron-down" style="width:13px;height:13px"></i>
+          </div>
+          <div id="afx-menu" class="afx-menu" style="display:none">
+            <div class="afx-sec">
+              <div class="afx-sec-title">Emphasis</div>
+              <div class="afx-radios">
+                <label class="afx-radio"><input type="radio" name="afx-emphasis" value="All" checked><span>All</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-emphasis" value="Main"><span>Main</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-emphasis" value="Mention"><span>Mention</span></label>
+              </div>
+            </div>
+            <div class="afx-sec">
+              <div class="afx-sec-title">Tonality</div>
+              <div class="afx-radios">
+                <label class="afx-radio"><input type="radio" name="afx-tonality" value="All" checked><span>All</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-tonality" value="Positive"><span>Positive</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-tonality" value="Negative"><span>Negative</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-tonality" value="Neutral"><span>Neutral</span></label>
+              </div>
+            </div>
+            <div class="afx-sec">
+              <div class="afx-sec-title">Sentiment</div>
+              <div class="afx-radios">
+                <label class="afx-radio"><input type="radio" name="afx-sentiment" value="All" checked><span>All</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-sentiment" value="Positive"><span>Positive</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-sentiment" value="Negative"><span>Negative</span></label>
+                <label class="afx-radio"><input type="radio" name="afx-sentiment" value="Neutral"><span>Neutral</span></label>
+              </div>
+            </div>
+            <div class="afx-sec">
+              <div class="afx-sec-title">Story Value</div>
+              <div class="afx-slider">
+                <div class="afx-slider-track"></div>
+                <div class="afx-slider-fill" id="afx-fill"></div>
+                <input type="range" min="0" max="10" step="1" value="0" id="afx-min-range" class="afx-range" oninput="afxRange('min')">
+                <input type="range" min="0" max="10" step="1" value="10" id="afx-max-range" class="afx-range" oninput="afxRange('max')">
+              </div>
+              <div class="afx-minmax">
+                <div class="afx-field"><label>min</label><input type="number" min="0" max="10" value="0" id="afx-min-num" oninput="afxNum('min')"></div>
+                <span class="afx-dash">–</span>
+                <div class="afx-field"><label>max</label><input type="number" min="0" max="10" value="10" id="afx-max-num" oninput="afxNum('max')"></div>
+              </div>
+            </div>
+            <div class="afx-foot"><button class="afx-apply" onclick="afxApply()">Apply Filters</button></div>
+          </div>
+        </div>
+        <div class="sf-wrap" style="position:relative">
+          <div class="fc-icon-btn sf-trigger" id="sf-btn" onclick="sfToggle(event)" title="Saved filters">
+            <i data-lucide="bookmark" class="icon-lg"></i>
+            <span class="sf-badge" id="sf-badge" style="display:none"></span>
+          </div>
+          <div id="sf-menu" class="sf-menu" style="display:none"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+          <button id="fc-detail-return" class="ah-return-btn" style="display:none" onclick="detailReturn()"><i data-lucide="arrow-left"></i> Mentions feed</button>
+          <div class="fc-search">
+            <i data-lucide="search" class="fc-search-icon"></i>
+            <input type="text" placeholder="Search articles, topics, sources…">
+            <div class="fc-search-kbd"><kbd>⌘</kbd><kbd>K</kbd></div>
+          </div>
+        </div>
+        </div><!-- /filter-bar -->
+      </div><!-- /header-card -->
+
+      <div class="page-inner">
+      <!-- TODAY'S BRIEF -->
+      <div class="brief-wrap" style="position:relative">
+        <!-- scan overlay covers the full brief-wrap card -->
+        <div class="brief-scan-overlay" id="bso">
+          <div class="bso-inner">
+            <!-- Left: radar + counter -->
+            <div class="bso-left">
+              <div class="bso-radar">
+                <div class="bso-ring bso-r1"></div>
+                <div class="bso-ring bso-r2"></div>
+                <div class="bso-ring bso-r3"></div>
+                <svg style="position:absolute;top:0;left:0;width:64px;height:64px;overflow:visible">
+                  <defs><radialGradient id="bsg" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#181d26" stop-opacity="0.18"/><stop offset="100%" stop-color="#181d26" stop-opacity="0"/></radialGradient></defs>
+                  <g style="transform-origin:32px 32px;animation:radarSweep 1.6s linear infinite"><path d="M32,32 L32,0 A32,32,0,0,1,64,32 Z" fill="url(#bsg)"/></g>
+                </svg>
+                <div class="bso-center"></div>
+              </div>
+              <div class="bso-counter" id="bso-counter">0</div>
+              <div class="bso-label" id="bso-label">Scanning coverage...</div>
+              <div class="bso-sub" id="bso-sub">Fetching latest mentions</div>
+              <div class="bso-progress"><div class="bso-bar" id="bso-bar"></div></div>
+            </div>
+            <!-- Divider -->
+            <div class="bso-divider"></div>
+            <!-- Right: live source feed -->
+            <div class="bso-right">
+              <div class="bso-feed-label">Live sources</div>
+              <div class="bso-feed" id="bso-feed"></div>
+            </div>
+          </div>
+        </div>
+        <div class="brief-top" id="b-top" onclick="toggleBrief()">
+          <div class="b-pulse"></div>
+          <div class="b-left">
+            <div class="b-title-row">
+              <span class="b-title">Today's brief — 3 Tier 1 stories flagged</span>
+              <span class="b-ai-tag"><i data-lucide="sparkles" class="icon-sm"></i> Smart Brief</span>
+            </div>
+            <div class="b-spark-row">
+              <span class="b-updated"><i data-lucide="clock" class="icon-sm"></i> Updated 2 min ago</span>
+              <span class="dot-sep">·</span>
+              <span class="b-spark-val" tabindex="0">↑ +22% mentions
+                <span class="b-tip" role="tooltip">
+                  <span class="b-tip-title">Mentions vs yesterday</span>
+                  <span class="b-tip-big"><strong>44</strong> today · 36 yesterday</span>
+                  <span class="b-tip-delta"><i data-lucide="arrow-up"></i> +8 mentions (+22%)</span>
+                  <span class="b-tip-divider"></span>
+                  <span class="b-tip-row">7-day avg: 39 · <span class="b-tip-pos">Above average</span></span>
+                  <span class="b-tip-row">Peak window: 2–4 PM (12 mentions)</span>
+                </span>
+              </span>
+              <span class="b-spark-label">vs yesterday</span>
+              <span class="dot-sep">·</span>
+              <span class="b-trending-flag"><i data-lucide="flame" class="icon-sm"></i> DITO 5G expansion trending</span>
+            </div>
+          </div>
+          <div class="b-chev-wrap">
+            <span class="b-chev-label" id="b-chev-label">View full brief</span>
+            <i data-lucide="chevron-down" class="b-chev icon-lg" id="b-chev"></i>
+          </div>
+        </div>
+
+        <!-- stat strip — always visible -->
+        <div class="brief-stats">
+          <div class="ss" id="ss-0">
+            <span class="ss-scan-ring"></span>
+            <div class="ss-ico ss-ico-1"><i data-lucide="message-circle"></i></div><div class="ss-val"><span class="ss-num" data-val="44">44</span> <span class="ss-trend">↑ 22%</span></div>
+            <div class="ss-lbl">mentions today</div>
+          </div>
+          <div class="ss" id="ss-1" data-target="1">
+            <span class="ss-scan-ring"></span>
+            <div class="ss-ico ss-ico-2"><i data-lucide="circle-dollar-sign"></i></div><div class="ss-val hero">PHP <span class="ss-num" data-val="2.78" data-prefix="PHP " data-suffix="M">2.78</span>M</div>
+            <div class="ss-lbl">combined AVE</div>
+          </div>
+          <div class="ss" id="ss-2">
+            <span class="ss-scan-ring"></span>
+            <div class="ss-ico ss-ico-3"><i data-lucide="gauge"></i></div><div class="ss-val"><span class="ss-num" data-val="68">68</span>% <span class="ss-trend neu">neutral</span></div>
+            <div class="ss-lbl">sentiment today</div>
+            <div class="ss-sentbar" title="22% positive · 68% neutral · 10% negative">
+              <span class="ss-sent-pos" style="width:22%"></span>
+              <span class="ss-sent-neu" style="width:68%"></span>
+              <span class="ss-sent-neg" style="width:10%"></span>
+            </div>
+          </div>
+          <div class="ss ss-tier" id="ss-3" onclick="openBrief()">
+            <span class="ss-scan-ring"></span>
+            <div class="ss-ico ss-ico-4"><i data-lucide="star"></i></div><div class="ss-val"><span class="ss-num" data-val="3">3</span></div>
+            <div class="ss-lbl">Tier 1 articles</div>
+          </div>
+        </div>
+
+        <div class="brief-body" id="b-body">
+          <div class="mm-tabs">
+            <div class="mm-tab act" onclick="switchBriefTab('spot',this)">Today's spotlight <span class="mm-tab-badge">1</span></div>
+            <div class="mm-tab" onclick="switchBriefTab('trend',this)">Trending now <span class="mm-tab-badge">4</span></div>
+            <div class="mm-tab" onclick="switchBriefTab('ai',this)">AI analysis</div>
+          </div>
+
+          <!-- SPOTLIGHT PANE -->
+          <div class="mm-pane act" id="pane-spot">
+            <div>
+              <div class="spot-tier"><i data-lucide="star" class="icon-sm"></i> Tier 1 spotlight</div>
+              <div class="spot-hl">BIZ BUZZ: Jimenez twits PLDT's foes — telco rivalry escalates</div>
+              <div class="spot-pub">Philippine Daily Inquirer · Business · 14 hours ago · <span class="spot-ave">PHP 4.41M total</span></div>
+              <div class="chips">
+                <span class="chip c-neu">Neutral</span>
+                <span class="chip c-vel"><i data-lucide="flame" class="icon-sm"></i> 12 articles / 1 day</span>
+                <span class="chip c-ch">Online</span><span class="chip c-ch">Print</span><span class="chip c-ch">TV</span><span class="chip c-ch">Radio</span>
+              </div>
+              <div class="brief-actions">
+                <button class="btn-nl" onclick="showNewsletter(trendStories[0])"><i data-lucide="mail" class="icon-lg"></i> Send as newsletter</button>
+                <button class="btn-primary" onclick="showAIReport(trendStories[0])"><i data-lucide="file-text" class="icon-lg"></i> Generate AI report</button>
+                <button class="btn-track" id="spot-track-btn" onclick="trackSpot()"><i data-lucide="megaphone" class="icon-lg"></i> Track this story</button>
+              </div>
+              <div class="why-strip">
+                <span class="why-strip-lbl"><i data-lucide="zap"></i> Why this was picked</span>
+                <span class="why-strip-txt">Keyword cluster "DITO Telecommunity" — Jimenez's remarks drove Tier 1 pickup across PDI, Philstar, ABS-CBN and CNN PH within 24 hours.</span>
+              </div>
+              <div id="al-spot"></div>
+            </div>
+            <div class="track-toast" id="spot-toast">
+              <i data-lucide="check"></i>
+              <span>Story added to Activity Tracker.</span>
+            </div>
+          </div>
+
+          <!-- TRENDING PANE -->
+          <div class="mm-pane" id="pane-trend">
+            <div class="trend-hint"><i data-lucide="info"></i> Click any story cluster to expand all coverage</div>
+            <div id="trend-rows"></div>
+          </div>
+
+          <!-- AI ANALYSIS PANE -->
+          <div class="mm-pane" id="pane-ai">
+            <div class="ai-box">
+              <div class="ai-lbl"><i data-lucide="sparkles" class="icon-md"></i> AI trend synthesis</div>
+              <div class="ai-txt" id="ai-out">Click "Generate" to get a live AI-written summary of today's DITO coverage patterns and what to watch next.</div>
+            </div>
+            <button class="btn-primary" id="gen-btn" onclick="doGenerate()"><i data-lucide="sparkles" class="icon-lg"></i> Generate analysis</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- TABLE CARD -->
+      <div class="tbl-card">
+
+        <!-- toolbar: actions + export only -->
+        <div class="tbl-header">
+          <div class="tbl-header-left">
+            <div class="tbl-select"><select>
+              <option>Newest Articles</option>
+              <option>Oldest Articles</option>
+              <option>Highest Value</option>
+              <option>Lowest Value</option>
+            </select></div>
+            <div class="tbl-select"><select>
+              <option>Saved Articles</option>
+              <option>All Articles</option>
+              <option>Unsaved Articles</option>
+            </select></div>
+          </div>
+          <div class="tbl-header-right">
+            <div class="tbl-view-toggle">
+              <button class="tbl-view-btn on" id="tvb-table" onclick="setMentionsView('table')" title="Table view"><i data-lucide="table-2"></i></button>
+              <button class="tbl-view-btn" id="tvb-cards" onclick="setMentionsView('cards')" title="Card view"><i data-lucide="layout-grid"></i></button>
+            </div>
+            <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
+            <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
+            <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+            <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+            <button class="btn-export" onclick="openExport()">Export</button>
+          </div>
+        </div>
+
+
+        <div class="tbl-scroll">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th style="width:46px"><span class="tcb"></span></th>
+                <th style="width:140px"><span class="th-inner">Estimated Reach <i data-lucide="info" class="info-i"></i></span></th>
+                <th style="width:110px">Eng Score</th>
+                <th>Post</th>
+                <th style="width:90px">Source</th>
+                <th style="width:130px">Sentiment</th>
+                <th style="width:180px">Influencer</th>
+                <th style="width:170px">As of</th>
+                <th style="width:40px"></th>
+              </tr>
+            </thead>
+            <tbody id="tbl-tbody">
+
+              <tr>
+                <td><span class="tcb"></span></td>
+                <td><span class="sv-val">4.33</span></td>
+                <td><span class="ave-val">PHP 397.9K</span></td>
+                <td>
+                  <div class="hl-cell">
+                    <span class="hl-icon"><i data-lucide="newspaper"></i></span>
+                    <span class="hl-text">BIZ BUZZ: Jimenez twits PLDT's foes</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="pub-name">Philippine Daily Inquirer</div>
+                  <div class="pub-cat">Business</div>
+                </td>
+                <td>
+                  <div class="date-main">May 25, 2026</div>
+                  <div class="date-ago">14 hours ago</div>
+                </td>
+                <td><span class="row-dots">⋯</span></td>
+              </tr>
+
+              <tr>
+                <td><span class="tcb"></span></td>
+                <td><span class="sv-val">1.8</span></td>
+                <td><span class="ave-val">PHP 206.5K</span></td>
+                <td>
+                  <div class="hl-cell">
+                    <span class="hl-icon"><i data-lucide="newspaper"></i></span>
+                    <span class="hl-text">BIZ BUZZ: Jimenez twits PLDTs foes Inquirer Plus</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="pub-name">INQUIRER PLUS</div>
+                  <div class="pub-cat">News</div>
+                </td>
+                <td>
+                  <div class="date-main">May 25, 2026</div>
+                  <div class="date-ago">14 hours ago</div>
+                </td>
+                <td><span class="row-dots">⋯</span></td>
+              </tr>
+
+              <tr>
+                <td><span class="tcb"></span></td>
+                <td><span class="sv-val">4.14</span></td>
+                <td><span class="ave-val">PHP 631.0K</span></td>
+                <td>
+                  <div class="hl-cell">
+                    <span class="hl-icon"><i data-lucide="newspaper"></i></span>
+                    <span class="hl-text">PLDTs 'butcher COO publicly slices telco rivals</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="pub-name">Philstar Online</div>
+                  <div class="pub-cat">News</div>
+                </td>
+                <td>
+                  <div class="date-main">May 25, 2026</div>
+                  <div class="date-ago">15 hours ago</div>
+                </td>
+                <td><span class="row-dots">⋯</span></td>
+              </tr>
+
+              <tr>
+                <td><span class="tcb"></span></td>
+                <td><span class="sv-val">1.14</span></td>
+                <td><span class="ave-val">PHP 91.8K</span></td>
+                <td>
+                  <div class="hl-cell">
+                    <span class="hl-icon"><i data-lucide="newspaper"></i></span>
+                    <span class="hl-text">DITO StreamZone199 Now Available</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="pub-name">Manila Shaker Philippines</div>
+                  <div class="pub-cat">News</div>
+                </td>
+                <td>
+                  <div class="date-main">May 24, 2026</div>
+                  <div class="date-ago">23 hours ago</div>
+                </td>
+                <td><span class="row-dots">⋯</span></td>
+              </tr>
+
+              <tr>
+                <td><span class="tcb"></span></td>
+                <td><span class="sv-val">5.23</span></td>
+                <td><span class="ave-val">PHP 98.4K</span></td>
+                <td>
+                  <div class="hl-cell">
+                    <span class="hl-icon"><i data-lucide="newspaper"></i></span>
+                    <span class="hl-text">Iridium, Planet Labs, and Ziff Davis Shares Skyrocket, What You Need T...</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="pub-name">Yahoo Philippines | News, Sports And Lifestyle</div>
+                  <div class="pub-cat">News</div>
+                </td>
+                <td>
+                  <div class="date-main">May 24, 2026</div>
+                  <div class="date-ago">1 day ago</div>
+                </td>
+                <td><span class="row-dots">⋯</span></td>
+              </tr>
+
+              <tr>
+                <td><span class="tcb"></span></td>
+                <td><span class="sv-val">5.22</span></td>
+                <td><span class="ave-val">PHP 190.5K</span></td>
+                <td>
+                  <div class="hl-cell">
+                    <span class="hl-icon"><i data-lucide="newspaper"></i></span>
+                    <span class="hl-text">DITO reigns supreme as the Philippines fastest mobile network by Opens...</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="pub-name">Inquirer Online</div>
+                  <div class="pub-cat">News</div>
+                </td>
+                <td>
+                  <div class="date-main">May 23, 2026</div>
+                  <div class="date-ago">1 day ago</div>
+                </td>
+                <td><span class="row-dots">⋯</span></td>
+              </tr>
+
+              <tr>
+                <td><span class="tcb"></span></td>
+                <td><span class="sv-val">1.33</span></td>
+                <td><span class="ave-val">PHP 184.7K</span></td>
+                <td>
+                  <div class="hl-cell">
+                    <span class="hl-icon"><i data-lucide="newspaper"></i></span>
+                    <span class="hl-text">Visayan Electric eyes smarter energy services with DITO</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="pub-name">Insider Ph</div>
+                  <div class="pub-cat">News</div>
+                </td>
+                <td>
+                  <div class="date-main">May 23, 2026</div>
+                  <div class="date-ago">2 days ago</div>
+                </td>
+                <td><span class="row-dots">⋯</span></td>
+              </tr>
+
+              <tr>
+                <td><span class="tcb"></span></td>
+                <td><span class="sv-val">2.87</span></td>
+                <td><span class="ave-val">PHP 142.3K</span></td>
+                <td>
+                  <div class="hl-cell">
+                    <span class="hl-icon"><i data-lucide="newspaper"></i></span>
+                    <span class="hl-text">DITO partners with local government for digital transformation push</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="pub-name">Manila Bulletin</div>
+                  <div class="pub-cat">Technology</div>
+                </td>
+                <td>
+                  <div class="date-main">May 22, 2026</div>
+                  <div class="date-ago">3 days ago</div>
+                </td>
+                <td><span class="row-dots">⋯</span></td>
+              </tr>
+
+              <tr>
+                <td><span class="tcb"></span></td>
+                <td><span class="sv-val">3.41</span></td>
+                <td><span class="ave-val">PHP 256.1K</span></td>
+                <td>
+                  <div class="hl-cell">
+                    <span class="hl-icon"><i data-lucide="newspaper"></i></span>
+                    <span class="hl-text">Telco war heats up as DITO expands 5G coverage to Visayas</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="pub-name">BusinessWorld</div>
+                  <div class="pub-cat">Business</div>
+                </td>
+                <td>
+                  <div class="date-main">May 22, 2026</div>
+                  <div class="date-ago">3 days ago</div>
+                </td>
+                <td><span class="row-dots">⋯</span></td>
+              </tr>
+
+              <tr>
+                <td><span class="tcb"></span></td>
+                <td><span class="sv-val">2.05</span></td>
+                <td><span class="ave-val">PHP 78.9K</span></td>
+                <td>
+                  <div class="hl-cell">
+                    <span class="hl-icon"><i data-lucide="newspaper"></i></span>
+                    <span class="hl-text">DITO Telecommunity opens new flagship store in Cebu City</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="pub-name">SunStar Cebu</div>
+                  <div class="pub-cat">Local News</div>
+                </td>
+                <td>
+                  <div class="date-main">May 21, 2026</div>
+                  <div class="date-ago">4 days ago</div>
+                </td>
+                <td><span class="row-dots">⋯</span></td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+        <div id="mentions-cards" style="display:none"></div>
+
+        <!-- detail-mode pagination bar — numeric, mirrors .ent-list-pager style -->
+        <div class="tbl-detail-pager ent-list-pager" id="tbl-detail-pager">
+          <div class="pg-info" id="tbl-pg-info"></div>
+          <div class="pg-btns" id="tbl-detail-pg-btns"></div>
+        </div>
+
+        <!-- bottom pagination (list mode) — populated by renderTableRows -->
+        <div class="tbl-footer">
+          <div class="pg-info" id="tbl-list-pg-info"></div>
+          <div class="pg-btns" id="tbl-list-pg-btns"></div>
+        </div>
+
+      </div><!-- /tbl-card -->
+
+      <!-- ARTICLE DETAIL PANEL (30 / 30 / 40) -->
+      <div class="art-detail-layout" id="article-detail-panel">
+        <button class="theater-exit" onclick="toggleTheater()" title="Exit theater (Esc)"><i data-lucide="minimize-2"></i> Exit theater</button>
+        <div class="art-col-left" id="adp-col-left"></div>
+        <div class="art-col-mid" id="adp-col-mid"></div>
+        <div class="art-col-right" id="adp-col-right"></div>
+      </div>
+
+      <!-- All-entities modal -->
+      <div class="ent-overlay" id="ent-modal" onclick="if(event.target===this)closeEntities()">
+        <div class="ent-modal">
+          <div class="ent-modal-hd"><span id="ent-modal-title">Entities</span><button class="ent-modal-close" onclick="closeEntities()" title="Close (Esc)"><i data-lucide="x"></i></button></div>
+          <div class="ent-modal-body" id="ent-modal-body"></div>
+        </div>
+      </div>
+
+      <!-- Full-broadsheet lightbox -->
+      <div class="bs-lightbox" id="bs-lightbox" onclick="if(event.target===this)closeBroadsheet()">
+        <button class="bs-lb-close" onclick="closeBroadsheet()" title="Close (Esc)"><i data-lucide="x"></i></button>
+        <div class="bs-lb-scroll"><img id="bs-lb-img" src="" alt="Full broadsheet page"></div>
+      </div>
+
+      </div><!-- /page-inner -->
+
+    </div><!-- /page-mentions -->
+    <!-- CONFIRM OVERLAY -->
+    <div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center">
+      <div id="confirm-box" style="background:#fff;border-radius:8px;padding:24px;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.18)"></div>
+    </div>
+
+    <!-- Newsletter slide-over -->
+    <div class="nl-overlay" id="nl-overlay" onclick="if(event.target===this)closeNewsletter()">
+      <div class="nl-panel">
+        <div class="nl-head">
+          <i data-lucide="mail" style="color:var(--muted);width:16px;height:16px;flex-shrink:0"></i>
+          <span class="nl-head-title">Send as Newsletter</span>
+          <button onclick="closeNewsletter()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;display:flex;align-items:center"><i data-lucide="x" style="width:16px;height:16px"></i></button>
+        </div>
+        <div class="nl-composer">
+          <div class="nl-field">
+            <span class="nl-field-lbl">To</span>
+            <input id="nl-to" type="text" placeholder="recipients@company.com" style="flex:1;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;font-family:inherit;outline:none;color:var(--ink)">
+          </div>
+          <div class="nl-field">
+            <span class="nl-field-lbl">Subject</span>
+            <input id="nl-subject" type="text" style="flex:1;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;font-family:inherit;outline:none;color:var(--ink)">
+          </div>
+        </div>
+        <div class="nl-preview" id="nl-preview"></div>
+        <div class="nl-send-bar">
+          <button class="btn-filled" style="flex:1;gap:6px;justify-content:center" onclick="sendNewsletter()"><i data-lucide="send" style="width:14px;height:14px"></i> Send newsletter</button>
+          <button class="btn-ghost" onclick="closeNewsletter()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Report modal -->
+    <div class="rpt-overlay" id="rpt-overlay" onclick="if(event.target===this)closeAIReport()">
+      <div class="rpt-modal">
+        <div style="padding:18px 24px;border-bottom:1px solid #ececf2;display:flex;align-items:center;gap:10px;flex-shrink:0">
+          <i data-lucide="file-text" style="color:#181d26;width:16px;height:16px"></i>
+          <span style="font-weight:600;font-size:14px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="rpt-title">AI Report</span>
+          <button onclick="closeAIReport()" style="background:none;border:none;cursor:pointer;color:#888;padding:4px"><i data-lucide="x"></i></button>
+        </div>
+        <div id="rpt-body" style="flex:1;overflow-y:auto"></div>
+        <div class="rpt-send-bar" id="rpt-send-bar" style="display:none">
+          <input id="rpt-to" type="text" placeholder="Send to: recipients@company.com" style="flex:1;border:1px solid #ddd;border-radius:6px;padding:8px 12px;font-size:12px;font-family:inherit;outline:none">
+          <button class="btn-filled" onclick="sendAIReport()"><i data-lucide="send"></i> Send</button>
+          <button class="btn-ghost" onclick="downloadAIReport()"><i data-lucide="download"></i> Download</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mention detail drawer -->
+    <div class="md-overlay" id="mention-overlay" onclick="if(event.target===this)closeMention()">
+      <div class="md-shell" id="mention-shell">
+        <div class="md-list" id="mention-list"></div>
+        <div class="md-panel" id="mention-panel"></div>
+      </div>
+      <div class="md-reader" id="mention-reader"></div>
+    </div>
+
+    <!-- Export modal -->
+    <div class="exp-overlay" id="exp-overlay" onclick="if(event.target===this)closeExport()">
+      <div class="exp-modal">
+        <div class="exp-head">
+          <span>Send Exports</span>
+          <button onclick="closeExport()" title="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="exp-body">
+          <div class="exp-field">
+            <label class="exp-label">Export Type</label>
+            <div class="exp-select">
+              <select id="exp-type">
+                <option>Aggregated Data</option>
+                <option>Raw Articles</option>
+                <option>Coverage Summary</option>
+              </select>
+            </div>
+          </div>
+          <div class="exp-field">
+            <label class="exp-label">File Format</label>
+            <div class="exp-select">
+              <select id="exp-format">
+                <option>XLSX</option>
+                <option>CSV</option>
+                <option>PDF</option>
+                <option>DOCX</option>
+              </select>
+            </div>
+          </div>
+          <div class="exp-field">
+            <label class="exp-label">To <span class="req">(Required)</span></label>
+            <input class="exp-input" type="email" id="exp-to" placeholder="someone@email.com" oninput="validateExport()">
+          </div>
+        </div>
+        <div class="exp-foot">
+          <button class="exp-cancel" onclick="closeExport()">Cancel</button>
+          <button class="exp-send" id="exp-send" onclick="sendExport()" disabled>Send</button>
+        </div>
+      </div>
+    </div>
+  <!-- ── ALL FILTERS MODAL ── -->
+  <div class="af-overlay" id="af-overlay" onclick="if(event.target===this)closeAllFilters()">
+    <div class="af-modal">
+
+      <!-- Header -->
+      <div class="af-head">
+        <div class="af-head-left">
+          <i data-lucide="sliders-horizontal" style="width:15px;height:15px;color:var(--muted);flex-shrink:0"></i>
+          <span class="af-head-title">All Filters</span>
+        </div>
+        <button class="af-close-btn" onclick="closeAllFilters()"><i data-lucide="x" style="width:16px;height:16px"></i></button>
+      </div>
+
+      <!-- 3-column body -->
+      <div class="af-body">
+
+        <!-- Col 1: Categories -->
+        <div class="af-col">
+          <div class="af-col-hd">
+            <span class="af-col-title">Categories</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div class="af-sort-dd" id="af-cat-sort" onclick="afToggleSort('cat')">
+                <span id="af-cat-sort-lbl">Name (A–Z)</span>
+                <i data-lucide="chevron-down" style="width:11px;height:11px;color:var(--muted)"></i>
+                <div class="af-sort-menu" id="af-cat-sort-menu">
+                  <div class="af-sort-opt active" onclick="afSetSort('cat','az',this)">Name (A – Z)</div>
+                  <div class="af-sort-opt" onclick="afSetSort('cat','za',this)">Name (Z – A)</div>
+                </div>
+              </div>
+              <div class="af-col-pager">
+                <button class="af-pager-btn" onclick="afPage('cat',-1)"><i data-lucide="chevron-left" style="width:11px;height:11px"></i></button>
+                <span class="af-pager-info" id="af-cat-page">1 / 1</span>
+                <button class="af-pager-btn" onclick="afPage('cat',1)"><i data-lucide="chevron-right" style="width:11px;height:11px"></i></button>
+              </div>
+            </div>
+          </div>
+          <div class="af-list" id="af-cat-list"></div>
+        </div>
+
+        <!-- Divider -->
+        <div class="af-col-divider"></div>
+
+        <!-- Col 2: Buckets -->
+        <div class="af-col">
+          <div class="af-col-hd">
+            <span class="af-col-title">Buckets</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div class="af-sort-dd" id="af-bkt-sort" onclick="afToggleSort('bkt')">
+                <span id="af-bkt-sort-lbl">Name (A–Z)</span>
+                <i data-lucide="chevron-down" style="width:11px;height:11px;color:var(--muted)"></i>
+                <div class="af-sort-menu" id="af-bkt-sort-menu">
+                  <div class="af-sort-opt active" onclick="afSetSort('bkt','az',this)">Name (A – Z)</div>
+                  <div class="af-sort-opt" onclick="afSetSort('bkt','za',this)">Name (Z – A)</div>
+                </div>
+              </div>
+              <button class="af-refresh-btn" data-btip="Refresh buckets" onclick="afRefreshBuckets()"><i data-lucide="refresh-cw" style="width:12px;height:12px"></i></button>
+            </div>
+          </div>
+          <div class="af-list af-list--buckets" id="af-bkt-list"></div>
+        </div>
+
+        <!-- Divider -->
+        <div class="af-col-divider"></div>
+
+        <!-- Col 3: Keywords -->
+        <div class="af-col af-col--keywords">
+          <div class="af-col-hd">
+            <span class="af-col-title">Keywords</span>
+          </div>
+          <div class="af-kw-body" id="af-kw-body">
+            <div class="af-kw-empty">Select a bucket to view keywords</div>
+          </div>
+        </div>
+
+      </div><!-- /af-body -->
+
+      <!-- Footer: active chips + actions -->
+      <div class="af-foot">
+        <div class="af-active-chips" id="af-active-chips"></div>
+        <div class="af-foot-actions">
+          <button class="af-clear-btn" id="af-clear-btn" onclick="afClearAll()">Clear all</button>
+          <button class="btn-ghost" onclick="closeAllFilters()">Cancel</button>
+          <button class="btn-filled" onclick="afApply()">Apply</button>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /af-overlay -->
+
+  </div><!-- /main -->
+  </div><!-- /app-body -->
+  </div><!-- /app-right -->
+</div>
+
+<script src="../js/data-shared.js"></script>
+<script src="../js/app.js"></script>
+</body>
+</html>

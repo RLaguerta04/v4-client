@@ -1,0 +1,344 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Media Meter — MediaWatch (Study 8)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="../css/colors_and_type.css">
+<link rel="stylesheet" href="../css/app.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ── SIDEBAR (full-height, left column) ── -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Logo -->
+    <div class="sb-logo">
+      <img class="sb-logo-full" src="../mmi-logo-purple.svg" alt="media meter">
+      <img class="sb-logo-mini" src="../mmi-logo-purple  minimize.svg" alt="media meter">
+    </div>
+
+    <!-- Workspace selector -->
+    <div class="sb-selector" onclick="if(document.getElementById('sidebar').classList.contains('collapsed'))toggleSidebar()">
+      <i data-lucide="layout-grid" style="width:15px;height:15px;flex-shrink:0"></i>
+      <span class="sb-selector-label">SharedView</span>
+      <i data-lucide="chevron-down" class="sb-selector-chev"></i>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="nav-section">
+      <div class="nav-i" id="nav-mentions" data-label="Mentions" onclick="goPage('mentions')"><i data-lucide="message-circle" class="icon-lg"></i><span class="nav-label">Mentions</span></div>
+      <div class="nav-i" id="nav-tracker" data-label="Activity Tracker" onclick="goPage('tracker')"><i data-lucide="megaphone" class="icon-lg"></i><span class="nav-label">Activity Tracker</span><span class="nav-badge-at" id="nb-tracker">2</span></div>
+      <div class="nav-i act" id="nav-dashboard" data-label="Dashboard" onclick="goPage('dashboard')"><i data-lucide="layout-dashboard" class="icon-lg"></i><span class="nav-label">Dashboard</span></div>
+      <div class="nav-i" id="nav-influencers" data-label="Influencers" onclick="goPage('influencers')"><i data-lucide="star" class="icon-lg"></i><span class="nav-label">Influencers</span></div>
+      <div class="nav-i" id="nav-categories" data-label="Categories" onclick="goPage('categories')"><i data-lucide="folder" class="icon-lg"></i><span class="nav-label">Categories</span></div>
+    </nav>
+
+    <!-- User profile -->
+    <div class="sb-profile">
+      <div class="sb-profile-avatar">C</div>
+      <div class="sb-profile-info">
+        <div class="sb-profile-name">Rogie Laguerta</div>
+        <div class="sb-profile-role">rogie.laguerta@seven-gen.com</div>
+      </div>
+    </div>
+
+    <!-- Subscription footer -->
+    <div class="sb-footer">
+      <div class="sb-sub-label">Subscription — Custom Plan</div>
+      <div class="sb-progress-row">
+        <div class="sb-progress"><div class="sb-progress-fill"></div></div>
+        <div class="sb-progress-label">18%</div>
+      </div>
+      <div class="sb-dates">Apr 1, 2026 – Mar 31, 2027</div>
+    </div>
+
+    <!-- Collapse / expand toggle -->
+    <div class="sb-collapse-btn" onclick="toggleSidebar()" title="Toggle navigation" aria-label="Toggle navigation">
+      <i data-lucide="chevrons-left" class="icon-expanded"></i>
+      <i data-lucide="chevrons-right" class="icon-collapsed"></i>
+    </div>
+
+  </aside>
+
+  <!-- ── RIGHT COLUMN (header + content) ── -->
+  <div class="app-right">
+
+  <!-- reader controls (hidden until reader mode) -->
+  <div id="ah-reader-ctrls" style="display:none;background:#fff;padding:8px;z-index:10;position:relative;justify-content:flex-end;align-items:center;gap:6px;width:100%"></div>
+
+  <div class="app-body">
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <!-- PAGE: DASHBOARD -->
+    <div class="page db-page" id="page-dashboard">
+      <!-- Filter bar -->
+      <div class="db-filterbar">
+        <div class="db-fb-pill db-fb-dropdown">
+          <span>Competitor News</span><i data-lucide="chevron-down" class="icon-sm"></i>
+        </div>
+        <div class="db-fb-date">
+          <span>June 7, 2026</span>
+          <i data-lucide="arrow-right" class="icon-sm" style="color:var(--muted)"></i>
+          <span>June 14, 2026</span>
+          <i data-lucide="calendar" class="icon-sm" style="color:var(--muted)"></i>
+        </div>
+        <div class="db-fb-pill db-fb-dropdown">
+          <span>Online News, Bl...</span>
+        </div>
+        <div class="db-fb-pill db-fb-tag">
+          <span>PHILIPPINES</span><i data-lucide="x" class="icon-sm" style="cursor:pointer"></i>
+        </div>
+        <div class="db-fb-pill db-fb-dropdown">
+          <span>Article Count</span><i data-lucide="chevron-down" class="icon-sm"></i>
+        </div>
+        <div class="db-fb-pill db-fb-all-filters">
+          <i data-lucide="filter" class="icon-sm"></i> All Filters
+        </div>
+        <div class="db-fb-icon-btn" title="Saved views"><i data-lucide="bookmark" class="icon-sm"></i></div>
+        <div class="db-fb-icon-btn" title="Advanced filter"><i data-lucide="filter" class="icon-sm"></i></div>
+        <div class="fc-search">
+          <i data-lucide="search" class="fc-search-icon"></i>
+          <input type="text" placeholder="Search articles, topics, sources…">
+          <div class="fc-search-kbd"><kbd>⌘</kbd><kbd>K</kbd></div>
+        </div>
+        <button class="db-compare-btn" title="Compare Categories/Buckets">Compare Categories/Buckets</button>
+        <button class="db-export-pdf-btn" title="Export to PDF"><i data-lucide="file-text" class="icon-sm"></i> <span class="db-btn-label">Export to PDF</span></button>
+      </div>
+
+      <div class="db-content">
+      <div class="db-content-inner">
+      <!-- KPI Cards — 2 rows × 4 columns -->
+      <div class="db-kpi-grid">
+        <!-- Row 1 -->
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Total Results</div>
+          <div class="db-kpi-val">248</div>
+          <div class="db-kpi-detail">Online: 168 · Print: 52 · Broadcast: 28</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-up">9% <span class="db-kpi-arrow">▲</span></div>
+        </div>
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Top Exposure by Medium</div>
+          <div class="db-kpi-val">Online News</div>
+          <div class="db-kpi-detail">168 articles count</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-up">14% <span class="db-kpi-arrow">▲</span></div>
+        </div>
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Top Publisher</div>
+          <div class="db-kpi-val db-kpi-val--md">Philippine Daily Inquirer</div>
+          <div class="db-kpi-detail">38 article/s published</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-up">60% <span class="db-kpi-arrow">▲</span></div>
+        </div>
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Top Author</div>
+          <div class="db-kpi-val">Daxim L. Lucas</div>
+          <div class="db-kpi-detail">14 article/s published</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-up">50% <span class="db-kpi-arrow">▲</span></div>
+        </div>
+        <!-- Row 2 -->
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Most Articles in a Day</div>
+          <div class="db-kpi-val">42 Article/s</div>
+          <div class="db-kpi-detail">May 23, 2026</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-up">12% <span class="db-kpi-arrow">▲</span></div>
+        </div>
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Top Tonality</div>
+          <div class="db-kpi-val db-kpi-green">Positive</div>
+          <div class="db-kpi-detail">184 article/s published</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-up">15% <span class="db-kpi-arrow">▲</span></div>
+        </div>
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Top Entities</div>
+          <div class="db-kpi-val">DITO Telecommunity</div>
+          <div class="db-kpi-detail">38 article/s published</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-down">-25% <span class="db-kpi-arrow">▼</span></div>
+        </div>
+        <div class="db-kpi-card">
+          <div class="db-kpi-label">Most Dominant Section</div>
+          <div class="db-kpi-val">News</div>
+          <div class="db-kpi-detail">156 article/s published</div>
+          <div class="db-kpi-divider"></div>
+          <div class="db-kpi-delta db-kpi-up">9% <span class="db-kpi-arrow">▲</span></div>
+        </div>
+      </div>
+
+      <!-- Timeline (composed chart) -->
+      <div class="db-row db-tl-row">
+        <div class="db-card" id="db-timeline-card">
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Timeline <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore db-tl-insights" onclick="openTimelineInsights()"><i data-lucide="sparkles"></i> Insights</button>
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-tl-ranges" id="db-tl-ranges">
+            <button class="db-tl-range" data-r="3" onclick="setTimelineRange(3)">3D</button>
+            <button class="db-tl-range on" data-r="7" onclick="setTimelineRange(7)">7D</button>
+            <button class="db-tl-range" data-r="15" onclick="setTimelineRange(15)">15D</button>
+            <button class="db-tl-range" data-r="30" onclick="setTimelineRange(30)">1M</button>
+          </div>
+          <div class="db-chart-wrap" id="db-timeline" style="height:420px"></div>
+        </div>
+      </div>
+
+      <!-- Media Exposure + Topic Emphasis (paired share bars) -->
+      <div class="db-row db-row-5-5">
+        <div class="db-card" id="db-exposure-card">
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Media Exposure (Article Count) <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore db-tl-insights" onclick="openExposureInsights()"><i data-lucide="sparkles"></i> Insights</button>
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-chart-wrap" id="db-exposure" style="height:110px"></div>
+        </div>
+        <div class="db-card" id="db-emphasis-card">
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Topic Emphasis <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore db-tl-insights" onclick="openEmphasisInsights()"><i data-lucide="sparkles"></i> Insights</button>
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-chart-wrap" id="db-emphasis" style="height:110px"></div>
+        </div>
+      </div>
+
+      <!-- Channel summary cards (populated by initDashboard) -->
+      <div class="db-row"><div class="db-ch-grid" id="db-channels"></div></div>
+
+      <!-- Tonality Distribution (donut + stacked time-bar) -->
+      <div class="db-row">
+        <div class="db-card">
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Tonality Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-ton-legend" id="db-ton-legend"></div>
+          <div class="db-tonality">
+            <div class="db-chart-wrap db-ton-donut" id="db-tonality-donut" style="height:280px"></div>
+            <div class="db-chart-wrap db-ton-bar" id="db-tonality-bar" style="height:280px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Frequency Distribution (story-value histogram) -->
+      <div class="db-row">
+        <div class="db-card">
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Frequency Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-chart-wrap" id="db-frequency" style="height:360px"></div>
+        </div>
+      </div>
+
+      <!-- Publisher Score + Author Story Value (paired distributions) -->
+      <div class="db-row db-row-5-5">
+        <div class="db-card">
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Publisher Score Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <!-- invisible spacer matches the Author card's tab row so both charts align -->
+          <div class="db-tabs2" aria-hidden="true" style="visibility:hidden"><div class="db-tab2">Bubble Plot</div></div>
+          <div class="db-chart-wrap" id="db-pubscore" style="height:440px"></div>
+        </div>
+        <div class="db-card">
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Author Story Value Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-tabs2" id="db-author-tabs">
+            <div class="db-tab2 on" data-t="bubble" onclick="setAuthorTab('bubble')">Bubble Plot</div>
+            <div class="db-tab2" data-t="bar" onclick="setAuthorTab('bar')">Bar Chart</div>
+          </div>
+          <div class="db-chart-wrap" id="db-author-bubble" style="height:440px"></div>
+          <div class="db-chart-wrap" id="db-author-bar" style="height:380px;display:none"></div>
+        </div>
+      </div>
+
+      <!-- Top Publishers (timeline swimlane) -->
+      <div class="db-row">
+        <div class="db-card">
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Top Publishers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-chart-wrap" id="db-toppub" style="height:380px"></div>
+          <div class="db-tp-foot" id="db-tp-foot"></div>
+        </div>
+      </div>
+
+      <!-- Entities Map (flexbox treemap) -->
+      <div class="db-row">
+        <div class="db-card">
+          <div class="db-card-hd db-tl-hd">
+            <span class="db-card-title">Entities Map <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            <div class="db-tl-actions">
+              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+            </div>
+          </div>
+          <div class="db-entmap" id="db-entities"></div>
+          <div class="db-ent-legend" id="db-ent-legend"></div>
+        </div>
+      </div>
+
+      </div><!-- /db-content-inner -->
+      </div><!-- /db-content -->
+    </div><!-- /page-dashboard -->
+  </div><!-- /main -->
+  </div><!-- /app-body -->
+  </div><!-- /app-right -->
+</div>
+
+<!-- Timeline Insights slide-over (reuses .nl-panel shell, push mode) -->
+<div class="nl-overlay ti-overlay" id="ti-overlay">
+  <div class="nl-panel">
+    <div class="ti-head" id="ti-head"></div>
+    <div class="ti-body" id="ti-body"></div>
+  </div>
+</div>
+
+<script src="../js/data-shared.js"></script>
+<script src="../js/app.js"></script>
+</body>
+</html>

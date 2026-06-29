@@ -2,7 +2,22 @@
 let activeTrend=null,spotTracked=false;
 const MC={'TV':'media-tv','Online':'media-online','Print':'media-print','Radio':'media-radio','Social':'media-social'};
 
-const trendStories=[
+// ── Workspace data layer ──
+// Each page chooses a workspace by loading a data file (e.g. js/data-shared.js) before app.js,
+// which sets window.WS + window.WS_DATA. wsData() returns the workspace's own copy of a dataset:
+//   • explicit override in WS_DATA  → use it (fully custom Shared View content)
+//   • non-default workspace, no override → an independent deep clone of the MediaWatch default
+//   • MediaWatch (no WS flag) → the default as-is (zero change)
+// This keeps one shared engine (app.js) while each workspace's content stays independent.
+function wsData(k,def){
+  if(window.WS_DATA&&window.WS_DATA[k])return window.WS_DATA[k];
+  if(window.WS&&window.WS!=='mediawatch'){try{return JSON.parse(JSON.stringify(def));}catch(e){return def;}}
+  return def;
+}
+// Tag the document with the workspace so CSS can theme it (Shared View = blue, MediaWatch = coral)
+if(window.WS&&window.WS!=='mediawatch'&&document.body)document.body.classList.add('ws-'+window.WS);
+
+let trendStories=[
   {id:0,rank:1,tier:'T1',hl:'Jimenez/PLDT executive rivalry — telco competitive landscape narrative',why:"Triggered by 'DITO Telecommunity' — Jimenez's pointed remarks on PLDT competitors picked up across Tier 1 business outlets, broadcast, and radio within 24 hours.",chips:[{cls:'c-neu',t:'Neutral'},{cls:'c-vel',t:'12 articles / 1 day'},{cls:'c-ch',t:'Online'},{cls:'c-ch',t:'Print'},{cls:'c-ch',t:'TV'},{cls:'c-ch',t:'Radio'}],tracked:false,ave:'PHP 4.41M',articles:[
     {media:'Print',source:'Philippine Daily Inquirer',hl:"BIZ BUZZ: Jimenez twits PLDT's foes",date:'14 hours ago',ave:'PHP 397K',score:96,dateRank:14},
     {media:'Online',source:'INQUIRER PLUS',hl:'BIZ BUZZ: Jimenez twits PLDTs foes Inquirer Plus',date:'14 hours ago',ave:'PHP 206K',score:91,dateRank:14},
@@ -30,6 +45,7 @@ const trendStories=[
     {media:'Online',source:'Manila Bulletin',hl:'DITO partners with local government for digital transformation push',date:'3 days ago',ave:'PHP 142K',score:85},
   ]},
 ];
+trendStories=wsData('trendStories',trendStories);
 
 
 function openBrief(){
@@ -109,6 +125,9 @@ const alState={};
 const aveNum=s=>parseFloat(String(s).replace(/[^0-9.]/g,''))||0;
 
 function articlesForList(listId){
+  // Shared View: the brief's coverage lists (spotlight + trending) show social posts, not news articles.
+  const social=window.WS_DATA&&window.WS_DATA.socialMentions;
+  if(social&&(listId==='spot'||listId.startsWith('trend-'))) return social;
   if(listId==='spot') return trendStories[0].articles;
   if(listId.startsWith('trend-')) return (trendStories.find(s=>s.id===parseInt(listId.split('-')[1]))||{}).articles||[];
   return [];
@@ -116,6 +135,8 @@ function articlesForList(listId){
 
 function renderArticleList(articles,listId){
   const state=alState[listId]||(alState[listId]={sort:'sim',filters:[],page:1});
+  // Shared View brief: social posts get a dedicated row layout (Source · Post · Sentiment · Influencer · Match · As of)
+  if(articles[0]&&articles[0].platform) return renderSocialArticleList(articles,listId,state);
   const sel=state.filters||(state.filters=[]);
   const mediaTypes=[...new Set(articles.map(a=>a.media))].filter(m=>m!=='Social');
   let filtered=sel.length===0?articles.slice():articles.filter(a=>sel.includes(a.media));
@@ -194,6 +215,82 @@ function renderArticleList(articles,listId){
   </div>`;
 }
 
+// Shared View brief coverage rendered as social rows (mirrors the mentions table) + retained Match column.
+function renderSocialArticleList(articles,listId,state){
+  const sel=state.filters||(state.filters=[]);
+  const platforms=[...new Set(articles.map(a=>a.platform))];
+  const reachNum=s=>{const m=String(s||'').replace(/,/g,'').match(/([\d.]+)\s*([km]?)/i);if(!m)return 0;let n=parseFloat(m[1]);if(/k/i.test(m[2]))n*=1e3;return n;};
+  const platSel=sel.filter(v=>platforms.includes(v));   // ignore stray non-platform filter values
+  let filtered=platSel.length===0?articles.slice():articles.filter(a=>platSel.includes(a.platform));
+  if(state.sort==='reach')filtered.sort((a,b)=>reachNum(b.reach)-reachNum(a.reach));
+  else if(state.sort!=='date')filtered.sort((a,b)=>(b.match||0)-(a.match||0));   // 'sim' (default); 'date' keeps data order
+  const PER_PAGE=10;
+  const totalPages=Math.max(1,Math.ceil(filtered.length/PER_PAGE));
+  let page=state.page||1;if(page>totalPages)page=totalPages;if(page<1)page=1;state.page=page;
+  const start=(page-1)*PER_PAGE;
+  const visible=filtered.slice(start,start+PER_PAGE);
+  const showControls=articles.length>=10;
+  const sortLabels={sim:'Similarity',date:'Most recent',reach:'Highest reach'};
+  const controls=showControls?`
+    <div class="art-filter-bar">
+      <div class="at-type-dd al-sort-dd" id="al-sort-dd-${listId}">
+        <div class="fc" onclick="toggleAlSort('${listId}',event)"><span>Sort: ${sortLabels[state.sort]||'Similarity'}</span><i data-lucide="chevron-down"></i></div>
+        <div class="at-type-menu al-sort-menu" id="al-sort-menu-${listId}">
+          ${[['sim','Similarity'],['date','Most recent'],['reach','Highest reach']].map(([v,l])=>`<div class="at-type-opt${state.sort===v?' active':''}" onclick="setSort('${listId}','${v}')"><span>Sort: ${l}</span></div>`).join('')}
+        </div>
+      </div>
+      <span class="art-count">All coverage — ${articles.length} post${articles.length!==1?'s':''}</span>
+      <div class="art-media-pills">
+        <span class="art-pill${sel.length===0?' on':''}" onclick="clearFilters('${listId}')">All</span>
+        ${platforms.map(pl=>{const p=SOCIAL_PLATFORMS[pl]||{label:pl};return`<span class="art-pill${sel.includes(pl)?' on':''}" onclick="toggleFilter('${listId}','${pl}')">${sel.includes(pl)?'<i data-lucide="check"></i> ':''}${p.label}</span>`;}).join('')}
+      </div>
+    </div>`:`
+    <div class="art-filter-bar"><span class="art-count">All coverage — ${articles.length} post${articles.length!==1?'s':''}</span></div>`;
+  let pager='';
+  if(totalPages>1){
+    let ws=Math.max(1,page-2),we=Math.min(totalPages,ws+4);ws=Math.max(1,we-4);
+    const win=[];for(let i=ws;i<=we;i++)win.push(i);
+    pager=`<div class="al-pager">
+      <span class="al-pg-info">${start+1}-${Math.min(start+PER_PAGE,filtered.length)} of ${filtered.length} posts</span>
+      <div class="pg-btns">
+        <button class="pgb arrow"${page===1?' disabled':''} onclick="setArtPage('${listId}',${page-1})"><i data-lucide="chevron-left"></i></button>
+        ${win.map(n=>`<button class="pgb${n===page?' on':''}" onclick="setArtPage('${listId}',${n})">${n}</button>`).join('')}
+        <button class="pgb arrow"${page===totalPages?' disabled':''} onclick="setArtPage('${listId}',${page+1})"><i data-lucide="chevron-right"></i></button>
+      </div>
+    </div>`;
+  }
+  const empty=filtered.length===0?`<div class="al-empty">No posts match this filter.</div>`:'';
+  const all=(window.WS_DATA&&window.WS_DATA.socialMentions)||[];
+  const rows=visible.map((a,i)=>{
+    const gi=all.indexOf(a);
+    const p=SOCIAL_PLATFORMS[a.platform]||{icon:'fa-globe',color:'#6b7280',label:a.platform||'—'};
+    const t=SOCIAL_TYPES[a.type]||{icon:'message-square',cls:'type-online'};
+    const sc=a.match>=85?'sc-hi':a.match>=70?'sc-mid':'sc-lo';
+    const barColor=a.match>=85?'#16a34a':a.match>=70?'#d97706':'#9ca3af';
+    return`<tr class="match-tbl-row" style="animation-delay:${i*0.03}s;cursor:pointer" onclick="openSocialPost(${gi})">
+      <td><div class="hl-cell"><span class="hl-icon ${t.cls}" data-btip="${_makeTip({label:a.type||'Post'})}"><i data-lucide="${t.icon}"></i></span><span class="hl-text soc-post" data-btip="${_makeTip({detail:a.post||''})}">${a.post||''}</span></div></td>
+      <td style="width:54px"><span class="soc-src" title="${p.label}"><i class="fa-brands ${p.icon}" style="color:${p.color}"></i></span></td>
+      <td class="tbl-sent-cell" style="width:120px">${sentimentCellHtml(a.sentiment)}</td>
+      <td style="width:140px"><span class="soc-influencer">${a.influencer||''}</span></td>
+      <td style="width:130px"><span class="art-score-val ${sc}">${a.match}% match</span><div class="match-score-track" style="margin-top:4px"><div class="match-score-fill" style="width:${a.match}%;background:${barColor}"></div></div></td>
+      <td style="width:110px;white-space:nowrap"><div class="date-main">${a.date||''}</div><div class="date-ago">${a.ago||''}</div></td>
+    </tr>`;
+  }).join('');
+  const table=filtered.length===0?'':`<table class="tbl match-tbl"><thead><tr>
+    <th>Post</th>
+    <th style="width:54px">Source</th>
+    <th style="width:120px">Sentiment</th>
+    <th style="width:140px">Influencer</th>
+    <th style="width:130px">Match</th>
+    <th style="width:110px">As of</th>
+  </tr></thead><tbody>${rows}</tbody></table>`;
+  return `<div class="article-list">
+    ${controls}
+    ${empty}
+    ${table}
+    ${pager}
+  </div>`;
+}
 function rerenderList(listId){
   const host=document.getElementById('al-'+listId);
   if(host){host.innerHTML=renderArticleList(articlesForList(listId),listId);initIcons();}
@@ -768,7 +865,7 @@ function sendExport(){
 }
 
 // ── Mention detail drawer ──
-const mentionData=[
+let mentionData=[
   {outlet:'Inquirer',sub:'Philippine Daily Inquirer',author:'Daxim L. Lucas',date:'May 25, 2026',ago:'14h ago',section:'Business',ave:'PHP 397.9K',title:"BIZ BUZZ: Jimenez twits PLDT's foes",sv:4.33,chart:[4,18,7,9,5,12,2,1,3],brand:'positive',tone:'positive',authorScore:'3.21',avgSv:'4.33',keywords:[['dito tel',1],['pldt',2],['jimenez',1]],entities:['PLDT','DITO Telecommunity','Eric Alberto','Smart Communications','Globe Telecom','Converge ICT','Manny V. Pangilinan','Dennis Uy','NTC','5G']},
   {type:'tv',outlet:'ANC',sub:'ANC 24/7',author:'Michelle Ong, Stanley A. Palisada',date:'June 16, 2026',ago:'9h ago',section:'News',ave:'PHP 62.6K',title:'Globe forms intelligence and trust office for stronger AI, cybersecurity capabilities',sv:5.65,chart:[3,7,10,8,11,6,4,2,1],brand:'positive',tone:'positive',authorScore:'2.10',avgSv:'5.65',keywords:[['globe telecom',1]],entities:['Globe Telecom','Globe','Anton Reynaldo Bonifacio'],program:'Market Edge',segment:'News',length:'00:00:34',aired:'June 16, 2026 05:33 AM',poster:'image/imgi_227_maxresdefault.jpg',transcript:'Good morning and welcome back to Market Edge here on ANC. Topping our Weekend Corporate Stories this hour is Globe Telecom, which has just announced a major reorganization of its technology and governance teams.\nThe telco giant is consolidating its key transformation and trust-enabling groups into a single unit it is calling the Intelligence and Trust Office. Globe says the new office will help strengthen its enterprise-wide artificial intelligence, data, and cybersecurity functions, as well as its broader digital trust capabilities.\nIn a statement, the company said the move is designed to sustain its long-term sustainability goals while sharpening its focus on customer protection and responsible innovation. Globe Chief Information Security Officer Anton Reynaldo Bonifacio will lead the new office, reporting directly to the office of the chief executive.\nAccording to the company, the new structure brings together teams that were previously spread across several departments, including data governance, network security, fraud prevention, and privacy compliance. Globe believes that uniting them will allow faster and more coordinated responses to emerging threats.\nExecutives say the timing is deliberate. With more transactions, more services, and more customer touchpoints moving online, the company argues that trust has become as important to its business as network coverage and pricing.\nAnalysts we spoke with say the restructuring reflects a wider industry trend, as telecommunications firms face mounting pressure to secure customer data and to deploy AI responsibly. They add that consolidating these functions under one leader should speed up decision-making and reduce duplication across the organization.\nOne technology analyst told this program that the creation of a dedicated trust office is a signal to enterprise clients in particular. Large corporate customers, the analyst said, increasingly want assurances about how their data is handled before signing long-term contracts.\nAnother market watcher noted that the move could help Globe stand out in a crowded field. As competitors race to expand coverage, positioning the brand around security and responsible AI may appeal to government agencies, banks, and other regulated industries.\nThe announcement also comes as the wider sector invests heavily in artificial intelligence. Globe has said it intends to use AI across customer service, fraud detection, and network optimization, and the new office is expected to set the guardrails for how those tools are built and deployed.\nOn the question of jobs, the company said the reorganization is not a cost-cutting exercise. Globe described it as a realignment of existing talent, with most affected staff moving into the new office rather than leaving the company.\nTurning now to the market reaction. Globe shares were little changed in early trading following the announcement, with investors largely viewing the reorganization as a long-term governance play rather than a near-term earnings driver.\nTraders we monitored said the muted move was expected, given that the restructuring does not change the near-term revenue outlook. Even so, several flagged it as a positive for the longer-term investment case.\nCompetitors are watching closely. Industry sources suggest rival carriers may announce similar initiatives in the coming months, as the pressure to demonstrate strong data governance grows across the sector.\nThere is also a regulatory dimension. With data privacy rules tightening and authorities paying closer attention to how companies handle personal information, a dedicated trust office could help Globe stay ahead of compliance requirements.\nConsumer advocates offered cautious support. They welcomed the focus on customer protection, but said the real test will be whether the new office translates into clearer policies, faster breach responses, and better support for ordinary subscribers.\nFor its part, Globe says it will share more details about the office and its roadmap in the coming weeks, including how it plans to measure progress on data protection and responsible AI.\nWe will have more on this story, including reaction from industry groups and regulators, later in the program. We will also speak with a panel of analysts about what the reorganization means for the broader telecommunications race.\nBut for now, that is the latest from the corporate desk. After the break, we turn to the markets, the peso, and the trading week ahead. Stay with us here on Market Edge. Back to you.'},
   {type:'tv',outlet:'CNN PH',sub:'CNN Philippines',author:'Rico Hizon',date:'May 25, 2026',ago:'16h ago',section:'News',ave:'PHP 710.0K',title:'Telco war escalates: Jimenez vs. Reyes feud explained',sv:4.82,chart:[5,9,12,7,10,6,3,2,1],brand:'neutral',tone:'mixed',authorScore:'3.40',avgSv:'4.82',keywords:[['pldt',2],['dito',1],['jimenez',1]],entities:['PLDT','DITO Telecommunity','Eric Alberto'],program:'The Final Word',segment:'News',length:'00:02:15',aired:'May 25, 2026 09:00 PM',poster:'image/imgi_304_hqdefault.jpg',transcript:'Good evening, I am Rico Hizon, and this is The Final Word. Our top story tonight: the rivalry between two of the biggest telecommunications companies in the country has spilled out into the open, and we break down what it means for ordinary consumers.\nIt started earlier this week when DITO Telecommunity chief Eric Alberto made a series of pointed remarks aimed squarely at incumbent PLDT. Within hours, the comments were picked up across business outlets, broadcast, and radio, fueling a very public exchange between the two camps.\nTo help us make sense of it all, we are joined by a panel of industry analysts. They argue that the feud, while dramatic, is ultimately a sign of intensifying competition, the kind that could benefit subscribers through lower prices and faster network expansion.\nOur panel also points to the race to roll out 5G coverage across the Visayas and Mindanao as the real battleground. Whoever earns the trust of regional markets, they say, will likely define the next phase of the telecommunications war.\nWe also asked whether regulators should step in. The consensus was that the agencies should keep a close watch, but allow market forces to play out, so long as service quality and consumer protection are not compromised.\nWe will be right back with reaction from consumer groups and a closer look at the latest subscriber numbers, right after the break. Stay with us here on The Final Word.'},
@@ -811,6 +908,7 @@ const mentionData=[
     mentionData.push({type:m[6],outlet:m[0],sub:m[1],author:'Staff Writer',date:'May 20, 2026',ago:(k+5)+'d ago',section:m[2],ave:'PHP '+(60+k*21)+'K',title:m[5],sv:sv,chart:charts[k%charts.length],brand:m[3],tone:m[4],authorScore:(1+(k%4)).toFixed(2),avgSv:sv.toFixed(2),keywords:[['dito',1],['telco',1]],entities:['DITO Telecommunity']});
   });
 })();
+mentionData=wsData('mentionData',mentionData);
 
 let mdActive=-1;
 let mdMode='split';            // default view: 'split' (docked) | 'modal' (overlay) | 'reader' (3-pane)
@@ -831,7 +929,9 @@ function gotoMdPage(p){
 function highlightMentionRow(idx){
   document.querySelectorAll('.tbl tbody tr').forEach(tr=>tr.classList.toggle('row-selected',parseInt(tr.dataset.idx)===idx));
 }
-function tblTotalPages(){return Math.max(1,Math.ceil(mentionData.length/tblPerPage()));}
+// Shared View supplies social posts; MediaWatch uses news mentions
+function mentTableData(){return (window.WS_DATA&&window.WS_DATA.socialMentions)||mentionData;}
+function tblTotalPages(){return Math.max(1,Math.ceil(mentTableData().length/tblPerPage()));}
 function renderTableRow(d,globalIdx){
   const sentClass={positive:'pos',negative:'neg',neutral:'neu'}[d.brand]||'none';
   const sentLabel={positive:'Positive',negative:'Negative',neutral:'Neutral'}[d.brand]||'Not set';
@@ -846,16 +946,48 @@ function renderTableRow(d,globalIdx){
     <td><span class="row-dots">⋯</span></td>
   </tr>`;
 }
+// Social platform registry — add a platform by adding one entry (Font Awesome brand + brand color)
+const SOCIAL_PLATFORMS={
+  facebook:{icon:'fa-facebook',color:'#1877f2',label:'Facebook'},
+  twitter:{icon:'fa-twitter',color:'#1da1f2',label:'X (Twitter)'},
+  instagram:{icon:'fa-instagram',color:'#e4405f',label:'Instagram'},
+  youtube:{icon:'fa-youtube',color:'#ff0000',label:'YouTube'},
+  reddit:{icon:'fa-reddit',color:'#ff4500',label:'Reddit'},
+  tiktok:{icon:'fa-tiktok',color:'#111111',label:'TikTok'}
+};
+// Post-type registry — add a type by adding one entry (lucide icon + design-system tint class)
+const SOCIAL_TYPES={
+  Text:{icon:'align-left',cls:'type-online'},
+  Photo:{icon:'image',cls:'type-blog'},
+  Video:{icon:'video',cls:'type-tv'}
+};
+let mdSocialActive=-1;
+function renderSocialRow(d,gIdx){
+  const p=SOCIAL_PLATFORMS[d.platform]||{icon:'fa-globe',color:'#6b7280',label:d.platform||'—'};
+  const t=SOCIAL_TYPES[d.type]||{icon:'message-square',cls:'type-online'};
+  return `<tr class="${gIdx===mdSocialActive?'row-selected':''}" data-idx="${gIdx}">
+    <td><span class="tcb"></span></td>
+    <td><span class="sv-val">${d.reach}</span></td>
+    <td><span class="eng-score">${d.engScore}</span></td>
+    <td><div class="hl-cell"><span class="hl-icon ${t.cls}" data-btip="${_makeTip({label:d.type||'Post'})}"><i data-lucide="${t.icon}"></i></span><span class="hl-text soc-post" data-btip="${_makeTip({detail:d.post||''})}">${d.post||''}</span></div></td>
+    <td><span class="soc-src" title="${p.label}"><i class="fa-brands ${p.icon}" style="color:${p.color}"></i></span></td>
+    <td class="tbl-sent-cell">${sentimentCellHtml(d.sentiment)}</td>
+    <td><span class="soc-influencer">${d.influencer||''}</span></td>
+    <td><div class="date-main">${d.date||''}</div><div class="date-ago">${d.ago||''}</div></td>
+    <td><span class="row-dots">⋯</span></td>
+  </tr>`;
+}
 function renderTableRows(){
   const isDetail=document.getElementById('page-mentions').classList.contains('detail-open');
-  const total=mentionData.length,pages=tblTotalPages();
+  const data=mentTableData(),social=data!==mentionData;
+  const total=data.length,pages=tblTotalPages();
   tblPage=Math.max(0,Math.min(tblPage,pages-1));
   const pp=tblPerPage();                                     // 10 in list view, 15 in detail
   const start=tblPage*pp;
   const end=Math.min(start+pp,total);
   const tbody=document.getElementById('tbl-tbody');
   if(!tbody)return;
-  tbody.innerHTML=mentionData.slice(start,end).map((d,k)=>renderTableRow(d,start+k)).join('');
+  tbody.innerHTML=data.slice(start,end).map((d,k)=>social?renderSocialRow(d,start+k):renderTableRow(d,start+k)).join('');
   const footer=document.querySelector('.tbl-footer');
   if(footer)footer.style.display=(isDetail||mentionsView==='cards')?'none':'flex';
   if(isDetail){
@@ -992,8 +1124,155 @@ function openDetailFor(d,idx){
   const page=document.getElementById('page-mentions');
   page.classList.add('detail-open');
   page.classList.toggle('spot-detail',!!mdSpotCtx);
+  document.getElementById('article-detail-panel')?.classList.remove('social-detail');
   renderTableRows();
   renderInlineDetail(d);
+}
+// Shared View: open a social post in the split preview (collapsed Post·Sentiment list + post detail)
+function openSocialPost(idx){
+  const list=window.WS_DATA&&window.WS_DATA.socialMentions;if(!list||!list[idx])return;
+  mdSocialActive=idx;mdActive=-1;mdSpotCtx=null;mdMode='split';
+  const sb=document.querySelector('.sidebar');
+  mdSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
+  if(sb)sb.classList.add('collapsed');
+  _updateDetailReturnBtn();
+  const page=document.getElementById('page-mentions');
+  page.classList.add('detail-open');page.classList.remove('spot-detail');
+  if(idx>=0)tblPage=Math.floor(idx/TBL_DETAIL_PER_PAGE);
+  renderTableRows();
+  renderSocialDetail(idx);
+}
+// Per-platform official embed → fixed-height iframe src (null ⇒ show the "View Post" fallback card)
+function socialEmbedSrc(platform,url){
+  if(!url)return null;
+  try{
+    if(platform==='facebook')return 'https://www.facebook.com/plugins/post.php?href='+encodeURIComponent(url)+'&show_text=true&width=500';
+    if(platform==='youtube'){const m=url.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/);return m?'https://www.youtube.com/embed/'+m[1]:null;}
+    if(platform==='twitter'){const m=url.match(/status\/(\d+)/);return m?'https://platform.twitter.com/embed/Tweet.html?id='+m[1]+'&theme=light':null;}
+    if(platform==='instagram'){const m=url.match(/\/(p|reel|tv)\/([\w-]+)/);return m?'https://www.instagram.com/'+m[1]+'/'+m[2]+'/embed':null;}
+    if(platform==='tiktok'){const m=url.match(/video\/(\d+)/);return m?'https://www.tiktok.com/embed/v2/'+m[1]:null;}
+    if(platform==='reddit')return 'https://www.redditmedia.com'+url.replace(/^https?:\/\/(www\.)?reddit\.com/,'')+'?ref_source=embed&embed=true&theme=light';
+  }catch(e){}
+  return null;
+}
+function renderSocialDetail(idx){
+  const list=window.WS_DATA&&window.WS_DATA.socialMentions,s=list&&list[idx];if(!s)return;
+  const p=SOCIAL_PLATFORMS[s.platform]||{icon:'fa-globe',color:'#6b7280',label:s.platform||'—'};
+  const layout=document.getElementById('article-detail-panel');if(layout)layout.classList.add('social-detail');
+  const left=document.getElementById('adp-col-left');if(left)left.innerHTML='';
+  // ── Middle column: post details (mirrors the mentions.html middle column) ──
+  const mid=document.getElementById('adp-col-mid');
+  if(mid){
+    const av=(s.influencer||'?').replace(/^@/,'').charAt(0).toUpperCase();
+    const toneVal={positive:'positive',neutral:'mixed',negative:'negative'}[s.sentiment]||'mixed';
+    const kw=(s.keywords||[]).map(([t,n])=>`<span class="md-kw-pill">${t}${n?' - '+n:''}</span>`).join('')||'<span class="soc-empty">No keywords</span>';
+    // Typed entity pills (reuses entityPillHtml from the news detail). Capped to ≤5 in data so no "Show all" modal is needed.
+    const ents=(s.entities||[]).slice(0,5).map(n=>entityPillHtml(n,entCountMap(s))).join('')||'<span class="soc-empty">No entities extracted for this post</span>';
+    const mrow=(k,v)=>`<div class="adp-meta-row"><span class="adp-meta-k">${k}</span><span class="adp-meta-v">${v}</span></div>`;
+    // Estimated Reach falls back to ~10% of follower count when the post has no reach figure ('-'),
+    // so the tile never shows a bare dash. Keeps data-shared.js honest while staying plausible.
+    const parseFollowers=str=>{if(!str)return 0;const m=String(str).replace(/,/g,'').match(/([\d.]+)\s*([KM]?)/i);if(!m)return 0;let n=parseFloat(m[1]);if(/k/i.test(m[2]))n*=1e3;else if(/m/i.test(m[2]))n*=1e6;return n;};
+    const fmtReach=n=>n>=1e6?(n/1e6).toFixed(n>=1e7?0:1).replace(/\.0$/,'')+'M':n>=1e3?Math.round(n/1e3)+'K':Math.round(n).toString();
+    const reachVal=(s.reach&&s.reach!=='-')?s.reach:(()=>{const f=parseFollowers(s.followers);return f?'~'+fmtReach(f*0.1):'~1.2K';})();
+    mid.innerHTML=`
+      <div class="adp-card adp-metric">
+        <div class="adp-metric-tiles static">
+          <div class="adp-mtile"><span class="adp-mtile-lbl">Estimated Reach</span><span class="adp-mtile-val">${reachVal}</span></div>
+          <div class="adp-mtile"><span class="adp-mtile-lbl">Engagement Score</span><span class="adp-mtile-val">${s.engScore!=null?s.engScore:'—'}</span></div>
+        </div>
+        <div class="soc-meta"><i data-lucide="clock"></i><span>As of <b>${s.date||''}${s.time?' '+s.time:''}</b> · UTC</span></div>
+      </div>
+      <div class="adp-card-pair">
+        <div class="adp-card">
+          ${mrow('Platform',p.label)+mrow('Type',s.type||'—')+mrow('Influencer',s.influencer||'—')+mrow('Est. Reach',s.reach||'—')+mrow('Posted',`${s.date||''}<br><span style="font-size:11px;font-weight:400;color:var(--muted)">${s.ago||''}</span>`)}
+        </div>
+        <div class="adp-card">
+          <div class="adp-card-hd">Influencer</div>
+          <div class="md-author-row"><span class="md-author-avatar" style="background:${p.color}">${av}</span><span class="md-author-name">${(s.influencer||'').replace(/^@/,'')}</span></div>
+          <div class="soc-infl-plat" style="margin:-6px 0 12px 42px">${p.label}</div>
+          <div class="md-stats">
+            <div><div class="md-stat-lbl">Influencer Score</div><div class="md-stat-val">${s.influencerScore||'—'}</div></div>
+            <div><div class="md-stat-lbl">Followers</div><div class="md-stat-val">${s.followers||'—'}</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="adp-card">
+        <div class="adp-sent-grid">
+          <div><div class="adp-card-hd">Brand Sentiment</div>${mdSelector('brand',s.sentiment,MD_SENTIMENT_OPTS)}</div>
+          <div><div class="adp-card-hd">Post Tone</div>${mdSelector('tone',toneVal,MD_TONE_OPTS)}</div>
+        </div>
+      </div>
+      <div class="adp-card-pair-half">
+        <div class="adp-card"><div class="adp-card-hd">Keywords</div><div class="md-kw">${kw}</div></div>
+        <div class="adp-card"><div class="adp-card-hd">Entities</div><div class="md-kw">${ents}</div></div>
+      </div>`;
+  }
+  // ── Right column: default to the live embed when one is available, else the self-rendered card ──
+  renderSocialRight(socialEmbedSrc(s.platform,s.url)?'embed':'card');
+  initIcons();
+}
+// Per-platform sizing for the (opt-in) live embed. ratio → responsive aspect box; h → fixed height.
+const SOCIAL_EMBED_SIZE={youtube:{ratio:'16 / 9'},tiktok:{h:760},instagram:{h:680},twitter:{h:420},facebook:{h:720},reddit:{h:440}};
+// Renders the right column in one of two modes:
+//   'card'  → a post card built entirely from our own data (never breaks, consistent across platforms)
+//   'embed' → the live platform iframe (lazy, per-platform size, skeleton while loading)
+// Because iframes are cross-origin we cannot detect a failed/blank/deleted embed, so the card is the
+// default and the embed is a deliberate, reversible enhancement.
+function renderSocialRight(mode){
+  const right=document.getElementById('adp-col-right');if(!right)return;
+  const list=window.WS_DATA&&window.WS_DATA.socialMentions,s=list&&list[mdSocialActive];if(!s)return;
+  const p=SOCIAL_PLATFORMS[s.platform]||{icon:'fa-globe',color:'#6b7280',label:s.platform||'—'};
+  const src=socialEmbedSrc(s.platform,s.url);
+  const handle=(s.influencer||'').replace(/^@/,''),av=(handle||'?').charAt(0).toUpperCase();
+  const viewBtn=`<a class="btn-filled soc-viewpost" href="${s.url||'#'}" target="_blank" rel="noopener"><i data-lucide="external-link" class="icon-lg"></i> View post &amp; comments</a>`;
+  if(mode==='embed'&&src){
+    const sz=SOCIAL_EMBED_SIZE[s.platform]||{h:560};
+    // Video (YouTube) keeps a fixed 16:9 box; feed posts use a fixed height that scrolls internally
+    // (taller posts scroll, so no clipping and no stretched-out empty gap when content is short).
+    const isVideo=!!sz.ratio;
+    const frameStyle=isVideo?`aspect-ratio:${sz.ratio};height:auto`:`height:${sz.h}px`;
+    right.innerHTML=`<div class="soc-embed-wrap">
+      <div class="soc-embed-frame" style="${frameStyle}">
+        <div class="soc-embed-skel"><span class="soc-spin"></span><span>Loading live preview…</span></div>
+        <iframe class="soc-embed" src="${src}" loading="lazy" scrolling="${isVideo?'no':'yes'}" frameborder="0" allowtransparency="true" allow="encrypted-media; clipboard-write; picture-in-picture; web-share" allowfullscreen sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms" onload="this.classList.add('loaded')"></iframe>
+      </div>
+      <div class="soc-embed-foot">
+        ${viewBtn}
+        <div class="soc-embed-note">Live preview from ${p.label} — comments aren't included in embeds; <a href="${s.url}" target="_blank" rel="noopener">open the original post ↗</a> to see the full thread (or if this stays blank / shows an error).</div>
+      </div>
+    </div>`;
+    // Stop the skeleton spinning forever if onload never fires (hard network failure)
+    const fr=right.querySelector('.soc-embed');
+    if(fr)setTimeout(()=>fr.classList.add('loaded'),6000);
+    initIcons();return;
+  }
+  // ── Card mode (default) ──
+  const media=s.thumb
+    ? `<div class="soc-card-media"><img src="${s.thumb}" alt="" loading="lazy" onerror="this.closest('.soc-card-media').classList.add('failed')"><span class="soc-card-ph" style="background:${p.color}"><i class="fa-brands ${p.icon}"></i></span>${s.type==='Video'?'<span class="soc-card-play"><i data-lucide="play"></i></span>':''}</div>`
+    : `<div class="soc-card-media failed"><span class="soc-card-ph" style="background:${p.color}"><i class="fa-brands ${p.icon}"></i><span class="soc-card-ph-lbl">${s.type||'Post'}</span></span></div>`;
+  const chip=(ic,lbl,val)=>val==null||val===''||val==='-'?'':`<span class="soc-stat"><i data-lucide="${ic}"></i><b>${val}</b> ${lbl}</span>`;
+  const liveLink=src?`<button class="btn-ghost soc-live-btn" onclick="renderSocialRight('embed')"><i data-lucide="play-circle"></i> Load live preview</button>`:'';
+  right.innerHTML=`<div class="soc-card">
+    <div class="soc-card-hd">
+      <span class="soc-card-av" style="background:${p.color}">${av}<span class="soc-card-badge" style="color:${p.color}"><i class="fa-brands ${p.icon}"></i></span></span>
+      <div class="soc-card-meta">
+        <div class="soc-card-name">${handle||p.label}<i data-lucide="badge-check" class="soc-card-tick"></i></div>
+        <div class="soc-card-sub">${p.label} · ${s.ago||s.date||''}</div>
+      </div>
+      <a class="soc-card-go" href="${s.url||'#'}" target="_blank" rel="noopener" title="Open on ${p.label}"><i class="fa-brands ${p.icon}" style="color:${p.color}"></i></a>
+    </div>
+    ${media}
+    <div class="soc-card-text" id="soc-card-text">${s.post||''}</div>
+    <button class="soc-card-more" id="soc-card-more" style="display:none" onclick="document.getElementById('soc-card-text').classList.toggle('expanded');this.textContent=document.getElementById('soc-card-text').classList.contains('expanded')?'Show less':'Show more'">Show more</button>
+    <div class="soc-card-stats">
+      ${chip('eye','reach',s.reach)}${chip('activity','engagement',s.engScore)}${chip('users','followers',s.followers)}
+    </div>
+    <div class="soc-card-actions">${viewBtn}${liveLink}</div>
+  </div>`;
+  initIcons();
+  // Reveal "Show more" only when the post text is actually clamped
+  const txt=document.getElementById('soc-card-text'),more=document.getElementById('soc-card-more');
+  if(txt&&more&&txt.scrollHeight-txt.clientHeight>4)more.style.display='inline-flex';
 }
 // Contextual header-bar back button — label/handler swap based on whether the user is in
 // the spotlight preview flow (mdSpotCtx) or the plain article-detail flow.
@@ -1305,6 +1584,8 @@ function closeMention(){
   const page=document.getElementById('page-mentions');
   page.classList.remove('detail-open');
   page.classList.remove('theater');
+  mdSocialActive=-1;
+  document.getElementById('article-detail-panel')?.classList.remove('social-detail');
   tblPage=0;
   renderTableRows();
   highlightMentionRow(-1);
@@ -2169,6 +2450,7 @@ let currentPage=document.getElementById('page-tracker')?'tracker'
                :document.getElementById('page-dashboard')?'dashboard'
                :document.getElementById('page-publishers')?'publishers'
                :document.getElementById('page-authors')?'authors'
+               :document.getElementById('page-influencers')?'influencers'
                :document.getElementById('page-categories')?'categories':'mentions';
 function goPage(page){
   if(currentPage===page)return;
@@ -2208,6 +2490,7 @@ let acts=[
     {id:'m9',media:'TV',source:'ABS-CBN News',title:'Telco war escalates: Jimenez vs. Reyes feud explained',date:'May 25, 2026',value:890000,score:0.83,manual:false},
   ]},
 ];
+acts=wsData('acts',acts);
 let atNid=3,trackerSel=null,trackerTabs={},msQ={},msF={},msR={},aiCache={},atTypeFilter='',atSearchFilter='',atAddOpen={},artFilter={},artSort={},artPage={},freshTrack={},scanKwOff={};
 let trackerListPage=0;
 const TRACKER_PER_PAGE=15;
@@ -3351,6 +3634,59 @@ function toggleSidebar(){
   document.getElementById('sidebar').classList.toggle('collapsed');
 }
 
+// ── Workspace switcher dropdown (sidebar selector) ──
+const WS_OPTIONS=['MediaWatch','SharedView','AdWatch'];
+const WS_MAP={MediaWatch:'mediawatch',SharedView:'shared',AdWatch:'adwatch'};
+const WS_LABEL={mediawatch:'MediaWatch',shared:'SharedView',adwatch:'AdWatch'};
+const wsNow=window.WS||'mediawatch';               // set by the loaded data file (data-shared.js etc.)
+let wsCurrent=WS_LABEL[wsNow]||'MediaWatch';
+function wsOpen(){
+  const sel=document.querySelector('.sb-selector');if(!sel)return;
+  let menu=document.getElementById('ws-menu');
+  if(!menu){menu=document.createElement('div');menu.id='ws-menu';menu.className='ws-menu';document.body.appendChild(menu);}
+  menu.innerHTML=WS_OPTIONS.map(o=>`<div class="ws-opt${o===wsCurrent?' active':''}" onclick="wsSelect('${o}')">${o}${o===wsCurrent?'<i data-lucide="check"></i>':''}</div>`).join('');
+  const r=sel.getBoundingClientRect();
+  menu.style.left=r.left+'px';menu.style.top=(r.bottom+4)+'px';menu.style.minWidth=r.width+'px';
+  menu.style.display='block';
+  if(typeof initIcons==='function')initIcons();
+}
+function wsToggle(e){
+  if(e)e.stopPropagation();
+  const sb=document.getElementById('sidebar');
+  if(sb&&sb.classList.contains('collapsed')){toggleSidebar();return;}
+  const menu=document.getElementById('ws-menu');
+  if(menu&&menu.style.display==='block'){menu.style.display='none';return;}
+  wsOpen();
+}
+function wsSelect(name){
+  const menu=document.getElementById('ws-menu');if(menu)menu.style.display='none';
+  const target=WS_MAP[name]||'mediawatch';
+  if(target===wsNow)return;                          // already here
+  if(target==='adwatch'){if(typeof showSimpleToast==='function')showSimpleToast('AdWatch workspace coming soon','sparkles');return;}
+  // Map the current page to the target workspace (Influencers is Shared-only; Publishers/Authors are MediaWatch-only)
+  const common=['mentions','tracker','dashboard','categories'];
+  const page=common.includes(currentPage)?currentPage:'mentions';
+  const inShared=wsNow==='shared';
+  let url;
+  if(target==='shared') url=(inShared?'':'shared/')+page+'.html';
+  else url=(inShared?'../':'')+page+'.html';
+  window.location.href=url;
+}
+(function wsInit(){
+  const sel=document.querySelector('.sb-selector');if(!sel)return;
+  sel.onclick=null;   // replace the inline expand-only handler — wsToggle does both
+  sel.addEventListener('click',wsToggle);
+  document.querySelectorAll('.sb-selector-label').forEach(el=>el.textContent=wsCurrent);
+})();
+document.addEventListener('click',function(e){
+  const menu=document.getElementById('ws-menu'),sel=document.querySelector('.sb-selector');
+  if(menu&&menu.style.display==='block'&&!menu.contains(e.target)&&sel&&!sel.contains(e.target))menu.style.display='none';
+});
+document.addEventListener('keydown',function(e){
+  const menu=document.getElementById('ws-menu');
+  if(e.key==='Escape'&&menu&&menu.style.display==='block')menu.style.display='none';
+});
+
 // Nav switching
 document.querySelectorAll('.nav-i').forEach(n=>{
   n.addEventListener('click',()=>{
@@ -3389,6 +3725,11 @@ document.addEventListener('click',function(e){
   }
   const tr=e.target.closest('.tbl tbody tr');
   if(tr){
+    if(window.WS_DATA&&window.WS_DATA.socialMentions){   // Shared View social table → social preview
+      const gi=parseInt(tr.dataset.idx);
+      if(!isNaN(gi))openSocialPost(gi);
+      return;
+    }
     const title=tr.querySelector('.hl-text')?.textContent.trim();
     if(!title) return; // header / non-article rows
     // open the right-side detail drawer for the clicked mention
@@ -4946,7 +5287,7 @@ function renderAuthors(){
   initIcons();
 }
 // ── CATEGORIES PAGE ──
-const catData=[
+let catData=[
   {id:'cat-company',name:'Company',created:'May 07, 2026',buckets:[
     {id:'b-dito',name:'DITO Brand',created:'May 07, 2026',keywords:[
       {label:'DITO Telecommunity',expression:'"DITO Telecommunity"',type:'main'},
@@ -5004,17 +5345,24 @@ const catData=[
     ]},
   ]},
 ];
+catData=wsData('catData',catData);
 let catSearch='',catPage=0,catPerPage=10;
 let catView={mode:'list',catId:null,bktId:null};
 let catBktSearch='',catBktSort='order';                   // 'order' | 'az' | 'za' | 'kw'
+// Smooth list ⇄ buckets swap via the View Transitions API (crossfade + slide), with fallback
+function catNav(){
+  const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(document.startViewTransition&&!reduce)document.startViewTransition(renderCategories);
+  else renderCategories();
+}
 function showCatDetail(catId){
   const c=catData.find(x=>x.id===catId);
   catView={mode:'category',catId,bktId:c&&c.buckets[0]?c.buckets[0].id:null};
   catBktSearch='';catBktSort='order';
-  renderCategories();
+  catNav();
 }
 function selectCatBucket(bktId){catView={...catView,bktId};renderCategories();}
-function backToCategories(){catView={mode:'list',catId:null,bktId:null};renderCategories();}
+function backToCategories(){catView={mode:'list',catId:null,bktId:null};catNav();}
 function setCatBktSearch(v){catBktSearch=v;renderCategories();}
 function setCatBktSort(v){catBktSort=v;renderCategories();}
 function setCatSearch(v){catSearch=v;catPage=0;renderCategories();}
@@ -5049,18 +5397,20 @@ function _catListView(){
   catPage=Math.max(0,Math.min(catPage,pages-1));
   const start=catPage*catPerPage,end=Math.min(start+catPerPage,total);
   const rows=all.slice(start,end).map(c=>`
-    <tr>
-      <td style="cursor:grab"><i data-lucide="grip-vertical" class="cat-grip"></i></td>
+    <tr class="cat-row" style="cursor:pointer" onclick="showCatDetail('${c.id}')">
+      <td style="cursor:grab" onclick="event.stopPropagation()" title="Drag to reorder"><i data-lucide="grip-vertical" class="cat-grip"></i></td>
       <td class="cat-name">${c.name}</td>
       <td>${c.buckets.length}</td>
       <td>${c.created}</td>
-      <td><button class="icon-action" title="View" onclick="showCatDetail('${c.id}')"><i data-lucide="eye" class="icon-lg"></i></button></td>
-    </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);cursor:default">No categories found</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--muted);cursor:default">No categories found</td></tr>`;
   const info=total?`${start+1}-${end} of ${total} results`:'0 results';
   let pgBtns=`<button class="pgb arrow" onclick="gotoCatPage(catPage-1)"${catPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
   for(let p=0;p<pages;p++)pgBtns+=`<button class="pgb${p===catPage?' on':''}" onclick="gotoCatPage(${p})">${p+1}</button>`;
   pgBtns+=`<button class="pgb arrow" onclick="gotoCatPage(catPage+1)"${catPage>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
   return `<div class="tbl-card">
+    <div class="tbl-header">
+      <div class="tbl-header-left"><span class="cat-tbl-title">Categories</span><span class="cat-tbl-count">${total}</span></div>
+    </div>
     <div class="tbl-scroll">
       <table class="tbl">
         <thead><tr>
@@ -5068,7 +5418,6 @@ function _catListView(){
           <th>Categories Name</th>
           <th style="width:160px">No of Buckets</th>
           <th style="width:190px">Date Created</th>
-          <th style="width:110px">Actions</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
