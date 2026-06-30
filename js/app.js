@@ -1212,7 +1212,7 @@ function renderSocialDetail(idx){
   initIcons();
 }
 // Per-platform sizing for the (opt-in) live embed. ratio → responsive aspect box; h → fixed height.
-const SOCIAL_EMBED_SIZE={youtube:{ratio:'16 / 9'},tiktok:{h:760},instagram:{h:680},twitter:{h:420},facebook:{h:720},reddit:{h:440}};
+const SOCIAL_EMBED_SIZE={youtube:{ratio:'16 / 9'},tiktok:{h:760},instagram:{h:680},twitter:{h:420},facebook:{h:690},reddit:{h:440}};
 // Renders the right column in one of two modes:
 //   'card'  → a post card built entirely from our own data (never breaks, consistent across platforms)
 //   'embed' → the live platform iframe (lazy, per-platform size, skeleton while loading)
@@ -1238,7 +1238,9 @@ function renderSocialRight(mode){
       </div>
       <div class="soc-embed-foot">
         ${viewBtn}
-        <div class="soc-embed-note">Live preview from ${p.label} — comments aren't included in embeds; <a href="${s.url}" target="_blank" rel="noopener">open the original post ↗</a> to see the full thread (or if this stays blank / shows an error).</div>
+        <div class="soc-embed-notes">
+          <div class="soc-embed-note soc-embed-note-warn"><i data-lucide="info"></i><span>Likes, comments &amp; shares are from the last scrape and may be outdated.</span></div>
+        </div>
       </div>
     </div>`;
     // Stop the skeleton spinning forever if onload never fires (hard network failure)
@@ -2404,7 +2406,9 @@ function doGenerate(){
 function applyAveColor(){
   const card=document.getElementById('ss-1');
   if(!card)return;
-  const val=parseFloat(card.querySelector('.ss-num').dataset.val)||0;
+  const numEl=card.querySelector('.ss-num');
+  if(!numEl)return;   // Shared View: ss-1 is the "top source" card (no numeric value to color)
+  const val=parseFloat(numEl.dataset.val)||0;
   const target=parseFloat(card.dataset.target)||1;
   const el=card.querySelector('.ss-val');
   el.classList.remove('grn','red');
