@@ -949,7 +949,7 @@ function renderTableRow(d,globalIdx){
 // Social platform registry — add a platform by adding one entry (Font Awesome brand + brand color)
 const SOCIAL_PLATFORMS={
   facebook:{icon:'fa-facebook',color:'#1877f2',label:'Facebook'},
-  twitter:{icon:'fa-twitter',color:'#1da1f2',label:'X (Twitter)'},
+  twitter:{icon:'fa-x-twitter',color:'#000000',label:'X (Twitter)'},
   instagram:{icon:'fa-instagram',color:'#e4405f',label:'Instagram'},
   youtube:{icon:'fa-youtube',color:'#ff0000',label:'YouTube'},
   reddit:{icon:'fa-reddit',color:'#ff4500',label:'Reddit'},
@@ -1205,14 +1205,18 @@ function renderSocialDetail(idx){
       <div class="adp-card-pair-half">
         <div class="adp-card"><div class="adp-card-hd">Keywords</div><div class="md-kw">${kw}</div></div>
         <div class="adp-card"><div class="adp-card-hd">Entities</div><div class="md-kw">${ents}</div></div>
-      </div>`;
+      </div>
+      <div class="soc-mid-caption"><i data-lucide="info"></i><span>These details are from the last capture and don't update after scraping — the embedded post may show newer live content.</span></div>`;
   }
-  // ── Right column: default to the live embed when one is available, else the self-rendered card ──
-  renderSocialRight(socialEmbedSrc(s.platform,s.url)?'embed':'card');
+  // ── Right column: live embed by default; unavailable/private/deleted posts (or no embed) → fallback card ──
+  renderSocialRight((s.unavailable||!socialEmbedSrc(s.platform,s.url))?'card':'embed');
   initIcons();
 }
 // Per-platform sizing for the (opt-in) live embed. ratio → responsive aspect box; h → fixed height.
-const SOCIAL_EMBED_SIZE={youtube:{ratio:'16 / 9'},tiktok:{h:760},instagram:{h:680},twitter:{h:420},facebook:{h:690},reddit:{h:440}};
+// Standardized container: all feed platforms share one height (STD_FEED_H); scroll handles overflow.
+// Only video (YouTube) diverges — it keeps a responsive 16:9 box so a landscape clip isn't letterboxed.
+const STD_FEED_H=620;
+const SOCIAL_EMBED_SIZE={youtube:{ratio:'16 / 9'},tiktok:{h:STD_FEED_H},instagram:{h:STD_FEED_H},twitter:{h:STD_FEED_H},facebook:{h:STD_FEED_H},reddit:{h:STD_FEED_H}};
 // Renders the right column in one of two modes:
 //   'card'  → a post card built entirely from our own data (never breaks, consistent across platforms)
 //   'embed' → the live platform iframe (lazy, per-platform size, skeleton while loading)
@@ -1224,24 +1228,28 @@ function renderSocialRight(mode){
   const p=SOCIAL_PLATFORMS[s.platform]||{icon:'fa-globe',color:'#6b7280',label:s.platform||'—'};
   const src=socialEmbedSrc(s.platform,s.url);
   const handle=(s.influencer||'').replace(/^@/,''),av=(handle||'?').charAt(0).toUpperCase();
-  const viewBtn=`<a class="btn-filled soc-viewpost" href="${s.url||'#'}" target="_blank" rel="noopener"><i data-lucide="external-link" class="icon-lg"></i> View post &amp; comments</a>`;
+  const viewBtn=`<a class="btn-filled soc-viewpost" href="${s.url||'#'}" target="_blank" rel="noopener"><i data-lucide="external-link" class="icon-lg"></i> View Post</a>`;
+  // Shared footer — identical markup on the live embed and the fallback card (consistent CTA + note).
+  const scrapeNote=`The likes, comments and shares shown here are a snapshot captured when the post was last scraped. They reflect engagement at that moment and don't refresh automatically.`;
+  // Live embed = View Post only (it's live; the snapshot caveat lives on column 2).
+  // Fallback card = View Post + note (the card itself IS the captured snapshot).
+  const footPlain=`<div class="soc-embed-foot">${viewBtn}</div>`;
+  const footRow=`<div class="soc-embed-foot">${viewBtn}<div class="soc-embed-notes"><div class="soc-embed-note">${scrapeNote}</div></div></div>`;
+  // Slim "no longer available" notice — used on the fallback card, and (for UI demo) atop a live embed via s.snapshotNotice.
+  const unavailNotice=`<div class="soc-card-unavail"><i data-lucide="alert-triangle"></i><span>This post is no longer available — showing the last saved snapshot.</span></div>`;
   if(mode==='embed'&&src){
-    const sz=SOCIAL_EMBED_SIZE[s.platform]||{h:560};
+    const sz=SOCIAL_EMBED_SIZE[s.platform]||{h:STD_FEED_H};
     // Video (YouTube) keeps a fixed 16:9 box; feed posts use a fixed height that scrolls internally
     // (taller posts scroll, so no clipping and no stretched-out empty gap when content is short).
     const isVideo=!!sz.ratio;
     const frameStyle=isVideo?`aspect-ratio:${sz.ratio};height:auto`:`height:${sz.h}px`;
     right.innerHTML=`<div class="soc-embed-wrap">
+      ${s.snapshotNotice?unavailNotice:''}
       <div class="soc-embed-frame" style="${frameStyle}">
         <div class="soc-embed-skel"><span class="soc-spin"></span><span>Loading live preview…</span></div>
         <iframe class="soc-embed" src="${src}" loading="lazy" scrolling="${isVideo?'no':'yes'}" frameborder="0" allowtransparency="true" allow="encrypted-media; clipboard-write; picture-in-picture; web-share" allowfullscreen sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms" onload="this.classList.add('loaded')"></iframe>
       </div>
-      <div class="soc-embed-foot">
-        ${viewBtn}
-        <div class="soc-embed-notes">
-          <div class="soc-embed-note soc-embed-note-warn"><i data-lucide="info"></i><span>Likes, comments &amp; shares are from the last scrape and may be outdated.</span></div>
-        </div>
-      </div>
+      ${footPlain}
     </div>`;
     // Stop the skeleton spinning forever if onload never fires (hard network failure)
     const fr=right.querySelector('.soc-embed');
@@ -1249,12 +1257,13 @@ function renderSocialRight(mode){
     initIcons();return;
   }
   // ── Card mode (default) ──
+  const un=!!s.unavailable;
   const media=s.thumb
     ? `<div class="soc-card-media"><img src="${s.thumb}" alt="" loading="lazy" onerror="this.closest('.soc-card-media').classList.add('failed')"><span class="soc-card-ph" style="background:${p.color}"><i class="fa-brands ${p.icon}"></i></span>${s.type==='Video'?'<span class="soc-card-play"><i data-lucide="play"></i></span>':''}</div>`
     : `<div class="soc-card-media failed"><span class="soc-card-ph" style="background:${p.color}"><i class="fa-brands ${p.icon}"></i><span class="soc-card-ph-lbl">${s.type||'Post'}</span></span></div>`;
   const chip=(ic,lbl,val)=>val==null||val===''||val==='-'?'':`<span class="soc-stat"><i data-lucide="${ic}"></i><b>${val}</b> ${lbl}</span>`;
-  const liveLink=src?`<button class="btn-ghost soc-live-btn" onclick="renderSocialRight('embed')"><i data-lucide="play-circle"></i> Load live preview</button>`:'';
-  right.innerHTML=`<div class="soc-card">
+  right.innerHTML=`<div class="soc-card${un?' is-unavail':''}">
+    ${un?unavailNotice:''}
     <div class="soc-card-hd">
       <span class="soc-card-av" style="background:${p.color}">${av}<span class="soc-card-badge" style="color:${p.color}"><i class="fa-brands ${p.icon}"></i></span></span>
       <div class="soc-card-meta">
@@ -1269,7 +1278,7 @@ function renderSocialRight(mode){
     <div class="soc-card-stats">
       ${chip('eye','reach',s.reach)}${chip('activity','engagement',s.engScore)}${chip('users','followers',s.followers)}
     </div>
-    <div class="soc-card-actions">${viewBtn}${liveLink}</div>
+    ${footRow}
   </div>`;
   initIcons();
   // Reveal "Show more" only when the post text is actually clamped
@@ -1614,9 +1623,11 @@ function mdBadge(map,val){const[c,ic,lbl]=map[val]||map[Object.keys(map)[0]];ret
 // Icon-based 3-option selectors for Brand Sentiment (faces) and Article Tone (thumbs)
 const MD_SENTIMENT_OPTS=[['positive','smile','Good for Brand','pos'],['neutral','meh','Neutral','neu'],['negative','frown','Bad for Brand','neg']];
 const MD_TONE_OPTS=[['positive','thumbs-up','Positive Tone','pos'],['mixed','minus','Neutral Tone','neu'],['negative','thumbs-down','Negative Tone','neg']];
-const MD_SOCIALS=[['fa-facebook-f','#1877F2'],['fa-twitter','#1DA1F2'],['fa-instagram','#E4405F'],['fa-linkedin-in','#0A66C2'],['fa-youtube','#FF0000'],['fa-pinterest-p','#E60023'],['fa-reddit-alien','#FF4500'],['fa-tiktok','#111111']];
+const MD_SOCIALS=[['fa-facebook-f','#1877F2'],['fa-x-twitter','#000000'],['fa-instagram','#E4405F'],['fa-linkedin-in','#0A66C2'],['fa-youtube','#FF0000'],['fa-pinterest-p','#E60023'],['fa-reddit-alien','#FF4500'],['fa-tiktok','#111111']];
+// X logo as inline SVG (Font Awesome 6.4.0 predates fa-x-twitter, so we draw it — works on every page)
+const X_SVG='<svg class="md-soc-x" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>';
 function renderSocialIcons(){
-  return `<div class="md-socials">${MD_SOCIALS.map(([c,col])=>`<span class="md-soc" style="background:${col}" onmouseenter="this.style.opacity='0.8'" onmouseleave="this.style.opacity='1'"><i class="fa-brands ${c}"></i></span>`).join('')}</div>`;
+  return `<div class="md-socials">${MD_SOCIALS.map(([c,col])=>`<span class="md-soc" style="background:${col}" onmouseenter="this.style.opacity='0.8'" onmouseleave="this.style.opacity='1'">${c==='fa-x-twitter'?X_SVG:`<i class="fa-brands ${c}"></i>`}</span>`).join('')}</div>`;
 }
 // Entities: typed icon + color (type inferred from the name)
 const ENT_TYPES={org:['building-2','#0d9488'],person:['user','#2563eb'],location:['map-pin','#d97706'],other:['tag','#6b7280']};
@@ -3832,6 +3843,15 @@ if(document.getElementById('page-mentions')){
   let pop;
   function showPop(card,i){
     let d=info[i]; if(!d)return;
+    if(i===1&&window.WS==='shared'){
+      const posts=(window.WS_DATA&&window.WS_DATA.socialMentions)||[];
+      const counts={};posts.forEach(pp=>{counts[pp.platform]=(counts[pp.platform]||0)+1;});
+      const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+      const total=posts.length,top=sorted[0]||['',0];
+      const lbl=k=>(SOCIAL_PLATFORMS[k]||{label:k}).label.replace(' (Twitter)','');
+      const breakdown=sorted.map(([k,n])=>`${lbl(k)} ${n}`).join(' · ');
+      d=['Top source',`<span style="color:#60a5fa;font-weight:600">${lbl(top[0])}</span> leads with ${top[1]} of ${total} posts.<br><span style="color:#9ca3af">${breakdown}</span>`];
+    }
     if(i===2&&card.dataset.pos){
       d=['Sentiment today','Overall tone of today\'s coverage — <span style="color:#4ade80;font-weight:600">'+card.dataset.pos+'% positive</span> · <span style="color:#9ca3af;font-weight:600">'+card.dataset.neu+'% neutral</span> · <span style="color:#f87171;font-weight:600">'+card.dataset.neg+'% negative</span>.'];
     }
@@ -5027,7 +5047,7 @@ function renderEntityDetail(kind,name){
   const c=colorFn(name);
   const scoreLabel=kind==='pub'?'Pub score':'Author score';
   const aveNum=totalAve>=1000?(totalAve/1000).toFixed(1)+'K':totalAve.toFixed(0);
-  const aveDisp=`<span class="ent-stat-pre">PHP</span> ${aveNum}`;
+  const aveDisp=aveNum;
   const tabMap=kind==='pub'?pubTab:authorTab;
   const activeTab=tabMap[name]||'articles';
   const tabBar=`<div class="mm-tabs ent-tabs">
@@ -5051,7 +5071,7 @@ function renderEntityDetail(kind,name){
       <div class="ent-detail-stats">
         <div class="ent-stat" data-btip="${_makeTip({label:scoreLabel+': '+score})}"><div class="ent-stat-val">${score}</div><div class="ent-stat-lbl">${scoreLabel}</div></div>
         <div class="ent-stat" data-btip="${_makeTip({label:'Articles: '+articles.length})}"><div class="ent-stat-val">${articles.length}</div><div class="ent-stat-lbl">Articles</div></div>
-        <div class="ent-stat" data-btip="${_makeTip({label:'Total AVE: PHP '+aveNum})}"><div class="ent-stat-val">${aveDisp}</div><div class="ent-stat-lbl">Total AVE</div></div>
+        <div class="ent-stat" data-btip="${_makeTip({label:'Total AVE: '+aveNum})}"><div class="ent-stat-val">${aveDisp}</div><div class="ent-stat-lbl">Total AVE</div></div>
       </div>
     </div>
     ${tabBar}
@@ -5517,7 +5537,6 @@ function _catCategoryView(){
           return `<div class="cat-kw-entry">
             <div class="cat-kw-entry-hd">
               <span class="cat-kw-label">${kw.label}</span>
-              <span class="cat-kw-typebadge cat-kw-typebadge--${t}">${TYPE_LBL[t]||t}</span>
               <button class="cat-kw-copy" onclick="copyKwExpr(${absIdx})" title="Copy expression"><i data-lucide="copy"></i></button>
             </div>
             <div class="cat-kw-expr">${_catFmtExpression(kw.expression||'')}</div>

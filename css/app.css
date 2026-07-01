@@ -1009,6 +1009,14 @@ body.aireport-open .app-body{margin-right:var(--aa-w)}
 .md-soc{width:23px;height:23px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;background:var(--icon-hint);transition:background 0.18s,opacity 0.12s}
 .md-soc:hover{opacity:1}
 .md-soc i{font-size:10px;line-height:1}
+.md-soc-x{width:10px;height:10px}
+/* Authors / Publishers (MediaWatch only — #page-authors is reused by Shared View influencers):
+   overlapping social-icon stack that fans out on hover (avatar-stack style) */
+body:not(.ws-shared) #page-authors .md-socials,#page-publishers .md-socials{flex-wrap:nowrap;gap:0;width:fit-content}
+body:not(.ws-shared) #page-authors .md-soc,#page-publishers .md-soc{margin-left:-8px;border:2px solid #fff;transition:margin-left 0.2s ease}
+body:not(.ws-shared) #page-authors .md-socials .md-soc:first-child,#page-publishers .md-socials .md-soc:first-child{margin-left:0}
+body:not(.ws-shared) #page-authors .md-socials:hover .md-soc,#page-publishers .md-socials:hover .md-soc{margin-left:4px}
+body:not(.ws-shared) #page-authors .md-socials:hover .md-soc:first-child,#page-publishers .md-socials:hover .md-soc:first-child{margin-left:0}
 .md-stats{display:flex;gap:16px}
 .md-stat-lbl{font-size:11.5px;color:var(--muted);margin-bottom:5px}
 .md-stat-val{font-size:18px;font-weight:700;color:var(--ink);font-family:var(--font-display)}
@@ -1557,8 +1565,16 @@ body.ws-shared #page-mentions.detail-open .tbl td:nth-child(9){display:none}
 .soc-empty{font-size:12.5px;color:var(--muted)}
 /* ── Post card (default right-column view) — self-rendered, consistent across all platforms ── */
 /* Center the card / embed within the right column (social detail only); stay top-aligned vertically */
-#article-detail-panel.social-detail .art-col-right{align-items:center}
-.soc-card{display:flex;flex-direction:column;border:none;border-radius:var(--radius-md);background:#fff;box-shadow:0 2px 10px rgba(24,29,38,0.09);overflow:hidden;width:100%;max-width:600px}
+#article-detail-panel.social-detail .art-col-right{align-items:center;justify-content:center}
+/* Column 2 footnote: clarifies the captured details vs the live embed (quiet, on its own line) */
+.soc-mid-caption{display:flex;align-items:flex-start;gap:7px;padding:2px 2px 4px;font-size:11px;line-height:1.45;color:var(--muted)}
+.soc-mid-caption i,.soc-mid-caption svg{width:13px;height:13px;flex-shrink:0;margin-top:1px}
+.soc-card{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius-md);background:#fff;box-shadow:0 2px 8px rgba(24,29,38,0.08);overflow:hidden;width:100%;max-width:600px}
+/* Unavailable-post fallback: a slim one-line notice at the top; card is otherwise a normal snapshot */
+.soc-card-unavail{display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(217,119,6,0.08);color:#b45309;font-size:12px;line-height:1.4}
+.soc-card-unavail i,.soc-card-unavail svg{width:14px;height:14px;flex-shrink:0}
+/* In the live embed (no card wrapper), detach the notice into a standalone rounded bar */
+.soc-embed-wrap .soc-card-unavail{margin-bottom:10px;border-radius:var(--radius-md)}
 .soc-card-hd{display:flex;align-items:center;gap:11px;padding:14px 16px}
 .soc-card-av{position:relative;width:42px;height:42px;border-radius:50%;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px}
 .soc-card-badge{position:absolute;right:-3px;bottom:-3px;width:18px;height:18px;background:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 1px 2px rgba(0,0,0,0.18)}
@@ -1587,22 +1603,25 @@ body.ws-shared #page-mentions.detail-open .tbl td:nth-child(9){display:none}
 .soc-card-actions .soc-viewpost{text-decoration:none}
 .soc-live-btn{display:inline-flex;align-items:center;gap:6px}
 /* ── Live embed (opt-in) ── */
-.soc-embed-wrap{display:flex;flex-direction:column;gap:10px;padding:4px;width:100%;max-width:600px}
+.soc-embed-wrap{display:flex;flex-direction:column;gap:0;padding:0;width:100%;max-width:600px}
 .soc-embed-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:2px}
 .soc-embed-ttl{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--ink)}
 .soc-embed-ttl i{font-size:15px}
-.soc-embed-frame{position:relative;width:100%;border-radius:var(--radius-md);overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(24,29,38,0.08)}
-.soc-embed{position:absolute;inset:0;width:100%;height:100%;border:none;background:#fff;opacity:0;transition:opacity 0.25s ease}
+.soc-embed-frame{position:relative;width:100%;border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;box-shadow:0 2px 8px rgba(24,29,38,0.08)}
+.soc-embed{position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:inherit;clip-path:inset(0 round var(--radius-md));background:#fff;opacity:0;transition:opacity 0.25s ease}
 .soc-embed.loaded{opacity:1}
-.soc-embed-skel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-size:12.5px;color:var(--muted);background:var(--canvas)}
+.soc-embed-skel{position:absolute;inset:0;border-radius:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-size:12.5px;color:var(--muted);background:var(--canvas)}
 .soc-spin{width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--ws-accent,#2563eb);border-radius:50%;animation:soc-spin 0.7s linear infinite}
 @keyframes soc-spin{to{transform:rotate(360deg)}}
-.soc-embed-foot{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:14px;margin-top:2px}
+.soc-embed-foot{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:16px;padding:14px 16px}
+.soc-embed-wrap .soc-embed-foot{margin-top:12px;padding-left:0;padding-right:0}
 .soc-embed-foot .soc-viewpost{flex-shrink:0;text-decoration:none}
+/* Subtle escape hatch: when FB's embed shows its own error (undetectable cross-origin), jump to the snapshot card */
+.soc-snap-link{display:inline-flex;align-items:center;gap:5px;background:none;border:none;padding:0;font-family:inherit;font-size:11.5px;color:var(--muted);cursor:pointer;line-height:1.4}
+.soc-snap-link:hover{color:var(--ws-accent,#2563eb);text-decoration:underline}
+.soc-snap-link i,.soc-snap-link svg{width:13px;height:13px;flex-shrink:0}
 .soc-embed-notes{flex:1;min-width:200px;display:flex;flex-direction:column;gap:5px}
-.soc-embed-note-warn{display:flex;align-items:flex-start;gap:6px}
-.soc-embed-note-warn i,.soc-embed-note-warn svg{width:13px;height:13px;flex-shrink:0;margin-top:1px}
-.soc-embed-note{font-size:11.5px;color:var(--muted);line-height:1.5}
+.soc-embed-note{font-size:11.5px;color:var(--muted);line-height:1.5;max-width:60ch}
 .soc-embed-note a,.soc-link-btn{color:var(--ws-accent,#2563eb)}
 .soc-link-btn{background:none;border:none;padding:0;font:inherit;font-size:11.5px;cursor:pointer;text-decoration:underline}
 .art-col-left{display:none}
@@ -1764,6 +1783,8 @@ body.ws-shared #page-mentions.detail-open .tbl td:nth-child(9){display:none}
 .adp-meta-v{flex:1;min-width:0;color:var(--ink);font-weight:600;word-break:break-word}
 /* Article right column */
 .adp-article{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:20px;box-shadow:none;flex:1}
+/* Tracker (incl. Shared View): strip the card chrome so the article sits flush, mirroring the mentions preview */
+#page-tracker .adp-article{border:none;padding:0;background:transparent;box-shadow:none;border-radius:0}
 .adp-title{font-size:22px;font-weight:700;color:var(--ink);font-family:var(--font-display);line-height:1.3;letter-spacing:-0.02em;margin-bottom:14px}
 .adp-hero{width:100%;aspect-ratio:16/9;max-height:280px;border-radius:var(--radius-md);overflow:hidden;margin-bottom:16px;position:relative;display:flex;align-items:flex-end;justify-content:flex-end;background:linear-gradient(140deg,#181d26,#272d3a 52%,#3a4252)}
 /* Small pill button (used by the Preview full broadsheet action) */
@@ -2065,6 +2086,8 @@ body.ws-shared #page-mentions.detail-open .tbl td:nth-child(9){display:none}
 /* KPI card hover: lift + shadow + sibling dim */
 .brief-stats .ss{cursor:pointer;display:block!important;transform:scale(1) translateY(0)!important;transition:transform 0.28s cubic-bezier(.22,1,.36,1),box-shadow 0.28s cubic-bezier(.22,1,.36,1)!important}
 .brief-stats .ss-ico{display:none!important}
+/* Shared View "top source" card: platform icon inline beside the name, no badge/background */
+.ss-src-ico{font-size:20px;color:#1877f2;margin-right:5px;vertical-align:-2px}
 .brief-stats .ss:hover{transform:scale(1.03) translateY(-4px)!important;box-shadow:0 12px 28px rgba(24,29,38,0.16)!important;z-index:5!important}
 #ss-pop{position:fixed;z-index:2000;max-width:260px;background:#181d26;color:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 10px 30px rgba(24,29,38,0.32);font-size:12.5px;line-height:1.5;opacity:0;transform:translateY(4px);transition:opacity 0.15s ease,transform 0.15s ease;pointer-events:none}
 #ss-pop.show{opacity:1;transform:translateY(0)}
