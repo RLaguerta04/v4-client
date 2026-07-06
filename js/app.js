@@ -125,9 +125,10 @@ const alState={};
 const aveNum=s=>parseFloat(String(s).replace(/[^0-9.]/g,''))||0;
 
 function articlesForList(listId){
-  // Shared View: the brief's coverage lists (spotlight + trending) show social posts, not news articles.
+  // Shared View: the brief's coverage lists (spotlight + trending) and the tracker's matched articles
+  // (trk-<id>) show social posts, not news articles.
   const social=window.WS_DATA&&window.WS_DATA.socialMentions;
-  if(social&&(listId==='spot'||listId.startsWith('trend-'))) return social;
+  if(social&&(listId==='spot'||listId.startsWith('trend-')||listId.startsWith('trk-'))) return social;
   if(listId==='spot') return trendStories[0].articles;
   if(listId.startsWith('trend-')) return (trendStories.find(s=>s.id===parseInt(listId.split('-')[1]))||{}).articles||[];
   return [];
@@ -1131,6 +1132,9 @@ function openDetailFor(d,idx){
 // Shared View: open a social post in the split preview (collapsed Post·Sentiment list + post detail)
 function openSocialPost(idx){
   const list=window.WS_DATA&&window.WS_DATA.socialMentions;if(!list||!list[idx])return;
+  // The social-post split preview lives on the mentions page; on other pages (e.g. the tracker's
+  // social coverage table) the row is display-only.
+  if(!document.getElementById('page-mentions'))return;
   mdSocialActive=idx;mdActive=-1;mdSpotCtx=null;mdMode='split';
   const sb=document.querySelector('.sidebar');
   mdSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
@@ -1143,10 +1147,10 @@ function openSocialPost(idx){
   renderSocialDetail(idx);
 }
 // Per-platform official embed → fixed-height iframe src (null ⇒ show the "View Post" fallback card)
-function socialEmbedSrc(platform,url){
+function socialEmbedSrc(platform,url,width){
   if(!url)return null;
   try{
-    if(platform==='facebook')return 'https://www.facebook.com/plugins/post.php?href='+encodeURIComponent(url)+'&show_text=true&width=500';
+    if(platform==='facebook'){const w=Math.round(Math.max(350,Math.min(750,width||500)));return 'https://www.facebook.com/plugins/post.php?href='+encodeURIComponent(url)+'&show_text=true&width='+w;}
     if(platform==='youtube'){const m=url.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/);return m?'https://www.youtube.com/embed/'+m[1]:null;}
     if(platform==='twitter'){const m=url.match(/status\/(\d+)/);return m?'https://platform.twitter.com/embed/Tweet.html?id='+m[1]+'&theme=light':null;}
     if(platform==='instagram'){const m=url.match(/\/(p|reel|tv)\/([\w-]+)/);return m?'https://www.instagram.com/'+m[1]+'/'+m[2]+'/embed':null;}
@@ -1217,6 +1221,22 @@ function renderSocialDetail(idx){
 // Only video (YouTube) diverges — it keeps a responsive 16:9 box so a landscape clip isn't letterboxed.
 const STD_FEED_H=620;
 const SOCIAL_EMBED_SIZE={youtube:{ratio:'16 / 9'},tiktok:{h:STD_FEED_H},instagram:{h:STD_FEED_H},twitter:{h:STD_FEED_H},facebook:{h:STD_FEED_H},reddit:{h:STD_FEED_H}};
+// X/Twitter's embedded-tweet iframe reports its rendered height via postMessage — grow the frame to
+// fit so the tweet shows in full (no fixed-height cap, no internal scroll). Other platforms keep the
+// fixed height as a fallback. Runs once (module-level); only touches the live X embed.
+window.addEventListener('message',function(e){
+  if(typeof e.origin!=='string'||!/twitter\.com|x\.com/.test(e.origin))return;
+  let d=e.data;if(typeof d==='string'){try{d=JSON.parse(d);}catch(_){return;}}
+  const emb=d&&d['twttr.embed'];
+  if(!emb||emb.method!=='twttr.private.resize')return;
+  const h=emb.params&&emb.params[0]&&emb.params[0].height;
+  if(!h)return;
+  const iframe=document.querySelector('.soc-embed');
+  if(iframe&&/platform\.twitter\.com|twitter\.com\/embed/.test(iframe.src||'')){
+    const frame=iframe.closest('.soc-embed-frame');
+    if(frame){frame.style.height=Math.ceil(h)+'px';frame.style.aspectRatio='auto';}
+  }
+});
 // Renders the right column in one of two modes:
 //   'card'  → a post card built entirely from our own data (never breaks, consistent across platforms)
 //   'embed' → the live platform iframe (lazy, per-platform size, skeleton while loading)
@@ -1226,7 +1246,9 @@ function renderSocialRight(mode){
   const right=document.getElementById('adp-col-right');if(!right)return;
   const list=window.WS_DATA&&window.WS_DATA.socialMentions,s=list&&list[mdSocialActive];if(!s)return;
   const p=SOCIAL_PLATFORMS[s.platform]||{icon:'fa-globe',color:'#6b7280',label:s.platform||'—'};
-  const src=socialEmbedSrc(s.platform,s.url);
+  // Facebook renders at a fixed pixel width, so measure the column and let the FB post fill it.
+  const colW=(right.clientWidth||600)-2;
+  const src=socialEmbedSrc(s.platform,s.url,colW);
   const handle=(s.influencer||'').replace(/^@/,''),av=(handle||'?').charAt(0).toUpperCase();
   const viewBtn=`<a class="btn-filled soc-viewpost" href="${s.url||'#'}" target="_blank" rel="noopener"><i data-lucide="external-link" class="icon-lg"></i> View Post</a>`;
   // Shared footer — identical markup on the live embed and the fallback card (consistent CTA + note).
@@ -1243,13 +1265,27 @@ function renderSocialRight(mode){
     // (taller posts scroll, so no clipping and no stretched-out empty gap when content is short).
     const isVideo=!!sz.ratio;
     const frameStyle=isVideo?`aspect-ratio:${sz.ratio};height:auto`:`height:${sz.h}px`;
+    // Article-style stacked header: post text · influencer byline · action row (Send/Export/View Post)
+    const infName=handle?('@'+handle):(s.influencer||p.label);
     right.innerHTML=`<div class="soc-embed-wrap">
+      <div class="soc-embed-head">
+        <div class="soc-embed-title" data-btip="${_makeTip({detail:s.post||''})}">${s.post||''}</div>
+        <div class="soc-embed-byline">
+          <span class="soc-embed-inf">${infName}</span>
+          <span class="adp-pub-dot"></span>
+          <span class="soc-embed-posted">${p.label} · ${s.ago||s.date||''}</span>
+        </div>
+        <div class="qa-row soc-embed-actions">
+          <button class="qa-btn" onclick="qaEmail(event)"><i data-lucide="mail"></i> Send via Email</button>
+          <button class="qa-btn" onclick="qaPdf(event)"><i data-lucide="file-down"></i> Export as PDF</button>
+          ${viewBtn}
+        </div>
+      </div>
       ${s.snapshotNotice?unavailNotice:''}
       <div class="soc-embed-frame" style="${frameStyle}">
         <div class="soc-embed-skel"><span class="soc-spin"></span><span>Loading live preview…</span></div>
-        <iframe class="soc-embed" src="${src}" loading="lazy" scrolling="${isVideo?'no':'yes'}" frameborder="0" allowtransparency="true" allow="encrypted-media; clipboard-write; picture-in-picture; web-share" allowfullscreen sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms" onload="this.classList.add('loaded')"></iframe>
+        <iframe class="soc-embed" src="${src}" loading="lazy" scrolling="${(isVideo||s.platform==='twitter')?'no':'yes'}" frameborder="0" allowtransparency="true" allow="encrypted-media; clipboard-write; picture-in-picture; web-share" allowfullscreen sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms" onload="this.classList.add('loaded')"></iframe>
       </div>
-      ${footPlain}
     </div>`;
     // Stop the skeleton spinning forever if onload never fires (hard network failure)
     const fr=right.querySelector('.soc-embed');
@@ -1337,9 +1373,10 @@ function previewArticle(listId,hlEnc){
 // Coverage-list pagination (spotlight + tracker activity panels share the same component)
 const SPOT_COV_PER_PAGE=10;
 let spotCovPage={},actCovPage={};
-function _covPager(curr,total,pages,handler){
-  if(total<=SPOT_COV_PER_PAGE)return'';
-  const start=curr*SPOT_COV_PER_PAGE,end=Math.min(start+SPOT_COV_PER_PAGE,total);
+function _covPager(curr,total,pages,handler,perPage){
+  perPage=perPage||SPOT_COV_PER_PAGE;
+  if(total<=perPage)return'';
+  const start=curr*perPage,end=Math.min(start+perPage,total);
   let btns=`<button class="pgb arrow" onclick="${handler}(${curr-1})"${curr<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
   for(let p=0;p<pages;p++)btns+=`<button class="pgb${p===curr?' on':''}" onclick="${handler}(${p})">${p+1}</button>`;
   btns+=`<button class="pgb arrow" onclick="${handler}(${curr+1})"${curr>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
@@ -1407,13 +1444,14 @@ function renderSpotPanel(d){
     </div>`;
   }).join('');
   return `<div class="spot-panel">
-    <div class="spot-tier"><i data-lucide="star" class="icon-sm"></i> Tier 1 Spotlight</div>
-    <div class="spot-panel-title">${s.hl}</div>
+    <div class="spot-act-head">
+      <div class="spot-tier"><i data-lucide="star" class="icon-sm"></i> Tier 1 Spotlight</div>
+      <div class="spot-panel-title" data-btip="${_makeTip({detail:s.hl})}">${s.hl}</div>
+    </div>
     <div class="spot-panel-why"><span class="spot-why-lbl"><i data-lucide="zap"></i> Why this was picked</span><span class="spot-why-txt">${s.why}</span></div>
     <div class="chips spot-panel-chips">${chips}</div>
-    <div class="spot-cov-hd">Coverage · ${arts.length} articles</div>
     <div class="spot-cov-tbl">
-      <div class="spot-cov-thd"><span>Headline</span><span>Match</span></div>
+      <div class="spot-cov-thd"><span>Headline</span><span class="spot-cov-match-cell">Match</span></div>
       <div class="spot-cov-list">${rows}</div>
     </div>
     ${_covPager(page,total,pages,'goSpotCovPage')}
@@ -1540,12 +1578,13 @@ function renderActPanel(){
     </div>`;
   }).join('');
   return `<div class="spot-panel ctx-act">
-    <div class="spot-tier ctx-tier"><i data-lucide="${tc.icon}" class="icon-sm"></i> ${a.type}</div>
-    <div class="spot-panel-title">${a.title}</div>
+    <div class="spot-act-head">
+      <div class="spot-tier ctx-tier"><i data-lucide="${tc.icon}" class="icon-sm"></i> ${a.type}</div>
+      <div class="spot-panel-title" data-btip="${_makeTip({detail:a.title})}">${a.title}</div>
+    </div>
     ${a.content?`<div class="spot-panel-why"><span class="spot-why-lbl"><i data-lucide="zap"></i> Activity context</span><span class="spot-why-txt">${a.content.length>180?a.content.slice(0,180)+'…':a.content}</span></div>`:''}
-    <div class="spot-cov-hd">Matched articles · ${total}</div>
     <div class="spot-cov-tbl">
-      <div class="spot-cov-thd"><span>Headline</span><span>Match</span></div>
+      <div class="spot-cov-thd"><span>Headline</span><span class="spot-cov-match-cell">Match</span></div>
       <div class="spot-cov-list">${rows}</div>
     </div>
     ${_covPager(page,total,pages,'goActCovPage')}
@@ -2773,8 +2812,10 @@ function renderDetailInner(a){
       </div>`:''}
 
 
-      <!-- Article list (filtered + sorted) — re-rendered in isolation on filter/sort -->
-      <div id="art-list-region" class="art-list-region">${buildArtList(a)}</div>
+      <!-- Article list — Shared View: social coverage table (same as mentions); MediaWatch: matched news articles -->
+      ${(window.WS_DATA&&window.WS_DATA.socialMentions)
+        ?`<div id="al-trk-${a.id}" class="art-list-region">${renderArticleList(window.WS_DATA.socialMentions,'trk-'+a.id)}</div>`
+        :`<div id="art-list-region" class="art-list-region">${buildArtList(a)}</div>`}
 
     </div>
   `;
@@ -4170,6 +4211,90 @@ function initDashboard(){
       <span class="ti-sent-dot" style="background:${toneColor(d.tone)}" title="${d.tone||'neutral'}"></span>
     </div>`;
   }
+  // Insights article list as a paginated table (Headline · Sentiment · ⋯) — screenshot-2 style.
+  function tiArtPagerBtns(cur,pages){
+    let b=`<button class="ti-pgb" onclick="tiArtTblPage(this,${cur-1})"${cur<=1?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+    for(let p=1;p<=pages;p++)b+=`<button class="ti-pgb num${p===cur?' on':''}" onclick="tiArtTblPage(this,${p})">${p}</button>`;
+    b+=`<button class="ti-pgb" onclick="tiArtTblPage(this,${cur+1})"${cur>=pages?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+    return b;
+  }
+  function artTr(d,i,per){
+    const ic=tiIcn(d.type);
+    const tone=d.tone==='positive'?'positive':d.tone==='negative'?'negative':'neutral';
+    const t=(d.title||'').replace(/"/g,'&quot;');
+    return `<tr class="ti-arttbl-row" data-i="${i}"${i>=per?' hidden':''} onclick="openInsArticle(${i})">
+      <td class="ti-arttbl-hl"><div class="ti-arttbl-hlwrap"><span class="hl-icon ${ic.cls}"><i data-lucide="${ic.icon}"></i></span><span class="ti-arttbl-title" title="${t}">${d.title}</span></div></td>
+      <td class="ti-arttbl-sent">${sentimentCellHtml(tone)}</td>
+      <td class="ti-arttbl-act"><button class="ti-arttbl-more" title="More" onclick="event.stopPropagation()"><i data-lucide="more-horizontal"></i></button></td>
+    </tr>`;
+  }
+  // Article preview (publishers-style 3-column) opened from an Insights table row.
+  let insArts=[],insPrevIdx=-1,insSidebarWasCollapsed=false;
+  window.openInsArticle=function(i){
+    const d=insArts[i];if(!d)return;
+    const page=document.getElementById('page-dashboard');
+    if(!page||!document.getElementById('adp-col-mid'))return;
+    insPrevIdx=i;
+    if(window.closeInsights)window.closeInsights();          // tuck the Insights slide-over away
+    const sb=document.querySelector('.sidebar');
+    insSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
+    if(sb)sb.classList.add('collapsed');
+    mdSpotCtx=null;mdActCtx=null;mdActive=-1;                // display-only context
+    page.classList.add('ent-detail-open');
+    renderInlineDetail(d);
+    _renderInsPrevList();
+    initIcons();
+  };
+  window.selectInsArticle=function(i){
+    const d=insArts[i];if(!d)return;
+    insPrevIdx=i;
+    renderInlineDetail(d);
+    _renderInsPrevList();
+    initIcons();
+  };
+  window.closeInsArticle=function(){
+    const page=document.getElementById('page-dashboard');if(page)page.classList.remove('ent-detail-open');
+    const sb=document.querySelector('.sidebar');
+    if(sb&&!insSidebarWasCollapsed)sb.classList.remove('collapsed');
+  };
+  // Left column: the current Insights article list as a compact table (Headline · Sentiment · ⋯), mirrors the publishers preview.
+  function _renderInsPrevList(){
+    const left=document.getElementById('adp-col-left');if(!left)return;
+    const rows=insArts.map((a,i)=>`<div class="spot-cov-li ent-prev-li${i===insPrevIdx?' active':''}" onclick="selectInsArticle(${i})">
+        <span class="md-li-ico type-${articleType(a)}"><i data-lucide="${typeIcon(a)}"></i></span>
+        <div class="spot-cov-body"><div class="spot-cov-hl">${a.title}</div></div>
+        <span class="ent-prev-trail"><span class="ent-prev-sent">${sentimentCellHtml(a.brand)}</span><span class="row-dots" title="More" onclick="event.stopPropagation()">⋯</span></span>
+      </div>`).join('');
+    left.innerHTML=`<div class="spot-panel ctx-act">
+      <div class="ent-prev-head">
+        <div class="ent-prev-head-l"><div class="spot-panel-title">Related articles</div></div>
+        <div class="ent-detail-stats"><div class="ent-stat"><div class="ent-stat-val">${insArts.length}</div><div class="ent-stat-lbl">Articles</div></div></div>
+      </div>
+      <div class="spot-cov-tbl">
+        <div class="spot-cov-thd"><span>Headline</span><span class="ent-prev-trail"><span class="ent-prev-sent">Sentiment</span><span class="row-dots" aria-hidden="true" style="visibility:hidden">⋯</span></span></div>
+        <div class="spot-cov-list">${rows}</div>
+      </div>
+    </div>`;
+  }
+  function renderArtTable(arts){
+    insArts=arts;
+    const per=15,total=arts.length,pages=Math.max(1,Math.ceil(total/per)),shown=Math.min(per,total);
+    const rows=arts.map((d,i)=>artTr(d,i,per)).join('');
+    return `<div class="ti-arttbl-wrap" data-per="${per}" data-page="1">
+      <table class="ti-arttbl"><thead><tr><th>Headline</th><th class="ti-c-sent">Sentiment</th><th class="ti-c-act" aria-label="actions"></th></tr></thead><tbody>${rows}</tbody></table>
+      ${pages>1?`<div class="ti-arttbl-pager"><div class="ti-arttbl-info">1–${shown} of ${total}</div><div class="ti-arttbl-btns">${tiArtPagerBtns(1,pages)}</div></div>`:''}
+    </div>`;
+  }
+  window.tiArtTblPage=function(el,page){
+    const wrap=el.closest('.ti-arttbl-wrap');if(!wrap)return;
+    const per=+wrap.dataset.per,rows=[...wrap.querySelectorAll('tbody tr')],total=rows.length,pages=Math.max(1,Math.ceil(total/per));
+    page=Math.max(1,Math.min(pages,page));wrap.dataset.page=page;
+    rows.forEach((r,i)=>{r.hidden=!(i>=(page-1)*per&&i<page*per);});
+    const start=(page-1)*per,end=Math.min(total,page*per);
+    const info=wrap.querySelector('.ti-arttbl-info');if(info)info.textContent=`${start+1}–${end} of ${total}`;
+    const btns=wrap.querySelector('.ti-arttbl-btns');if(btns)btns.innerHTML=tiArtPagerBtns(page,pages);
+    initIcons();
+  };
   function tiAnalysis(){
     const data=tlData(),n=data.length,results=data.map(d=>d.results);
     const total=results.reduce((a,b)=>a+b,0),avg=Math.round(total/n);
@@ -4247,16 +4372,8 @@ function initDashboard(){
     const rank=[...data].sort((a,b)=>b.results-a.results).findIndex(d=>d.fullDate===tiKey)+1;
     const arts=dayArticles(day),dCls=delta>=0?'ti-up':'ti-down',dSign=delta>=0?'+':'';
     return `
-      <div class="ti-stats">
-        <div class="ti-stat"><div class="ti-stat-lbl">Results</div><div class="ti-stat-val">${day.results}</div><div class="ti-stat-sub">on this day</div></div>
-        <div class="ti-stat"><div class="ti-stat-lbl">vs previous day</div><div class="ti-stat-val ${prev?dCls:''}">${prev?dSign+delta:'—'}</div><div class="ti-stat-sub">${prev?prev.date:'no prior day'}</div></div>
-        <div class="ti-stat"><div class="ti-stat-lbl">Share of range</div><div class="ti-stat-val">${share}%</div><div class="ti-stat-sub">of ${total.toLocaleString()} results</div></div>
-        <div class="ti-stat"><div class="ti-stat-lbl">Rank</div><div class="ti-stat-val">#${rank}</div><div class="ti-stat-sub">of ${data.length} days</div></div>
-      </div>
-      <div>
-        <div class="ti-sec-title"><i data-lucide="file-text"></i> Related articles</div>
-        ${arts.map(artRow).join('')}
-        ${day.results>arts.length?`<div class="ti-more-note">Showing ${arts.length} of ${day.results} results</div>`:''}
+      <div class="ti-detail-flush">
+        ${renderArtTable(arts)}
       </div>`;
   }
   // Source-aware panel controller (Timeline + Media Exposure plug in here)
@@ -4265,7 +4382,8 @@ function initDashboard(){
       ?`<span class="ti-head-badge"><i data-lucide="sparkles"></i></span>
          <div class="ti-head-titles"><div class="ti-head-title">${label}</div><div class="ti-head-sub">${sub}</div></div>
          <button class="ti-x" onclick="closeInsights()" title="Close"><i data-lucide="x"></i></button>`
-      :`<div class="ti-head-titles"><button class="ti-back" onclick="insBack()"><i data-lucide="arrow-left"></i> ${label}</button><div class="ti-head-title">${detailTitle}</div></div>
+      :`<span class="ti-head-badge"><i data-lucide="file-text"></i></span>
+         <div class="ti-head-titles"><div class="ti-head-title">${detailTitle}</div><div class="ti-head-sub">${sub}</div></div>
          <button class="ti-x" onclick="closeInsights()" title="Close"><i data-lucide="x"></i></button>`;
   }
   // Chart sources register here: {card, sub(), detailTitle(), overview(), detail(), clear()}
@@ -4345,7 +4463,13 @@ function initDashboard(){
   buildTimeline(7);
 
   // ── Media Exposure (100% stacked channel share, single horizontal bar) ──
-  const expSeries=[  // colors mirror the media-type icons (.hl-icon.type-*) used across the app
+  // Shared (social) workspace shows Platform Exposure (post share) instead of Media Exposure (article share).
+  const expIsSocial=!!(window.WS_DATA&&window.WS_DATA.socialMentions);
+  const expSeries=expIsSocial?[
+    {key:'facebook',label:'Facebook',color:'#3b7dd8',labelColor:'#fff'},
+    {key:'twitter',label:'Twitter',color:'#29a3f0',labelColor:'#fff'},
+    {key:'instagram',label:'Instagram',color:'#d6249f',labelColor:'#fff'}
+  ]:[  // colors mirror the media-type icons (.hl-icon.type-*) used across the app
     {key:'online',label:'Online News',color:'#3b6098',labelColor:'#fff'},
     {key:'blogs',label:'Blogs',color:'#d97706',labelColor:'#fff'},
     {key:'broadsheet',label:'Broadsheet',color:'#4f46e5',labelColor:'#fff'},
@@ -4354,7 +4478,9 @@ function initDashboard(){
     {key:'tv',label:'TV',color:'#7c3aed',labelColor:'#fff'},
     {key:'radio',label:'Radio',color:'#db2777',labelColor:'#fff'}
   ];
-  const expData=[{name:'',online:55.24,blogs:16.43,broadsheet:8.62,provincial:1.64,tabloid:1.44,tv:13.35,radio:3.29}];
+  const expData=expIsSocial
+    ?[{name:'',facebook:81.16,twitter:17.39,instagram:1.45}]
+    :[{name:'',online:55.24,blogs:16.43,broadsheet:8.62,provincial:1.64,tabloid:1.44,tv:13.35,radio:3.29}];
   function ExpTooltip(o){
     if(!o||!o.active)return null;
     return RC('div',{style:{background:'#181d26',border:'none',borderRadius:8,padding:'10px 13px',boxShadow:'0 6px 20px rgba(0,0,0,0.28)',minWidth:196}},
@@ -4373,10 +4499,10 @@ function initDashboard(){
         RC(YAxis,{type:'category',dataKey:'name',hide:true}),
         RC(Tooltip,{content:ExpTooltip,cursor:false}),
         ...expSeries.map((s,i)=>RC(Bar,{key:s.key,dataKey:s.key,stackId:'a',fill:s.color,maxBarSize:50,
-          isAnimationActive:false,cursor:'pointer',
+          isAnimationActive:false,cursor:expIsSocial?'default':'pointer',
           fillOpacity:(dimKey&&dimKey!==s.key)?0.3:1,
           onMouseEnter:()=>setHov(s.key),
-          onClick:()=>window.openExposureChannel(s.key),
+          onClick:expIsSocial?undefined:()=>window.openExposureChannel(s.key),
           radius:i===0?[5,0,0,5]:i===expSeries.length-1?[0,5,5,0]:0},
           RC(LabelList,{dataKey:s.key,position:'center',formatter:v=>v>=10?`${s.label.toUpperCase()}: ${v}%`:'',style:{fontSize:11,fontWeight:600,fill:s.labelColor}})
         ))
@@ -4444,11 +4570,10 @@ function initDashboard(){
       </div>
       <div>
         <div class="ti-sec-title"><i data-lucide="file-text"></i> Related articles</div>
-        ${arts.map(artRow).join('')}
-        ${r.count>arts.length?`<div class="ti-more-note">Showing ${arts.length} of ${r.count} articles</div>`:''}
+        ${renderArtTable(arts)}
       </div>`;
   }
-  SRC.exposure={card:'db-exposure-card',sub:()=>'Media Exposure · article share',detailTitle:()=>expChannelLabel(tiKey),overview:()=>expOverviewHTML(),detail:()=>expDetailHTML(),clear:()=>{expSelected=null;renderExposure();}};
+  SRC.exposure={card:'db-exposure-card',sub:()=>expIsSocial?'Platform Exposure · post share':'Media Exposure · article share',detailTitle:()=>expChannelLabel(tiKey),overview:()=>expOverviewHTML(),detail:()=>expDetailHTML(),clear:()=>{expSelected=null;renderExposure();}};
 
   // ── Channel summary cards (icons reuse the .hl-icon.type-* chips from mentions) ──
   const channelData=[
@@ -4460,10 +4585,42 @@ function initDashboard(){
     {name:'TV',icon:'tv',cls:'type-tv',score:'5.53',sv:'0',ave:'84.8M',words:'1.3K',articles:'65'},
     {name:'Radio',icon:'radio',cls:'type-radio',score:'10',sv:'0',ave:'10.2M',words:'757',articles:'16'}
   ];
+  // Social platform breakdown — reused in the Shared (social) workspace. Per-platform metric sets
+  // (stats vary by platform), plus Facebook reactions and per-platform note lines. 3-col grid.
+  const socialChannelData=[
+    {platform:'facebook', stats:[['Avg. Inf. Score','0.01'],['Total Story Value','0.04'],['Video Posts','56'],['Total Posts','56'],['Total Likes','397'],['Comments','188']],
+     reactions:[['👍','397'],['😮','25'],['❤️','319'],['😢','2'],['😆','32'],['😠','14']]},
+    {platform:'twitter', stats:[['Avg. Inf. Score','0'],['Total Likes','8'],['Total Story Value','0'],['Retweets','0'],['Total Tweets','12']],
+     notes:['1 tweet: 8 likes','1 tweet: 0 retweets']},
+    {platform:'instagram', stats:[['Avg. Inf. Score','0'],['Total Likes','9'],['Total Story Value','0'],['Total Posts','1'],['Comments','2']],
+     notes:['1 video: 9 likes','1 video: 0 views','1 video: 2 comments']},
+    {platform:'youtube', stats:[['Avg. Inf. Score','0.02'],['Total Story Value','0.03'],['Video Posts','14'],['Total Views','4.2K'],['Total Likes','210'],['Comments','45']],
+     notes:['1 video: 210 likes','1 video: 4.2K views','1 video: 45 comments']},
+    {platform:'reddit', stats:[['Avg. Inf. Score','0.01'],['Total Story Value','0.01'],['Total Posts','8'],['Upvotes','96'],['Comments','63'],['Awards','3']],
+     notes:['1 post: 96 upvotes','1 post: 63 comments']},
+    {platform:'tiktok', stats:[['Avg. Inf. Score','0.03'],['Total Story Value','0.05'],['Video Posts','5'],['Total Likes','340'],['Comments','78'],['Shares','21']],
+     notes:['1 video: 340 likes','1 video: 78 comments']}
+  ];
   const chGrid=document.getElementById('db-channels');
   if(chGrid){
     const sub=(lbl,val)=>`<div class="db-ch-sub-stat"><span class="db-ch-sub-lbl">${lbl}</span><span class="db-ch-sub-val${val==='0'?' zero':''}">${val}</span></div>`;
-    chGrid.innerHTML=channelData.map(c=>`<div class="db-ch-card">
+    if(window.WS_DATA&&window.WS_DATA.socialMentions){
+      chGrid.classList.add('soc-ch-grid');
+      chGrid.innerHTML=socialChannelData.map(c=>{
+        const p=SOCIAL_PLATFORMS[c.platform]||{icon:'fa-globe',color:'#6b7280',label:c.platform};
+        const ico=p.icon==='fa-x-twitter'?X_SVG:`<i class="fa-brands ${p.icon}"></i>`;
+        const stats=c.stats.map(([l,v])=>`<div class="soc-ch-stat"><span class="soc-ch-stat-lbl">${l}</span><span class="soc-ch-stat-val">${v}</span></div>`).join('');
+        const reactions=c.reactions?`<div class="soc-ch-sec"><div class="soc-ch-sec-lbl">Reactions</div><div class="soc-ch-react">${c.reactions.map(([e,n])=>`<span class="soc-ch-react-i"><span class="soc-ch-react-e">${e}</span>${n}</span>`).join('')}</div></div>`:'';
+        const noteIcon=t=>/retweet/i.test(t)?'repeat':/views/i.test(t)?'eye':/comments/i.test(t)?'message-circle':/upvotes/i.test(t)?'arrow-big-up':/shares/i.test(t)?'share-2':/awards/i.test(t)?'award':/likes/i.test(t)?'heart':'bar-chart-2';
+        const notes=c.notes?`<div class="soc-ch-sec"><div class="soc-ch-sec-lbl">Breakdown</div><div class="soc-ch-notes">${c.notes.map(n=>`<div class="soc-ch-note"><i data-lucide="${noteIcon(n)}"></i>${n}</div>`).join('')}</div></div>`:'';
+        return `<div class="db-ch-card soc-ch-card">
+      <div class="db-ch-hd"><span class="db-ch-name">${p.label}</span><span class="hl-icon soc-ch-ico" style="background:${p.color}1a;color:${p.color}">${ico}</span></div>
+      <div class="soc-ch-stats">${stats}</div>
+      ${reactions}${notes}
+    </div>`;}).join('');
+    } else {
+      chGrid.classList.remove('soc-ch-grid');
+      chGrid.innerHTML=channelData.map(c=>`<div class="db-ch-card">
       <div class="db-ch-hd"><span class="hl-icon ${c.cls}"><i data-lucide="${c.icon}"></i></span><span class="db-ch-name">${c.name}</span></div>
       <div class="db-ch-hero"><div class="db-ch-hero-lbl">Total AVE</div><div class="db-ch-hero-val">${c.ave}</div></div>
       <div class="db-ch-sub">
@@ -4471,6 +4628,7 @@ function initDashboard(){
         ${sub('Avg Words',c.words)}${sub('Story Value',c.sv)}
       </div>
     </div>`).join('');
+    }
     initIcons();
   }
 
@@ -4566,7 +4724,7 @@ function initDashboard(){
       <div>
         <div class="ti-sec-title"><i data-lucide="file-text"></i> Related articles</div>
         <p style="font-size:12px;color:var(--muted);margin:0 0 6px">${desc}.</p>
-        ${arts.map(artRow).join('')}
+        ${renderArtTable(arts)}
       </div>`;
   }
   SRC.emphasis={card:'db-emphasis-card',sub:()=>'Topic Emphasis · subject prominence',detailTitle:()=>empCatLabel(tiKey),overview:()=>empOverviewHTML(),detail:()=>empDetailHTML(),clear:()=>{empSelected=null;renderEmphasis();}};
@@ -4843,6 +5001,172 @@ function initDashboard(){
   const entLeg=document.getElementById('db-ent-legend');
   if(entLeg) entLeg.innerHTML=entityData.map(e=>'<span class="db-ent-leg-item"><span class="sq" style="background:'+e.color+'"></span>'+e.name+'</span>').join('');
 
+  // ── Insights sources for the remaining dashboard charts — Timeline-level analysis (computed from each chart's data) ──
+  const _iStat=(lbl,val,sub,cls)=>`<div class="ti-stat"><div class="ti-stat-lbl">${lbl}</div><div class="ti-stat-val ${cls||''}">${val}</div><div class="ti-stat-sub">${sub}</div></div>`;
+  const _iStats=(...s)=>`<div class="ti-stats">${s.join('')}</div>`;
+  const _iNarr=(html)=>`<div class="ti-narrative">${html}</div>`;
+  const _iSec=(icon,t)=>`<div class="ti-sec-title"><i data-lucide="${icon}"></i> ${t}</div>`;
+  const _iIns=(icon,html)=>`<div class="ti-insight"><i data-lucide="${icon}"></i><div>${html}</div></div>`;
+  const _iCall=(icon,color,bg,lbl,sub,val,valCls)=>`<div class="ti-callout" style="cursor:default"><span class="ti-callout-ic" style="background:${bg};color:${color}"><i data-lucide="${icon}"></i></span><div class="ti-callout-main"><div class="ti-callout-lbl">${lbl}</div><div class="ti-callout-sub">${sub}</div></div><span class="ti-callout-val ${valCls||''}">${val}</span></div>`;
+  const _iRank=(rows,barColor)=>`<div>${rows.map((r,i)=>`<div class="ti-rank" style="cursor:default"><span class="ti-rank-no">${i+1}</span><span class="ti-rank-name">${r.name}</span><span class="ti-rank-bar"><span class="ti-rank-bar-fill" style="width:${r.pct}%${r.color?';background:'+r.color:(barColor?';background:'+barColor:'')}"></span></span><span class="ti-rank-val">${r.val}</span></div>`).join('')}</div>`;
+  const _iRow=(a,b)=>`<div class="ti-irow"><span class="ti-irow-a">${a}</span><span class="ti-irow-b">${b}</span></div>`;
+  const _iList=(rows)=>`<div class="ti-ilist">${rows.map(([a,b])=>_iRow(a,b)).join('')}</div>`;
+  const _iFoot=(txt)=>`<div class="ti-foot"><i data-lucide="sparkles"></i><span>${txt}</span></div>`;
+
+  SRC.tonality={card:'db-tonality-card',sub:()=>'Sentiment breakdown',detailTitle:()=>'Tonality',clear:()=>{},detail:()=>SRC.tonality.overview(),overview:()=>{
+    const tot=tonPie.reduce((s,d)=>s+d.value,0);
+    const pos=(tonPie.find(d=>d.name==='Positive')||{}).value||0,neu=(tonPie.find(d=>d.name==='Neutral')||{}).value||0,neg=(tonPie.find(d=>d.name==='Negative')||{}).value||0;
+    const dom=[...tonPie].sort((a,b)=>b.value-a.value)[0],net=Math.round((pos-neg)/tot*100),posPct=pos/tot*100,negPct=neg/tot*100;
+    const ratio=neg?(pos/neg).toFixed(1):pos;
+    const byPos=[...tonDates].sort((a,b)=>b.Positive-a.Positive),peak=byPos[0];
+    const negDay=[...tonDates].filter(d=>d.Negative>0).sort((a,b)=>b.Negative-a.Negative)[0];
+    const first=tonDates[0],lastD=tonDates[tonDates.length-1],improving=(lastD.Positive-lastD.Negative)>=(first.Positive-first.Negative);
+    const netNegDays=tonDates.filter(d=>d.Negative>=d.Positive&&d.Negative>0).length;
+    return _iNarr(`Sentiment skews <b>${dom.name.toLowerCase()}</b> — <b>${pos}</b> of ${tot} mentions (<b>${posPct.toFixed(0)}%</b>) are positive vs ${neg} negative, a net <b class="${net>=0?'ti-up':'ti-down'}">${net>=0?'+':''}${net}%</b>. Tone ${improving?'improved':'softened'} over the range, peaking on <b>${peak.date}</b>.`)
+      +_iStats(
+        _iStat('Total mentions',tot,'in range'),
+        _iStat('Dominant',dom.name,posPct.toFixed(0)+'% of mentions'),
+        _iStat('Net sentiment',(net>=0?'+':'')+net+'%',pos+' pos · '+neg+' neg',net>=0?'ti-up':'ti-down'),
+        _iStat('Peak positive',peak.Positive,peak.date)
+      )
+      +_iSec('trending-up','Key trends')
+      +_iIns('smile',`Positive leads at <b>${posPct.toFixed(0)}%</b> — about <b>${ratio}×</b> the negative share (${negPct.toFixed(0)}%).`)
+      +_iIns('activity',`Tone is <b>${improving?'improving':'softening'}</b> — ${lastD.date} ran ${lastD.Positive}:${lastD.Negative} pos:neg vs ${first.Positive}:${first.Negative} early on.`)
+      +_iIns('shield-check',`${netNegDays===0?'No day was net-negative':netNegDays+' day(s) ran net-negative'} across the range — narrative risk is ${netNegDays===0?'low':'worth watching'}.`)
+      +_iSec('zap','Notable days')
+      +_iCall('trending-up','#16a34a','rgba(22,163,74,0.12)','Most positive · '+peak.date,'Highest positive volume','+'+peak.Positive,'ti-up')
+      +(negDay?_iCall('trending-down','#e94f37','rgba(233,79,55,0.12)','Negative driver · '+negDay.date,'Most negative mentions','−'+negDay.Negative,'ti-down'):'')
+      +_iSec('award','Top days by positive volume')
+      +_iRank(byPos.slice(0,4).map(d=>({name:d.date,val:d.Positive,pct:Math.round(d.Positive/(byPos[0].Positive||1)*100)})),'#16a34a')
+      +_iSec('lightbulb','Takeaways')
+      +_iIns('megaphone',`Amplify the <b>${peak.date}</b> positive coverage through owned channels while momentum holds.`)
+      +(negDay?_iIns('search',`Investigate the <b>${negDay.date}</b> negative driver before it shapes the wider narrative.`):'')
+      +_iFoot('AI-generated summary derived from the sentiment distribution and daily tonality.');
+  }};
+  SRC.frequency={card:'db-frequency-card',sub:()=>'Story-value distribution',detailTitle:()=>'Frequency',clear:()=>{},detail:()=>SRC.frequency.overview(),overview:()=>{
+    const entries=Object.entries(freqCounts).map(([v,c])=>[+v,c]).sort((a,b)=>a[0]-b[0]),tot=entries.reduce((s,e)=>s+e[1],0);
+    const mean=entries.reduce((s,e)=>s+e[0]*e[1],0)/tot,byCount=[...entries].sort((a,b)=>b[1]-a[1]),vals=entries.map(e=>e[0]);
+    const loB=Math.min(...vals),hiB=Math.max(...vals),midEmpty=[];for(let v=loB+1;v<hiB;v++)if(!freqCounts[v])midEmpty.push(v);
+    const bimodal=byCount.length>=2&&Math.abs(byCount[0][0]-byCount[1][0])>=3,maxC=byCount[0][1];
+    const lo=entries.filter(e=>e[0]<=1).reduce((s,e)=>s+e[1],0),hi=entries.filter(e=>e[0]>=4).reduce((s,e)=>s+e[1],0);
+    return _iNarr(`${tot} articles span story values <b>${loB}–${hiB}</b>, ${bimodal?'clustering at <b>both ends</b>':'concentrated'} with a weighted mean of <b>${mean.toFixed(2)}</b>. ${lo} low-value (≤1) vs ${hi} high-value (≥4) articles.`)
+      +_iStats(
+        _iStat('Total articles',tot,'in distribution'),
+        _iStat('Most common','SV '+byCount[0][0],byCount[0][1]+' articles'),
+        _iStat('Mean story value',mean.toFixed(2),'weighted'),
+        _iStat('Spread','SV '+loB+'–'+hiB,entries.length+' active buckets')
+      )
+      +_iSec('trending-up','Key trends')
+      +_iIns('bar-chart-2',`Distribution is <b>${bimodal?'bimodal':'concentrated'}</b> — peaks at SV ${byCount[0][0]} (${byCount[0][1]})${byCount[1]?' and SV '+byCount[1][0]+' ('+byCount[1][1]+')':''}.`)
+      +_iIns('minus-circle',`Mid-range is empty${midEmpty.length?' — no articles at SV '+midEmpty.join(', '):''}, so there's little "moderate" coverage.`)
+      +_iIns('gauge',`Mean SV of <b>${mean.toFixed(2)}</b> ${mean<2?'sits low':'is moderate'} — overall value is pulled up by the high-SV cluster.`)
+      +_iSec('award','Story-value buckets')
+      +_iRank(entries.map(e=>({name:'Story value '+e[0].toFixed(2),val:e[1],pct:Math.round(e[1]/maxC*100)})),'#b9a4f7')
+      +_iSec('lightbulb','Takeaways')
+      +_iIns('search',`Dig into the <b>SV ${hiB}</b> cluster — the high-value stories driving the most reach.`)
+      +_iIns('layers',`The split suggests two content types; segment reporting to track low- vs high-value output separately.`)
+      +_iFoot('AI-generated summary derived from the story-value histogram.');
+  }};
+  SRC.pubscore={card:'db-pubscore-card',sub:()=>pubScoreData.length+' publishers',detailTitle:()=>'Publisher score',clear:()=>{},detail:()=>SRC.pubscore.overview(),overview:()=>{
+    const n=pubScoreData.length,byScore=[...pubScoreData].sort((a,b)=>b.score-a.score),byArts=[...pubScoreData].sort((a,b)=>b.articles-a.articles);
+    const avg=pubScoreData.reduce((s,p)=>s+p.score,0)/n,arts=pubScoreData.reduce((s,p)=>s+p.articles,0),top=byScore[0],bottom=byScore[n-1];
+    const half=Math.ceil(n/2),hiVol=byArts.slice(0,half),loVol=byArts.slice(half);
+    const hiVolAvg=hiVol.reduce((s,p)=>s+p.score,0)/hiVol.length,loVolAvg=loVol.reduce((s,p)=>s+p.score,0)/loVol.length,corr=hiVolAvg>loVolAvg;
+    const gap=(top.score-bottom.score).toFixed(2),emerging=[...pubScoreData].filter(p=>p.articles<=Math.ceil(n/3)).sort((a,b)=>b.score-a.score)[0];
+    return _iNarr(`<b>${top.name}</b> leads with a score of <b>${top.score.toFixed(2)}</b> across ${top.articles} articles. Higher-volume publishers ${corr?'tend to score higher':'do not necessarily score higher'}, and scores span <b>${gap}</b> points top-to-bottom.`)
+      +_iStats(
+        _iStat('Publishers',n,'tracked'),
+        _iStat('Top score',top.score.toFixed(2),top.name),
+        _iStat('Avg score',avg.toFixed(2),'across publishers'),
+        _iStat('Total articles',arts,'combined')
+      )
+      +_iSec('trending-up','Key trends')
+      +_iIns(corr?'arrow-up-right':'shuffle',`Volume ${corr?'correlates with':'is decoupled from'} score — top-half-by-volume average <b>${hiVolAvg.toFixed(2)}</b> vs ${loVolAvg.toFixed(2)} for the rest.`)
+      +_iIns('bar-chart-2',`Scores range <b>${bottom.score.toFixed(2)}–${top.score.toFixed(2)}</b> — a ${gap}-point spread across ${n} publishers.`)
+      +(emerging?_iIns('sparkles',`<b>${emerging.name}</b> punches above its volume — score ${emerging.score.toFixed(2)} on just ${emerging.articles} article${emerging.articles!==1?'s':''}.`):'')
+      +_iSec('award','Top publishers by score')
+      +_iRank(byScore.slice(0,5).map(p=>({name:p.name,val:p.score.toFixed(2),pct:Math.round(p.score/top.score*100),color:p.color})),'#7c3aed')
+      +_iSec('lightbulb','Takeaways')
+      +_iIns('target',`Prioritize <b>${top.name}</b> and other high-score, high-volume outlets for placement and outreach.`)
+      +(emerging?_iIns('trending-up',`Nurture <b>${emerging.name}</b> — high quality, low volume, with room to grow reach.`):'')
+      +_iFoot('AI-generated summary derived from publisher article counts and scores.');
+  }};
+  SRC.author={card:'db-author-card',sub:()=>authorData.length+' authors',detailTitle:()=>'Author story value',clear:()=>{},detail:()=>SRC.author.overview(),overview:()=>{
+    const n=authorData.length,bySv=[...authorData].sort((a,b)=>b.sv-a.sv),byArts=[...authorData].sort((a,b)=>b.articles-a.articles);
+    const avg=authorData.reduce((s,a)=>s+a.sv,0)/n,arts=authorData.reduce((s,a)=>s+a.articles,0),top=bySv[0],bottom=bySv[n-1],prolific=byArts[0];
+    const efficient=[...authorData].sort((a,b)=>(b.sv/b.articles)-(a.sv/a.articles))[0],gap=(top.sv-bottom.sv).toFixed(2);
+    return _iNarr(`<b>${top.name}</b> tops story value at <b>${top.sv.toFixed(2)}</b> (${top.articles} articles). Most prolific is <b>${prolific.name}</b> (${prolific.articles} articles); story value spans <b>${gap}</b> points across ${n} authors.`)
+      +_iStats(
+        _iStat('Authors',n,'tracked'),
+        _iStat('Top story value',top.sv.toFixed(2),top.name),
+        _iStat('Avg story value',avg.toFixed(2),'across authors'),
+        _iStat('Total articles',arts,'combined')
+      )
+      +_iSec('trending-up','Key trends')
+      +_iIns('user-check',`<b>${top.name}</b>${bySv[1]?' and <b>'+bySv[1].name+'</b>':''} drive the highest-value coverage (SV ${top.sv.toFixed(2)}${bySv[1]?', '+bySv[1].sv.toFixed(2):''}).`)
+      +_iIns('zap',`Most efficient is <b>${efficient.name}</b> — <b>${(efficient.sv/efficient.articles).toFixed(2)}</b> story value per article.`)
+      +_iIns('bar-chart-2',`Story value ranges <b>${bottom.sv.toFixed(2)}–${top.sv.toFixed(2)}</b> across the author set.`)
+      +_iSec('award','Top authors by story value')
+      +_iRank(bySv.slice(0,5).map(a=>({name:a.name,val:a.sv.toFixed(2),pct:Math.round(a.sv/top.sv*100),color:a.color})),'#e94f37')
+      +_iSec('lightbulb','Takeaways')
+      +_iIns('handshake',`Build relationships with <b>${top.name}</b> and <b>${prolific.name}</b> — highest value and highest volume respectively.`)
+      +_iIns('eye',`Track <b>${efficient.name}</b> — a high value-per-article rate signals influential, quotable coverage.`)
+      +_iFoot('AI-generated summary derived from author article counts and story values.');
+  }};
+  SRC.toppub={card:'db-toppub-card',sub:()=>topPubData.length+' publishers',detailTitle:()=>'Top publishers',clear:()=>{},detail:()=>SRC.toppub.overview(),overview:()=>{
+    const n=topPubData.length,byDate=[...topPubData].sort((a,b)=>b.x-a.x),arts=topPubData.reduce((s,p)=>s+(p.count||1),0);
+    const latest=byDate[0],earliest=byDate[byDate.length-1],spanDays=Math.max(1,Math.round((latest.x-earliest.x)/86400000));
+    const secMap={};topPubData.forEach(p=>{if(p.section)secMap[p.section]=(secMap[p.section]||0)+1;});
+    const topSec=Object.entries(secMap).sort((a,b)=>b[1]-a[1])[0];
+    const dayMap={};topPubData.forEach(p=>{dayMap[p.pub]=(dayMap[p.pub]||0)+1;});
+    const busiest=Object.entries(dayMap).sort((a,b)=>b[1]-a[1])[0];
+    return _iNarr(`<b>${n}</b> publishers ran ${arts} pieces over ${spanDays} days. Coverage ${busiest[1]>1?'clusters on <b>'+busiest[0]+'</b>':'is spread across the window'}${topSec?', led by the <b>'+topSec[0]+'</b> section':''}.`)
+      +_iStats(
+        _iStat('Publishers',n,'in range'),
+        _iStat('Articles',arts,'published'),
+        _iStat('Latest',latest.pub,latest.name),
+        _iStat('Span',spanDays+'d',earliest.pub+' → '+latest.pub)
+      )
+      +_iSec('trending-up','Key trends')
+      +_iIns('calendar',`Most coverage landed on <b>${busiest[0]}</b> (${busiest[1]} publisher${busiest[1]!==1?'s':''}) — a clear publishing cluster.`)
+      +(topSec?_iIns('layout-grid',`<b>${topSec[0]}</b> is the leading section (${topSec[1]} of ${n}).`):'')
+      +_iIns('clock',`Freshest coverage: <b>${latest.name}</b> on ${latest.pub}.`)
+      +_iSec('award','Coverage by date (newest first)')
+      +_iList(byDate.map(p=>[p.name,p.pub]))
+      +_iSec('lightbulb','Takeaways')
+      +_iIns('radio',`Watch <b>${busiest[0]}</b> for coverage surges — the busiest publishing day in the window.`)
+      +_iIns('mail',`Engage <b>${latest.name}</b> while their coverage is still fresh.`)
+      +_iFoot('AI-generated summary derived from publisher publish dates and sections.');
+  }};
+  SRC.entities={card:'db-entities-card',sub:()=>entityData.length+' entity types',detailTitle:()=>'Entities',clear:()=>{},detail:()=>SRC.entities.overview(),overview:()=>{
+    const sorted=[...entityData].sort((a,b)=>b.value-a.value),dom=sorted[0];
+    const org=(entityData.find(e=>e.name==='ORG')||{}).value||0,per=(entityData.find(e=>e.name==='PERSON')||{}).value||0;
+    const gpe=(entityData.find(e=>e.name==='GPE')||{}).value||0,norp=(entityData.find(e=>e.name==='NORP')||{}).value||0;
+    const combined=org+per,geoGroup=gpe+norp;
+    return _iNarr(`Coverage is <b>${dom.name}-centric</b> — ${dom.name} leads at <b>${dom.value.toFixed(1)}%</b>, and organizations + people together make up <b>${combined.toFixed(0)}%</b> of all entities. Geographic and group entities are minimal (<b>${geoGroup.toFixed(1)}%</b>).`)
+      +_iStats(
+        _iStat('Entity types',entityData.length,'detected'),
+        _iStat('Dominant',dom.name,dom.value.toFixed(1)+'%'),
+        _iStat('Org + Person',combined.toFixed(0)+'%','combined share'),
+        _iStat('Geo + Group',geoGroup.toFixed(1)+'%','GPE + NORP')
+      )
+      +_iSec('trending-up','Key observations')
+      +_iIns('building-2',`Organizations dominate at <b>${org.toFixed(1)}%</b> — coverage centers on companies and institutions.`)
+      +_iIns('user',`People account for <b>${per.toFixed(1)}%</b> — a strong person-driven angle alongside orgs.`)
+      +_iIns('map-pin',`Geographic (GPE ${gpe.toFixed(1)}%) and group (NORP ${norp.toFixed(1)}%) entities are thin — little regional or demographic framing.`)
+      +_iSec('award','Type breakdown')
+      +_iRank(sorted.map(e=>({name:e.name,val:e.value.toFixed(2)+'%',pct:Math.round(e.value/dom.value*100),color:e.color})),null)
+      +_iSec('lightbulb','Takeaways')
+      +_iIns('target',`The org/person focus fits corporate-reputation tracking — keep monitoring ${dom.name} entities closely.`)
+      +_iIns('globe',`Expand <b>geographic (GPE)</b> tracking if regional spread matters — it's currently just ${gpe.toFixed(1)}%.`)
+      +_iFoot('AI-generated summary derived from the entity-type distribution.');
+  }};
+  window.openTonalityInsights=()=>tiOpenSource('tonality');
+  window.openFrequencyInsights=()=>tiOpenSource('frequency');
+  window.openPubScoreInsights=()=>tiOpenSource('pubscore');
+  window.openAuthorInsights=()=>tiOpenSource('author');
+  window.openTopPubInsights=()=>tiOpenSource('toppub');
+  window.openEntitiesInsights=()=>tiOpenSource('entities');
 }
 (function(){function c(){document.querySelectorAll(".brief-stats .ss").forEach(function(card){var tr=card.querySelector(".ss-trend:not(.neu)");if(!tr)return;var neg=/[↓−-]/.test(tr.textContent);tr.classList.remove("pos","neg");tr.classList.add(neg?"neg":"pos");var v=card.querySelector(".ss-val");if(v){v.classList.remove("tcol-pos","tcol-neg");v.classList.add(neg?"tcol-neg":"tcol-pos");}});}if(document.readyState!=="loading")c();else document.addEventListener("DOMContentLoaded",c);})();
 
@@ -4972,12 +5296,20 @@ function _synthArticles(seedName,realCount,need){
     const aveK=(40+((h>>>5)%760)/10).toFixed(1);                  // always 1 decimal — "40.0K" etc.
     const idx=Math.min(months.length-1,realCount+i);
     const outlet=ENT_OUTLET_POOL[(h>>>7)%ENT_OUTLET_POOL.length];
+    const brand=ENT_BRAND_POOL[(h>>>13)%ENT_BRAND_POOL.length];
+    // Fields the 3-column preview (renderInlineDetail) needs — real mentionData has these; synth must too.
+    const chart=Array.from({length:9},(_,k)=>2+((h>>>(k+2))%16));
     out.push({
       sv,ave:'PHP '+aveK+'K',title,date:months[idx],ago:agos[idx],
       type:ENT_TYPE_POOL[(h>>>11)%ENT_TYPE_POOL.length],
-      brand:ENT_BRAND_POOL[(h>>>13)%ENT_BRAND_POOL.length],
+      brand,
+      tone:{positive:'positive',neutral:'mixed',negative:'negative'}[brand]||'mixed',
       author:ENT_AUTHOR_POOL[(h>>>17)%ENT_AUTHOR_POOL.length],
-      sub:outlet.sub,section:outlet.section,
+      authorScore:(sv*0.7).toFixed(2),avgSv:sv.toFixed(2),
+      chart,
+      keywords:[['dito',(h%3)+1],['telco',((h>>>2)%2)+1]],
+      entities:((h>>>9)%2)?['DITO Telecommunity','Globe Telecom']:['DITO Telecommunity'],
+      outlet:outlet.sub,sub:outlet.sub,section:outlet.section,
       _synth:true
     });
   }
@@ -5147,7 +5479,7 @@ function _paneArticles(kind,name,articles){
             <th style="width:40px"></th>
           </tr></thead>
           <tbody>
-            ${pageRows.length===0?`<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);font-size:12.5px">No articles found</td></tr>`:pageRows.map(d=>`<tr>
+            ${pageRows.length===0?`<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);font-size:12.5px">No articles found</td></tr>`:pageRows.map((d,i)=>`<tr class="ent-art-row" onclick="openEntArticle('${kind}',${attrJson(name)},${start+i})">
               <td><span class="tcb"></span></td>
               <td><span class="sv-val">${(d.sv||0).toFixed(2)}</span></td>
               <td><span class="ave-val">${d.ave||'—'}</span></td>
@@ -5164,6 +5496,77 @@ function _paneArticles(kind,name,articles){
     ${pagerHtml}`;
 }
 
+// ── Article preview (tracker-style 3-column: article list · analytics · article body) ──
+let entPrev=null,entSidebarWasCollapsed=false,entPrevPage=0;   // {kind,name,idx} + prior sidebar state + list page
+const ENT_PREV_PER_PAGE=15;   // articles per page in the preview's left-column list
+function openEntArticle(kind,name,idx){
+  const arts=getEntityArticles(kind,name),d=arts[idx];
+  const page=document.getElementById(kind==='pub'?'page-publishers':'page-authors');
+  if(!d||!page||!document.getElementById('adp-col-mid'))return;
+  entPrev={kind,name,idx};
+  entPrevPage=Math.floor(idx/ENT_PREV_PER_PAGE);   // open the list on the page holding the clicked row
+  mdSpotCtx=null;mdActCtx=null;mdActive=-1;   // no spotlight/activity context; toggles display-only
+  const sb=document.querySelector('.sidebar');   // auto-collapse the nav for more preview room
+  entSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
+  if(sb)sb.classList.add('collapsed');
+  page.classList.add('ent-detail-open');
+  renderInlineDetail(d);
+  _renderEntPrevList();
+  initIcons();
+}
+function selectEntArticle(i){
+  if(!entPrev)return;
+  const d=getEntityArticles(entPrev.kind,entPrev.name)[i];if(!d)return;
+  entPrev.idx=i;
+  renderInlineDetail(d);
+  _renderEntPrevList();
+  initIcons();
+}
+function goEntPrevPage(p){entPrevPage=p;_renderEntPrevList();initIcons();}
+// Left column: this entity's articles as a compact table (Headline · Sentiment · ⋯) with pagination — mirrors the tracker's coverage panel.
+function _renderEntPrevList(){
+  const left=document.getElementById('adp-col-left');if(!left||!entPrev)return;
+  const {kind,name,idx}=entPrev,arts=getEntityArticles(kind,name);
+  // Mini detail-header stats (same formulas as renderEntityDetail) — social icons + Score · Articles · Total AVE
+  const totalAve=arts.reduce((s,d)=>{const m=String(d.ave||'').match(/[\d.]+/);return s+(m?parseFloat(m[0]):0);},0);
+  const avgSv=arts.length?(arts.reduce((s,d)=>s+(d.sv||0),0)/arts.length):0;
+  const score=(avgSv*2).toFixed(2),scoreLabel=kind==='pub'?'Pub score':'Author score';
+  const aveNum=totalAve>=1000?(totalAve/1000).toFixed(1)+'K':totalAve.toFixed(0);
+  const statsHtml=`<div class="ent-detail-stats">
+      <div class="ent-stat"><div class="ent-stat-val">${score}</div><div class="ent-stat-lbl">${scoreLabel}</div></div>
+      <div class="ent-stat"><div class="ent-stat-val">${arts.length}</div><div class="ent-stat-lbl">Articles</div></div>
+      <div class="ent-stat"><div class="ent-stat-val">${aveNum}</div><div class="ent-stat-lbl">Total AVE</div></div>
+    </div>`;
+  const total=arts.length,pages=Math.max(1,Math.ceil(total/ENT_PREV_PER_PAGE));
+  let page=Math.max(0,Math.min(entPrevPage,pages-1));entPrevPage=page;
+  const start=page*ENT_PREV_PER_PAGE,pageArts=arts.slice(start,start+ENT_PREV_PER_PAGE);
+  const rows=pageArts.map((a,i)=>{
+    const gi=start+i;
+    return `<div class="spot-cov-li ent-prev-li${gi===idx?' active':''}" onclick="selectEntArticle(${gi})">
+      <span class="md-li-ico type-${articleType(a)}"><i data-lucide="${typeIcon(a)}"></i></span>
+      <div class="spot-cov-body"><div class="spot-cov-hl">${a.title}</div></div>
+      <span class="ent-prev-trail"><span class="ent-prev-sent">${sentimentCellHtml(a.brand)}</span><span class="row-dots" title="More" onclick="event.stopPropagation()">⋯</span></span>
+    </div>`;
+  }).join('');
+  left.innerHTML=`<div class="spot-panel ctx-act">
+    <div class="ent-prev-head">
+      <div class="ent-prev-head-l"><div class="spot-panel-title" data-btip="${_makeTip({label:name})}">${name}</div>${renderSocialIcons()}</div>
+      ${statsHtml}
+    </div>
+    <div class="spot-cov-tbl">
+      <div class="spot-cov-thd"><span>Headline</span><span class="ent-prev-trail"><span class="ent-prev-sent">Sentiment</span><span class="row-dots" aria-hidden="true" style="visibility:hidden">⋯</span></span></div>
+      <div class="spot-cov-list">${rows}</div>
+    </div>
+    ${_covPager(page,total,pages,'goEntPrevPage',ENT_PREV_PER_PAGE)}
+  </div>`;
+}
+function closeEntArticle(){
+  document.querySelectorAll('.ent-detail-open').forEach(p=>p.classList.remove('ent-detail-open'));
+  const sb=document.querySelector('.sidebar');   // restore the nav unless it was already collapsed
+  if(sb&&!entSidebarWasCollapsed)sb.classList.remove('collapsed');
+  entPrev=null;
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&entPrev)closeEntArticle();});
 // ── Pane: Performance Charts ──
 function _panePerf(kind,name){
   const days=entPerfRange[kind+':'+name]||7;

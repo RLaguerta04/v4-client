@@ -491,6 +491,9 @@ svg.lucide-chevron-down{width:18px!important;height:18px!important}
 .ave-val{font-size:13px;font-weight:600;color:var(--ink)}
 .hl-icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:var(--radius-sm);background:var(--canvas);color:var(--muted);margin-right:10px;vertical-align:middle;flex-shrink:0;border:1px solid var(--border)}
 .hl-icon i,.hl-icon svg{width:13px!important;height:13px!important}
+/* Social platform chips (dashboard channel cards) — FA brand glyph / inline X SVG sized for the chip */
+.hl-icon.soc-ch-ico i{width:auto!important;height:auto!important;font-size:14px}
+.hl-icon.soc-ch-ico svg{width:14px!important;height:14px!important}
 .hl-cell{display:flex;align-items:center}
 .hl-text{font-size:13px;color:var(--ink);line-height:1.4;font-weight:400}
 .pub-name{font-size:13px;color:var(--ink);font-weight:600;line-height:1.3}
@@ -1017,6 +1020,12 @@ body:not(.ws-shared) #page-authors .md-soc,#page-publishers .md-soc{margin-left:
 body:not(.ws-shared) #page-authors .md-socials .md-soc:first-child,#page-publishers .md-socials .md-soc:first-child{margin-left:0}
 body:not(.ws-shared) #page-authors .md-socials:hover .md-soc,#page-publishers .md-socials:hover .md-soc{margin-left:4px}
 body:not(.ws-shared) #page-authors .md-socials:hover .md-soc:first-child,#page-publishers .md-socials:hover .md-soc:first-child{margin-left:0}
+/* In the narrow preview header, use a gentler hover spread so the row doesn't wrap to two lines
+   (authors selectors carry body:not(.ws-shared) to out-specify the guarded base hover rule) */
+#page-publishers .ent-preview-wrap .md-socials:hover .md-soc,
+body:not(.ws-shared) #page-authors .ent-preview-wrap .md-socials:hover .md-soc{margin-left:-4px}
+#page-publishers .ent-preview-wrap .md-socials:hover .md-soc:first-child,
+body:not(.ws-shared) #page-authors .ent-preview-wrap .md-socials:hover .md-soc:first-child{margin-left:0}
 .md-stats{display:flex;gap:16px}
 .md-stat-lbl{font-size:11.5px;color:var(--muted);margin-bottom:5px}
 .md-stat-val{font-size:18px;font-weight:700;color:var(--ink);font-family:var(--font-display)}
@@ -1522,13 +1531,16 @@ body.rpt-open .app-right{transition:padding-right 0.28s cubic-bezier(0.4,0,0.2,1
 .art-detail-layout{display:none;gap:0;padding-bottom:0;flex:16;min-width:0}
 #page-mentions.detail-open .art-detail-layout{display:flex}
 #page-mentions.detail-open .art-col-mid{padding:20px 16px 32px}
-/* Shared View preview: collapse social table to Post(4) · Source(5) — post shown first */
+/* Shared View tracker: hide the news filter/sort bar (the social coverage table brings its own).
+   Scoped to the tracker's own bar (direct child of .dpane) so the nested social one stays. */
+body.ws-shared #page-tracker .dpane > .art-filter-bar{display:none}
+/* Shared View preview: collapse social table to Post(4) · Source(5) · Sentiment(6) */
 body.ws-shared #page-mentions.detail-open .tbl th:nth-child(4),
 body.ws-shared #page-mentions.detail-open .tbl td:nth-child(4),
 body.ws-shared #page-mentions.detail-open .tbl th:nth-child(5),
-body.ws-shared #page-mentions.detail-open .tbl td:nth-child(5){display:table-cell}
+body.ws-shared #page-mentions.detail-open .tbl td:nth-child(5),
 body.ws-shared #page-mentions.detail-open .tbl th:nth-child(6),
-body.ws-shared #page-mentions.detail-open .tbl td:nth-child(6),
+body.ws-shared #page-mentions.detail-open .tbl td:nth-child(6){display:table-cell}
 body.ws-shared #page-mentions.detail-open .tbl th:nth-child(8),
 body.ws-shared #page-mentions.detail-open .tbl td:nth-child(8),
 body.ws-shared #page-mentions.detail-open .tbl th:nth-child(9),
@@ -1565,7 +1577,7 @@ body.ws-shared #page-mentions.detail-open .tbl td:nth-child(9){display:none}
 .soc-empty{font-size:12.5px;color:var(--muted)}
 /* ── Post card (default right-column view) — self-rendered, consistent across all platforms ── */
 /* Center the card / embed within the right column (social detail only); stay top-aligned vertically */
-#article-detail-panel.social-detail .art-col-right{align-items:center;justify-content:center}
+#article-detail-panel.social-detail .art-col-right{align-items:center;justify-content:flex-start}
 /* Column 2 footnote: clarifies the captured details vs the live embed (quiet, on its own line) */
 .soc-mid-caption{display:flex;align-items:flex-start;gap:7px;padding:2px 2px 4px;font-size:11px;line-height:1.45;color:var(--muted)}
 .soc-mid-caption i,.soc-mid-caption svg{width:13px;height:13px;flex-shrink:0;margin-top:1px}
@@ -1603,7 +1615,20 @@ body.ws-shared #page-mentions.detail-open .tbl td:nth-child(9){display:none}
 .soc-card-actions .soc-viewpost{text-decoration:none}
 .soc-live-btn{display:inline-flex;align-items:center;gap:6px}
 /* ── Live embed (opt-in) ── */
-.soc-embed-wrap{display:flex;flex-direction:column;gap:0;padding:0;width:100%;max-width:600px}
+.soc-embed-wrap{display:flex;flex-direction:column;gap:0;padding:0;width:100%}
+/* Embed header — article-style stacked layout (mirrors renderArticleBody):
+   post text · influencer byline · action row (Send via Email / Export as PDF / View Post).
+   Not sticky — it's a normal heading block (like the article-body header), so the embed
+   sits directly below it and shows the post from its true top instead of sliding underneath. */
+.soc-embed-head{display:block;padding:2px 0 14px;margin-bottom:14px;background:#fff}
+.soc-embed-title{min-width:0;font-size:15px;font-weight:600;color:var(--ink);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:default;margin-bottom:8px}
+.soc-embed-byline{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.soc-embed-inf{font-size:12.5px;font-weight:600;color:var(--ink)}
+.soc-embed-posted{font-size:12.5px;color:var(--muted)}
+.qa-row.soc-embed-actions{margin-bottom:0;align-items:center}
+.soc-embed-head .soc-viewpost{flex-shrink:0;text-decoration:none}
+/* View Post sits in the qa-row — match the qa-btn height so the row aligns, keep its dark accent */
+.soc-embed-actions .soc-viewpost{font-size:12px;padding:6px 11px}
 .soc-embed-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:2px}
 .soc-embed-ttl{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--ink)}
 .soc-embed-ttl i{font-size:15px}
@@ -1627,10 +1652,68 @@ body.ws-shared #page-mentions.detail-open .tbl td:nth-child(9){display:none}
 .art-col-left{display:none}
 .art-col-mid{flex:7;min-width:0;display:flex;flex-direction:column;gap:10px;height:100%;overflow-y:overlay;animation:detailSlideIn 0.3s ease both}
 .art-col-right{flex:9;min-width:0;display:flex;flex-direction:column;height:100%;overflow-y:overlay;padding:20px 24px 32px;animation:detailSlideIn 0.35s 0.06s ease both;box-shadow:-4px 0 12px rgba(0,0,0,0.06);background:#fff}
+/* ── Publishers/Authors article preview (tracker-style 3-column, opened from a row) ── */
+.ent-art-row{cursor:pointer;transition:background 0.12s}
+.ent-art-row:hover{background:var(--canvas)}
+.ent-preview-wrap{display:none}
+/* Dashboard article preview — reuses the ent-preview 3-column shell, opened from an Insights table row */
+#page-dashboard.ent-detail-open{overflow:hidden}
+#page-dashboard.ent-detail-open .db-filterbar,#page-dashboard.ent-detail-open .db-content{display:none}
+/* Layered entrance — Stage 1: the whole section slides in from the right (left list rides along) */
+#page-dashboard.ent-detail-open .ent-preview-wrap{display:flex;flex-direction:column;flex:1;min-height:0;animation:insPreviewIn 0.44s cubic-bezier(.16,1,.3,1) both}
+#page-dashboard.ent-detail-open .ent-preview-back{display:inline-flex}
+@keyframes insPreviewIn{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:translateX(0)}}
+/* Stage 2: the analytics + article-body columns cascade in from the right with a slighter offset,
+   staggered behind the section — a layered, parallax reveal. The left list rides with the section. */
+#page-dashboard.ent-detail-open .ent-preview-wrap .art-col-left{animation:none}
+#page-dashboard.ent-detail-open .ent-preview-wrap .art-col-mid{animation:insColIn 0.55s cubic-bezier(.16,1,.3,1) 0.16s both}
+#page-dashboard.ent-detail-open .ent-preview-wrap .art-col-right{animation:insColIn 0.6s cubic-bezier(.16,1,.3,1) 0.26s both}
+@keyframes insColIn{from{opacity:0;transform:translateX(38px)}to{opacity:1;transform:translateX(0)}}
+.ins-preview-bar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
+.ins-pv-filters{display:flex;align-items:center;gap:8px}
+.ins-pv-right{display:flex;align-items:center;gap:8px}
+/* Preview mode retains the filter bar; only the list/detail body is swapped for the 3-column preview */
+.ent-page.ent-detail-open > .ent-body{display:none}
+.ent-page.ent-detail-open > .ent-preview-wrap{display:flex;flex-direction:column;flex:1;min-height:0}
+/* "Back to publishers" lives in the filter bar's right group — shown only in preview mode */
+.ent-preview-back{display:none;align-items:center;gap:6px;font-size:13.5px;font-weight:500;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;padding:7px 14px;transition:background 0.12s,border-color 0.12s}
+.ent-preview-back:hover{background:var(--canvas);border-color:var(--focus-border)}
+.ent-page.ent-detail-open .ent-preview-back{display:inline-flex}
+.ent-preview-wrap .art-detail-layout{display:flex;flex:1;min-height:0}
+.ent-preview-wrap .art-col-left{display:flex;flex-direction:column;flex:6;min-width:0;height:100%;overflow:hidden;background:var(--surface);border-right:1px solid var(--border);padding:0;animation:detailSlideIn 0.3s ease both}
+.ent-preview-wrap .art-col-mid{padding:20px 16px 32px}
+/* Left column: fixed header (name/stats + Articles + thead) · scrolling list · fixed pagination */
+.ent-preview-wrap .spot-panel{display:flex;flex-direction:column;flex:1;min-height:0;height:100%}
+.ent-preview-wrap .ent-prev-head{flex-shrink:0;padding:18px 16px 12px}
+.ent-preview-wrap .ent-prev-cov-hd{flex-shrink:0;margin:0;padding:12px 16px;border-top:1px solid var(--border)}
+.ent-preview-wrap .spot-cov-tbl{flex:1;min-height:0;display:flex;flex-direction:column;margin:0;border:none;border-radius:0}
+.ent-preview-wrap .spot-cov-thd{flex-shrink:0;margin:0;padding:9px 16px}
+.ent-preview-wrap .spot-cov-list{flex:1;min-height:0;overflow-y:auto;padding:0;scrollbar-width:none}
+.ent-preview-wrap .spot-cov-list::-webkit-scrollbar{display:none}
+/* Rows: vertically centered, edge-to-edge highlight, aligned Sentiment · ⋯ columns (mentions-style) */
+.ent-preview-wrap .spot-cov-li{align-items:center;padding:10px 16px}
+.ent-preview-wrap .ent-prev-trail{gap:4px}
+.ent-preview-wrap .ent-prev-sent{width:74px;justify-content:flex-start}
+.ent-preview-wrap .spot-cov-pager{flex-shrink:0;margin:0;padding:12px 16px;border-top:1px solid var(--border);background:var(--surface)}
+/* Left-column mini header — name + social icons + 3 stats all on one line (stats wrap under on narrow widths) */
+.ent-prev-head{display:flex;align-items:center;justify-content:space-between;gap:10px 20px;flex-wrap:wrap}
+.ent-prev-head-l{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+.ent-prev-head-l .spot-panel-title{flex:0 1 auto;min-width:0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
+.spot-panel .md-socials{margin:0;flex-shrink:0}
+.spot-panel .ent-detail-stats{display:flex;gap:18px;margin:0;flex-shrink:0}
+.spot-panel .ent-stat{flex:1;min-width:0;text-align:center}
+.spot-panel .ent-stat-val{font-size:16px;font-weight:700;font-family:var(--font-display);color:var(--ink);line-height:1.1}
+.spot-panel .ent-stat-lbl{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:var(--muted);margin-top:2px;white-space:nowrap}
+.ent-prev-cov-hd{border-top:1px solid var(--border);padding-top:14px;margin-top:4px}
+/* Left-column article table — reuses the tracker's .spot-cov-* coverage table + a Sentiment · ⋯ trailing cell */
+.ent-prev-trail{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ent-prev-sent{display:inline-flex}
+.ent-prev-trail .row-dots{cursor:pointer;color:var(--muted);font-size:16px;line-height:1;padding:2px 4px;border-radius:5px}
+.ent-prev-trail .row-dots:hover{color:var(--ink);background:var(--canvas)}
 /* ── Spotlight-origin detail: left column = story context + scoped coverage; purple accent ── */
 #page-mentions.spot-detail .tbl-card{display:none}
 #page-mentions.spot-detail .art-detail-layout{border-top:3px solid #7c3aed}
-#page-mentions.spot-detail .art-col-left{display:flex;flex-direction:column;flex:6;min-width:0;height:100%;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);padding:18px 16px 24px;animation:detailSlideIn 0.3s ease both}
+#page-mentions.spot-detail .art-col-left{display:flex;flex-direction:column;flex:6;min-width:0;height:100%;overflow:hidden;background:var(--surface);border-right:1px solid var(--border);padding:0;animation:detailSlideIn 0.3s ease both}
 .spot-panel{display:flex;flex-direction:column}
 .spot-back{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;margin-bottom:18px;font-family:inherit}
 .spot-back:hover{color:#7c3aed}
@@ -1664,8 +1747,38 @@ body.ws-shared #page-mentions.detail-open .tbl td:nth-child(9){display:none}
 #page-tracker .art-detail-layout{display:none}
 #page-tracker.tk-detail-open .at-body{display:none}
 #page-tracker.tk-detail-open .art-detail-layout{display:flex;flex:1;min-height:0;overflow:hidden;border-top:3px solid var(--ctx-accent,#7c3aed)}
-#page-tracker.tk-detail-open .art-col-left{display:flex;flex-direction:column;flex:6;min-width:0;height:100%;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);padding:18px 16px 24px;animation:detailSlideIn 0.3s ease both}
+#page-tracker.tk-detail-open .art-col-left{display:flex;flex-direction:column;flex:6;min-width:0;height:100%;overflow:hidden;background:var(--surface);border-right:1px solid var(--border);padding:0;animation:detailSlideIn 0.3s ease both}
 #page-tracker.tk-detail-open .art-col-mid{padding:20px 16px 32px}
+/* Tracker preview left column — same flush/sticky treatment as the publishers preview; keeps the
+   activity context + matched-articles data and the MATCH column. Header pinned · list scrolls · pager pinned. */
+#page-tracker.tk-detail-open .spot-panel,
+#page-mentions.spot-detail .spot-panel{display:flex;flex-direction:column;flex:1;min-height:0;height:100%;padding:18px 0 0}
+#page-tracker.tk-detail-open .spot-act-head,
+#page-mentions.spot-detail .spot-act-head{display:flex;align-items:center;gap:10px;flex-shrink:0;min-width:0;padding:0 16px}
+#page-tracker.tk-detail-open .spot-tier,
+#page-mentions.spot-detail .spot-tier{flex-shrink:0;margin:0}
+#page-tracker.tk-detail-open .spot-panel-title,
+#page-mentions.spot-detail .spot-panel-title{flex:1;min-width:0;margin:0;padding:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
+#page-tracker.tk-detail-open .spot-panel-why,
+#page-mentions.spot-detail .spot-panel-why{flex-shrink:0;margin:14px 16px}
+#page-mentions.spot-detail .spot-panel-chips{flex-shrink:0;margin:0 16px 14px}
+#page-tracker.tk-detail-open .spot-cov-hd,
+#page-mentions.spot-detail .spot-cov-hd{flex-shrink:0;margin:0;padding:0 16px 8px}
+#page-tracker.tk-detail-open .spot-cov-tbl,
+#page-mentions.spot-detail .spot-cov-tbl{flex:1;min-height:0;display:flex;flex-direction:column;margin:0;border:none;border-radius:0}
+#page-tracker.tk-detail-open .spot-cov-thd,
+#page-mentions.spot-detail .spot-cov-thd{flex-shrink:0;margin:0;padding:9px 16px}
+#page-tracker.tk-detail-open .spot-cov-list,
+#page-mentions.spot-detail .spot-cov-list{flex:1;min-height:0;overflow-y:auto;padding:0;scrollbar-width:none}
+#page-tracker.tk-detail-open .spot-cov-list::-webkit-scrollbar,
+#page-mentions.spot-detail .spot-cov-list::-webkit-scrollbar{display:none}
+#page-tracker.tk-detail-open .spot-cov-li,
+#page-mentions.spot-detail .spot-cov-li{align-items:center;padding:10px 16px}
+/* Fixed match column so the MATCH header aligns with the "X% match" values below it */
+#page-tracker.tk-detail-open .spot-cov-match-cell,
+#page-mentions.spot-detail .spot-cov-match-cell{width:72px;flex-shrink:0}
+#page-tracker.tk-detail-open .spot-cov-pager,
+#page-mentions.spot-detail .spot-cov-pager{flex-shrink:0;margin:0;padding:12px 16px;border-top:1px solid var(--border);background:var(--surface)}
 /* Activity-colored accent for the context panel */
 .ctx-act .spot-tier{color:var(--ctx-accent);background:rgba(0,0,0,0.045);border-color:rgba(0,0,0,0.09)}
 .ctx-act .spot-why-lbl{color:var(--ctx-accent)}
@@ -1784,7 +1897,9 @@ body.ws-shared #page-mentions.detail-open .tbl td:nth-child(9){display:none}
 /* Article right column */
 .adp-article{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:20px;box-shadow:none;flex:1}
 /* Tracker (incl. Shared View): strip the card chrome so the article sits flush, mirroring the mentions preview */
-#page-tracker .adp-article{border:none;padding:0;background:transparent;box-shadow:none;border-radius:0}
+#page-tracker .adp-article,
+#page-publishers .adp-article,
+#page-authors .adp-article{border:none;padding:0;background:transparent;box-shadow:none;border-radius:0}
 .adp-title{font-size:22px;font-weight:700;color:var(--ink);font-family:var(--font-display);line-height:1.3;letter-spacing:-0.02em;margin-bottom:14px}
 .adp-hero{width:100%;aspect-ratio:16/9;max-height:280px;border-radius:var(--radius-md);overflow:hidden;margin-bottom:16px;position:relative;display:flex;align-items:flex-end;justify-content:flex-end;background:linear-gradient(140deg,#181d26,#272d3a 52%,#3a4252)}
 /* Small pill button (used by the Preview full broadsheet action) */
@@ -2311,6 +2426,22 @@ body.ws-shared .sb-progress-fill{background:var(--ws-accent,#2563eb)!important}
 .db-ch-sub-lbl{font-size:9.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em}
 .db-ch-sub-val{font-size:14px;font-weight:700;color:var(--ink);font-family:var(--font-display);line-height:1.1}
 .db-ch-sub-val.zero{color:var(--muted);font-weight:600}
+/* ── Social platform channel cards (Shared workspace) — 3-col grid, full per-platform metadata ── */
+.db-ch-grid.soc-ch-grid{grid-template-columns:repeat(3,1fr)}
+.soc-ch-card .db-ch-name{text-align:left;text-transform:uppercase;letter-spacing:0.02em}
+.soc-ch-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 14px}
+.soc-ch-stat{display:flex;flex-direction:column;gap:4px;min-width:0}
+.soc-ch-stat-lbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;line-height:1.25}
+.soc-ch-stat-val{font-size:20px;font-weight:700;color:#181d26;font-family:var(--font-display);letter-spacing:-0.01em;line-height:1.1}
+/* Engagement block — grouped under its own divider + micro label, below the primary stats */
+.soc-ch-sec{margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.soc-ch-sec-lbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:12px}
+.soc-ch-react{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 12px}
+.soc-ch-react-i{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--ink)}
+.soc-ch-react-e{font-size:16px;line-height:1}
+.soc-ch-notes{display:flex;flex-direction:column;gap:6px}
+.soc-ch-note{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.soc-ch-note i,.soc-ch-note svg{width:13px!important;height:13px!important;flex-shrink:0}
 /* Tonality Distribution: legend + donut/bar two-column body */
 .db-ton-legend{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:4px}
 .db-ton-leg-item{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--ink)}
@@ -2339,13 +2470,14 @@ body.ws-shared .sb-progress-fill{background:var(--ws-accent,#2563eb)!important}
 .db-ent-leg-item{display:inline-flex;align-items:center;gap:7px}
 .db-ent-leg-item .sq{width:10px;height:10px;border-radius:2px;flex-shrink:0}
 /* KPI grid */
-.db-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;flex-shrink:0}
+.db-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:16px;flex-shrink:0}
 .db-kpi-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:20px;display:flex;flex-direction:column;gap:4px;transition:box-shadow 0.2s,transform 0.2s}
 .db-kpi-card:hover{box-shadow:0 8px 24px rgba(24,29,38,0.1);transform:translateY(-2px)}
 .db-kpi-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px}
 .db-kpi-val{font-size:26px;font-weight:700;color:var(--ink);font-family:var(--font-display);letter-spacing:-0.02em;line-height:1.15;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .db-kpi-val--md{font-size:17px;letter-spacing:-0.01em;line-height:1.3;white-space:normal}
 .db-kpi-val.db-kpi-green{color:#16a34a}
+.db-kpi-val.db-kpi-na{color:var(--muted);font-weight:600}
 .db-kpi-detail{font-size:12px;color:var(--muted);margin-bottom:10px}
 .db-kpi-divider{height:1px;background:var(--border);margin:8px 0}
 .db-kpi-delta{font-size:12.5px;font-weight:600;margin-top:2px}
@@ -2398,6 +2530,9 @@ body.ins-open .is-focused{box-shadow:0 0 0 2px rgba(124,58,237,0.45),0 12px 32px
 .ti-head{padding:15px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:11px;flex-shrink:0}
 .ti-head-badge{width:30px;height:30px;border-radius:var(--radius-sm);background:rgba(124,58,237,0.12);color:#7c3aed;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 .ti-head-badge i,.ti-head-badge svg{width:16px;height:16px}
+/* Detail header uses the same badge chip, as a back button */
+.ti-head-back{border:none;cursor:pointer;font-family:inherit;transition:background 0.12s}
+.ti-head-back:hover{background:rgba(124,58,237,0.22)}
 .ti-head-titles{flex:1;min-width:0}
 .ti-head-title{font-size:14px;font-weight:600;color:var(--ink);line-height:1.2}
 .ti-head-sub{font-size:11.5px;color:var(--muted);margin-top:2px}
@@ -2420,6 +2555,12 @@ body.ins-open .is-focused{box-shadow:0 0 0 2px rgba(124,58,237,0.45),0 12px 32px
 .ti-down{color:#e94f37}
 .ti-sec-title{font-size:10.5px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);font-weight:700;margin-bottom:9px;display:flex;align-items:center;gap:6px}
 .ti-sec-title i,.ti-sec-title svg{width:13px;height:13px}
+/* Data-driven insight list rows (dashboard chart insights) */
+.ti-ilist{display:flex;flex-direction:column}
+.ti-irow{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px}
+.ti-irow:last-child{border-bottom:none}
+.ti-irow-a{color:var(--ink);font-weight:500;min-width:0}
+.ti-irow-b{color:var(--muted);white-space:nowrap;flex-shrink:0}
 .ti-insight{display:flex;gap:9px;font-size:12.5px;line-height:1.5;color:var(--ink-2);padding:5px 0}
 .ti-insight b{color:var(--ink);font-weight:600}
 .ti-insight>i,.ti-insight>svg{width:14px;height:14px;flex-shrink:0;margin-top:2px;color:var(--muted)}
@@ -2450,6 +2591,30 @@ body.ins-open .is-focused{box-shadow:0 0 0 2px rgba(124,58,237,0.45),0 12px 32px
 .ti-foot{font-size:11px;color:var(--muted);line-height:1.5;display:flex;gap:6px;align-items:flex-start;border-top:1px solid var(--border);padding-top:14px}
 .ti-foot i,.ti-foot svg{width:13px;height:13px;flex-shrink:0;margin-top:1px}
 .ti-more-note{font-size:11.5px;color:var(--muted);text-align:center;padding-top:4px}
+/* Insights article table (Headline · Sentiment · ⋯) with pagination */
+/* Timeline day detail = table only → bleed to the panel edges (cancel .ti-body padding) */
+.ti-detail-flush{margin:-16px -18px}
+.ti-arttbl{width:100%;border-collapse:collapse;table-layout:fixed}
+.ti-arttbl th,.ti-arttbl td{padding:11px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
+.ti-arttbl thead th{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;background:var(--canvas)}
+.ti-arttbl th.ti-c-sent,.ti-arttbl td.ti-arttbl-sent{width:120px}
+.ti-arttbl th.ti-c-act,.ti-arttbl td.ti-arttbl-act{width:44px;text-align:right}
+.ti-arttbl-row[hidden]{display:none}
+.ti-arttbl-row{cursor:pointer}
+.ti-arttbl-row:hover{background:var(--canvas)}
+.ti-arttbl-hlwrap{display:flex;align-items:center;gap:10px;min-width:0}
+.ti-arttbl-hlwrap .hl-icon{margin-right:0;width:30px;height:30px;flex-shrink:0}
+.ti-arttbl-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;font-weight:600;color:var(--ink)}
+.ti-arttbl-more{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;border-radius:6px;line-height:0}
+.ti-arttbl-more:hover{background:var(--border);color:var(--ink)}
+.ti-arttbl-more i,.ti-arttbl-more svg{width:16px;height:16px}
+.ti-arttbl-pager{display:flex;align-items:center;justify-content:space-between;padding:14px 2px 2px}
+.ti-arttbl-info{font-size:12px;color:var(--muted)}
+.ti-arttbl-btns{display:flex;align-items:center;gap:4px}
+.ti-pgb{min-width:28px;height:28px;padding:0 6px;border:1px solid var(--border);background:#fff;border-radius:6px;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.ti-pgb.on{background:#181d26;color:#fff;border-color:#181d26}
+.ti-pgb:disabled{opacity:0.4;cursor:default}
+.ti-pgb i,.ti-pgb svg{width:14px;height:14px}
 .db-tl-ranges{display:flex;gap:6px;flex-shrink:0}
 .db-tl-range{font-size:12px;font-weight:500;color:var(--muted);background:transparent;border:none;border-radius:6px;padding:5px 13px;cursor:pointer;font-family:inherit;transition:background 0.12s,color 0.12s}
 .db-tl-range:hover{background:var(--canvas);color:var(--ink)}

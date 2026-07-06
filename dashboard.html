@@ -232,10 +232,11 @@
 
       <!-- Tonality Distribution (donut + stacked time-bar) -->
       <div class="db-row">
-        <div class="db-card">
+        <div class="db-card" id="db-tonality-card">
           <div class="db-card-hd db-tl-hd">
             <span class="db-card-title">Tonality Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
+              <button class="db-tl-explore db-tl-insights" onclick="openTonalityInsights()"><i data-lucide="sparkles"></i> Insights</button>
               <button class="db-tl-explore">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
@@ -250,10 +251,11 @@
 
       <!-- Frequency Distribution (story-value histogram) -->
       <div class="db-row">
-        <div class="db-card">
+        <div class="db-card" id="db-frequency-card">
           <div class="db-card-hd db-tl-hd">
             <span class="db-card-title">Frequency Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
+              <button class="db-tl-explore db-tl-insights" onclick="openFrequencyInsights()"><i data-lucide="sparkles"></i> Insights</button>
               <button class="db-tl-explore">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
@@ -264,10 +266,11 @@
 
       <!-- Publisher Score + Author Story Value (paired distributions) -->
       <div class="db-row db-row-5-5">
-        <div class="db-card">
+        <div class="db-card" id="db-pubscore-card">
           <div class="db-card-hd db-tl-hd">
             <span class="db-card-title">Publisher Score Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
+              <button class="db-tl-explore db-tl-insights" onclick="openPubScoreInsights()"><i data-lucide="sparkles"></i> Insights</button>
               <button class="db-tl-explore">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
@@ -276,10 +279,11 @@
           <div class="db-tabs2" aria-hidden="true" style="visibility:hidden"><div class="db-tab2">Bubble Plot</div></div>
           <div class="db-chart-wrap" id="db-pubscore" style="height:440px"></div>
         </div>
-        <div class="db-card">
+        <div class="db-card" id="db-author-card">
           <div class="db-card-hd db-tl-hd">
             <span class="db-card-title">Author Story Value Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
+              <button class="db-tl-explore db-tl-insights" onclick="openAuthorInsights()"><i data-lucide="sparkles"></i> Insights</button>
               <button class="db-tl-explore">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
@@ -295,10 +299,11 @@
 
       <!-- Top Publishers (timeline swimlane) -->
       <div class="db-row">
-        <div class="db-card">
+        <div class="db-card" id="db-toppub-card">
           <div class="db-card-hd db-tl-hd">
             <span class="db-card-title">Top Publishers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
+              <button class="db-tl-explore db-tl-insights" onclick="openTopPubInsights()"><i data-lucide="sparkles"></i> Insights</button>
               <button class="db-tl-explore">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
@@ -310,10 +315,11 @@
 
       <!-- Entities Map (flexbox treemap) -->
       <div class="db-row">
-        <div class="db-card">
+        <div class="db-card" id="db-entities-card">
           <div class="db-card-hd db-tl-hd">
             <span class="db-card-title">Entities Map <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
+              <button class="db-tl-explore db-tl-insights" onclick="openEntitiesInsights()"><i data-lucide="sparkles"></i> Insights</button>
               <button class="db-tl-explore">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
@@ -325,6 +331,38 @@
 
       </div><!-- /db-content-inner -->
       </div><!-- /db-content -->
+
+      <!-- Article preview (publishers-style 3-column) opened from an Insights table row -->
+      <div class="ent-preview-wrap ins-preview-wrap">
+        <div class="ins-preview-bar">
+          <div class="ins-pv-filters">
+            <select class="pub-sort" aria-label="Sort articles">
+              <option>Newest Articles</option>
+              <option>Oldest Articles</option>
+              <option>Highest Story Value</option>
+              <option>Highest AVE</option>
+            </select>
+            <select class="pub-sort" aria-label="Filter articles">
+              <option>Saved Articles</option>
+              <option>All Articles</option>
+              <option>Unread</option>
+            </select>
+          </div>
+          <div class="ins-pv-right">
+            <button class="ent-preview-back" onclick="closeInsArticle()"><i data-lucide="arrow-left" class="icon-lg"></i> Back to dashboard</button>
+            <div class="fc-search">
+              <i data-lucide="search" class="fc-search-icon"></i>
+              <input type="text" placeholder="Search articles…">
+              <div class="fc-search-kbd"><kbd>⌘</kbd><kbd>K</kbd></div>
+            </div>
+          </div>
+        </div>
+        <div class="art-detail-layout" id="article-detail-panel">
+          <div class="art-col-left" id="adp-col-left"></div>
+          <div class="art-col-mid" id="adp-col-mid"></div>
+          <div class="art-col-right" id="adp-col-right"></div>
+        </div>
+      </div>
     </div><!-- /page-dashboard -->
   </div><!-- /main -->
   </div><!-- /app-body -->

@@ -105,6 +105,7 @@
           <div class="fc-icon-btn"><i data-lucide="bookmark" class="icon-lg"></i></div>
           <div class="fc-icon-btn"><i data-lucide="filter" class="icon-lg"></i></div>
           <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+            <button class="ent-preview-back" onclick="closeEntArticle()"><i data-lucide="arrow-left" class="icon-lg"></i> Back to authors</button>
             <select class="pub-sort" onchange="setAuthorSort(this.value)" aria-label="Sort authors">
               <option value="score">Highest Author Score</option>
               <option value="count">Most Articles</option>
@@ -132,6 +133,15 @@
           </div>
         </div>
         <div class="ent-detail-panel" id="author-detail-panel"></div>
+      </div>
+
+      <!-- Article preview (tracker-style 3-column: article list · analytics · article body) -->
+      <div class="ent-preview-wrap">
+        <div class="art-detail-layout" id="article-detail-panel">
+          <div class="art-col-left" id="adp-col-left"></div>
+          <div class="art-col-mid" id="adp-col-mid"></div>
+          <div class="art-col-right" id="adp-col-right"></div>
+        </div>
       </div>
     </div>
   </div><!-- /main -->
