@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Media Meter — Article View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --p900:#4a3c8c;--p700:#5b4ba0;--p600:#6b5cb8;--p500:#8775c7;--p100:#ede9f8;--p50:#f5f2fb;
+  --g50:#f7f7f9;--g100:#eef0f3;--g200:#e3e6eb;--g300:#d1d5db;--g400:#9ca3af;
+  --g500:#6b7280;--g600:#4b5563;--g700:#374151;--g800:#1f2937;--g900:#111827;
+  --green:#16a34a;--red:#ef4444;--amber:#b45309;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop{0%{transform:scale(0.6);opacity:0}100%{transform:scale(1);opacity:1}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#e9ebef;color:var(--g800);min-height:100vh}
+.wrap{max-width:1340px;margin:0 auto;padding:14px 18px 60px}
+
+/* top chrome */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.view-img-tab{font-size:13px;color:var(--g600);background:#fff;border:1px solid var(--g200);border-radius:8px;padding:8px 16px;font-weight:500}
+.hide-btn{font-size:13px;color:#fff;background:var(--p700);border:none;border-radius:8px;padding:8px 18px;font-weight:600;cursor:pointer;transition:background .15s}
+.hide-btn:hover{background:var(--p900)}
+
+/* 3-column grid */
+.grid{display:grid;grid-template-columns:330px 1fr 360px;gap:18px;align-items:start}
+.card{background:#fff;border:1px solid var(--g200);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+.card-label{font-size:12px;color:var(--g400);font-weight:500;margin-bottom:6px}
+.title-h{font-size:18px;font-weight:700;color:var(--g900);line-height:1.35}
+
+.stat-row{display:flex;gap:34px;margin-bottom:16px}
+.stat-k{font-size:11px;letter-spacing:.06em;color:var(--g500);font-weight:600;margin-bottom:4px}
+.stat-v{font-size:30px;font-weight:700;color:var(--g900);line-height:1}
+.freq-btn{width:100%;border:1px solid var(--p500);color:var(--p700);background:#fff;border-radius:9px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.freq-btn:hover{background:var(--p50)}
+
+.meta-row{display:flex;justify-content:space-between;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--g100);font-size:13.5px}
+.meta-row:last-child{border-bottom:none}
+.meta-k{color:var(--g500);display:flex;align-items:center;gap:5px}
+.meta-v{color:var(--g900);font-weight:600;text-align:right}
+.meta-sub{font-size:11px;color:var(--g400);font-weight:400}
+.info-i{width:14px;height:14px;color:var(--g300)}
+
+.kw-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.kw{font-size:12px;background:var(--p50);color:var(--p700);border:1px solid var(--p100);border-radius:14px;padding:4px 11px;font-weight:500}
+
+/* center article reader */
+.reader{background:#fff;border:1px solid var(--g200);border-radius:12px;padding:30px 38px;min-height:560px}
+.reader .kicker{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--p600);font-weight:600;margin-bottom:8px}
+.reader h1{font-size:27px;font-weight:700;color:var(--g900);line-height:1.2;margin-bottom:6px}
+.reader .byline{font-size:13px;color:var(--g500);margin-bottom:22px;padding-bottom:18px;border-bottom:2px solid var(--g100)}
+.reader p{font-size:15px;line-height:1.75;color:var(--g700);margin-bottom:16px}
+.reader .drop::first-letter{font-size:46px;font-weight:700;float:left;line-height:.86;padding:4px 8px 0 0;color:var(--p700)}
+
+/* right column / newspaper image */
+.col-image{background:#fff;border:1px solid var(--g200);border-radius:12px;overflow:hidden}
+.col-image .frame{aspect-ratio:3/4;background:repeating-linear-gradient(0deg,#fbfbfa,#fbfbfa 13px,#f1f1ef 14px,#f1f1ef 15px);position:relative;display:flex;flex-direction:column;padding:18px}
+.np-masthead{text-align:center;border-bottom:2px solid #cfcfca;padding-bottom:6px;margin-bottom:8px}
+.np-masthead .mh1{font-family:Georgia,'Times New Roman',serif;font-size:15px;font-weight:700;letter-spacing:.04em;color:#3a3a36}
+.np-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1}
+.np-h{font-family:Georgia,serif;font-size:11px;font-weight:700;color:#4a4a44;margin-bottom:4px;line-height:1.2}
+.np-line{height:5px;background:#dededa;border-radius:1px;margin-bottom:4px}
+.np-line.s{width:62%}
+.np-photo{height:60px;background:linear-gradient(135deg,#d8d8d2,#c7c7bf);border-radius:2px;margin:6px 0;display:flex;align-items:center;justify-content:center;color:#9a9a90;font-size:9px}
+.col-cap{text-align:center;font-size:11px;color:var(--g400);padding:9px;border-top:1px solid var(--g100)}
+
+/* right-side floating action rail */
+.rail{position:fixed;right:26px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:16px;z-index:50}
+.rail-btn{width:56px;height:56px;border-radius:50%;background:var(--p700);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;box-shadow:0 6px 18px rgba(74,60,140,.35);transition:transform .14s,background .14s,box-shadow .14s;position:relative}
+.rail-btn:hover{background:var(--p900);transform:scale(1.08);box-shadow:0 8px 22px rgba(74,60,140,.5)}
+.rail-btn svg{width:24px;height:24px}
+.rail-btn .tip{position:absolute;right:68px;top:50%;transform:translateY(-50%);background:var(--g900);color:#fff;font-size:11.5px;font-weight:500;padding:5px 9px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .14s}
+.rail-btn:hover .tip{opacity:1}
+.rail-btn.is-mega{background:var(--p700);box-shadow:0 6px 20px rgba(74,60,140,.5)}
+.rail-new{position:absolute;top:-3px;right:-3px;background:var(--green);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:9px;animation:pop .3s ease}
+
+/* toast */
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--g900);color:#fff;font-size:13px;padding:11px 18px;border-radius:9px;opacity:0;transition:all .25s;z-index:400;display:flex;align-items:center;gap:8px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast svg{width:16px;height:16px}
+
+/* ── ACTIVITY TRACKER MODAL ── */
+.at-overlay{position:fixed;inset:0;background:rgba(17,24,39,.55);z-index:300;display:flex;align-items:center;justify-content:center;padding:24px;animation:fadeIn .18s ease}
+.at-modal{width:100%;max-width:760px;max-height:88vh;background:#fff;border-radius:14px;box-shadow:0 26px 64px rgba(0,0,0,.34);display:flex;flex-direction:column;overflow:hidden;animation:fadeIn .22s ease;position:relative}
+.at-head{display:flex;align-items:center;gap:10px;padding:17px 22px;border-bottom:1px solid var(--g100)}
+.at-head svg{width:22px;height:22px;color:var(--p700)}
+.at-head-title{font-size:18px;font-weight:600;color:var(--p700);flex:1}
+.at-close{cursor:pointer;color:var(--g400);width:22px;height:22px;padding:0;background:none;border:none}
+.at-close:hover{color:var(--g700)}
+.at-help-btn{flex:none;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--g300);background:#fff;color:var(--g500);font-size:13px;font-weight:700;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.at-help-btn:hover{border-color:var(--p500);color:var(--p700);background:var(--p50)}
+/* ── user manual panel ── */
+.at-help{position:absolute;inset:0;z-index:20;background:#fff;display:flex;flex-direction:column;border-radius:14px;animation:fadeIn .18s ease}
+.at-help>*{flex:0 0 auto}
+.hm-head{display:flex;align-items:center;gap:10px;padding:17px 22px;border-bottom:1px solid var(--g100)}
+.hm-head svg{width:22px;height:22px;color:var(--p700)}
+.hm-title{font-size:18px;font-weight:600;color:var(--p700);flex:1}
+.hm-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:6px 22px 10px}
+.hm-row{display:flex;gap:13px;padding:13px 0;border-bottom:1px solid var(--g100)}
+.hm-row:last-child{border-bottom:none}
+.hm-ic{flex:none;width:34px;height:34px;border-radius:9px;background:var(--p50);color:var(--p700);display:flex;align-items:center;justify-content:center}
+.hm-ic svg{width:18px;height:18px}
+.hm-h{font-size:14px;font-weight:700;color:var(--g800);margin-bottom:2px}
+.hm-b{font-size:12.8px;color:var(--g600);line-height:1.5}
+.hm-b strong{color:var(--g800);font-weight:600}
+.hm-foot{display:flex;justify-content:flex-end;padding:13px 22px;border-top:1px solid var(--g100);background:var(--g50)}
+.at-sub{padding:12px 22px;background:var(--g50);border-bottom:1px solid var(--g100);font-size:12.5px;color:var(--g600);line-height:1.5}
+.at-sub strong{color:var(--g800)}
+.at-modal>*{flex:0 0 auto}   /* header, sub, filters, pager, footer stay fixed — Track / Add never get clipped */
+.at-body{padding:14px 22px;display:flex;flex-direction:column;gap:9px;flex:1 1 auto;min-height:0;overflow-y:auto}  /* only the list flexes/scrolls when needed */
+/* ── search + date-released filter bar ── */
+.at-filters{display:flex;align-items:center;gap:10px;padding:11px 22px;border-bottom:1px solid var(--g100);flex-wrap:wrap}
+.at-search{position:relative;flex:1;min-width:190px;display:flex;align-items:center}
+.at-search>svg{position:absolute;left:11px;width:15px;height:15px;color:var(--g400);pointer-events:none}
+.at-search input{width:100%;padding:8px 12px 8px 33px;border:1px solid var(--g200);border-radius:8px;font-size:13px;font-family:inherit;color:var(--g800);outline:none;transition:border-color .15s,box-shadow .15s}
+.at-search input:focus{border-color:var(--p500);box-shadow:0 0 0 3px rgba(135,117,199,.22)}
+.at-dates{display:flex;align-items:center;gap:6px}
+.at-dlbl{font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.04em}
+.at-dates input[type=date]{padding:7px 9px;border:1px solid var(--g200);border-radius:8px;font-size:12.5px;font-family:inherit;color:var(--g700);outline:none}
+.at-dates input[type=date]:focus{border-color:var(--p500);box-shadow:0 0 0 3px rgba(135,117,199,.22)}
+.at-dsep{font-size:12px;color:var(--g400)}
+.at-clear{padding:7px 12px;border:1px solid var(--g200);background:#fff;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--g600);cursor:pointer;transition:all .14s}
+.at-clear:hover{background:var(--g50);border-color:var(--g300);color:var(--g800)}
+/* ── date-range trigger pill ── */
+.dr-trigger{display:inline-flex;align-items:center;gap:9px;padding:7px 9px 7px 12px;border:1px solid var(--g200);border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;font-size:12.5px;color:var(--g800);min-width:248px}
+.dr-trigger:hover{border-color:var(--g300)}
+.dr-seg{font-weight:600;white-space:nowrap}
+.dr-seg.ph{color:var(--g400);font-weight:500}
+.dr-arrow{color:var(--g400)}
+.dr-clear{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--g100);color:var(--g500);flex:none}
+.dr-clear:hover{background:var(--g200);color:var(--g700)}
+.dr-clear svg{width:10px;height:10px}
+/* ── date-range calendar popover ── */
+#dr-pop-root .dr-backdrop{position:fixed;inset:0;z-index:6000;background:transparent}
+#dr-pop-root .dr-pop{position:fixed;z-index:6001;background:#fff;border:1px solid var(--g200);border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.22);padding:12px 14px}
+#dr-pop-root .dr-bar{display:flex;align-items:center;gap:4px;margin-bottom:8px}
+#dr-pop-root .dr-bar-sp{flex:1}
+#dr-pop-root .dr-arw{width:28px;height:28px;border:none;background:transparent;border-radius:7px;cursor:pointer;color:var(--g600);font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center}
+#dr-pop-root .dr-arw:hover{background:var(--g100)}
+#dr-pop-root .dr-cals{display:flex;gap:20px;flex-wrap:wrap}
+#dr-pop-root .dr-cal{width:226px}
+#dr-pop-root .dr-mhead{text-align:center;font-size:13px;font-weight:700;color:var(--g800);margin-bottom:8px}
+#dr-pop-root .dr-wd{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:3px}
+#dr-pop-root .dr-wd span{text-align:center;font-size:11px;font-weight:600;color:var(--g400);padding:2px 0}
+#dr-pop-root .dr-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+#dr-pop-root .dr-day{height:30px;display:flex;align-items:center;justify-content:center;font-size:12.5px;color:var(--g700);cursor:pointer;user-select:none}
+#dr-pop-root .dr-day.muted{color:var(--g300);cursor:default}
+#dr-pop-root .dr-day:not(.muted):not(.sel):not(.inrange):hover{background:var(--g100);border-radius:7px}
+#dr-pop-root .dr-day.inrange{background:#e9eaf2}
+#dr-pop-root .dr-day.sel{background:#2e2c46;color:#fff;font-weight:700;border-radius:7px}
+.mt-date{color:var(--g500)}
+/* ── recommended activity highlight ── */
+.at-card.rec{background:linear-gradient(0deg,#fff,#faf8ff);border-color:var(--p100)}
+.at-card.rec:hover{border-color:var(--p500)}
+.at-card.rec.sel{border-color:var(--p700)}
+.rec-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.rec-pill{display:inline-flex;align-items:center;gap:3px;background:var(--p700);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.rec-pill .rec-star{width:11px;height:11px}
+.rec-pct{font-size:11px;font-weight:700;color:var(--green);white-space:nowrap}
+.at-empty{padding:34px 18px;text-align:center;color:var(--g500);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.at-empty svg{width:26px;height:26px;color:var(--g300)}
+.at-card{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;border:1.5px solid var(--g200);border-radius:10px;cursor:pointer;background:#fff;transition:all .14s;position:relative}
+.at-card:hover{border-color:var(--p500);background:var(--p50)}
+.at-card.sel{border-color:var(--p700);background:var(--p50);box-shadow:0 0 0 3px rgba(107,92,184,.12)}
+.at-card.added{border-color:#bbf7d0;background:#f0fdf4;cursor:default}
+.at-ic{width:36px;height:36px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.at-ic svg{width:18px;height:18px}
+.ic-pr{background:#ede9f8;color:#5b4ba0}.ic-tr{background:#fdf0e1;color:#b45309}.ic-cr{background:#fde8e8;color:#dc2626}
+.at-card-body{flex:1;min-width:0}
+.at-card-top{display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap}
+.at-card-title{font-size:13.5px;font-weight:600;color:var(--g900)}
+.ac-type{font-size:10px;font-weight:600;padding:2px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:.04em}
+.type-pr{background:#ede9f8;color:#5b4ba0}.type-tr{background:#fdf0e1;color:#b45309}.type-cr{background:#fde8e8;color:#dc2626}
+.at-card-prev{font-size:11.5px;color:var(--g500);line-height:1.45;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.at-card-meta{display:flex;gap:14px;font-size:11px}
+.mt-mch{color:#5046a6;font-weight:500}.mt-ave{color:#276627;font-weight:500}
+.at-check{display:inline-flex;align-items:center;gap:4px;color:var(--green);font-size:12px;font-weight:600;flex-shrink:0;white-space:nowrap}
+.at-check svg{width:15px;height:15px}
+.at-actions{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.at-remove{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:500;color:var(--g400);background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:5px;transition:all .14s}
+.at-remove:hover{color:var(--red);background:#fee2e2}
+.at-remove svg{width:12px;height:12px}
+.at-cbox{width:20px;height:20px;border-radius:6px;border:2px solid var(--g300);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;color:#fff;transition:all .14s}
+.at-cbox svg{width:13px;height:13px}
+.at-card.sel .at-cbox{border-color:var(--p700);background:var(--p700)}
+.at-card:hover .at-cbox{border-color:var(--p500)}
+.at-foot{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:15px 22px;border-top:1px solid var(--g100);background:var(--g50);flex-wrap:wrap}
+.btn-track{font-size:13px;padding:9px 15px;background:#fff;border:1px solid var(--green);color:var(--green);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:600;transition:all .15s}
+.btn-track svg{width:15px;height:15px}
+.btn-track:hover:not(:disabled){background:#f0fdf4}
+.btn-track:disabled{background:var(--green);color:#fff;cursor:default;opacity:.92}
+.btn-add{font-size:13px;padding:10px 20px;background:var(--green);color:#fff;border:none;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:600;transition:all .15s}
+.btn-add svg{width:15px;height:15px}
+.btn-add:hover:not(:disabled){background:#15803d;box-shadow:0 2px 9px rgba(22,163,74,.35)}
+.btn-add:disabled{background:#cbd5cf;cursor:not-allowed;opacity:.8}
+
+/* ── modal pagination bar ── */
+.at-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 22px;border-top:1px solid var(--g100);background:#fff;flex-wrap:wrap}
+.at-pager-info{font-size:12px;color:var(--g500)}
+.at-pager-ctrls{display:flex;align-items:center;gap:6px}
+.pg-btn{min-width:30px;height:30px;padding:0 8px;border:1px solid var(--g200);background:#fff;border-radius:7px;font-size:12.5px;font-weight:600;color:var(--g600);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .14s}
+.pg-btn:hover:not(:disabled):not(.active){background:var(--g50);border-color:var(--g300)}
+.pg-btn.active{background:var(--p700);border-color:var(--p700);color:#fff;cursor:default}
+.pg-btn:disabled{opacity:.4;cursor:not-allowed}
+.pg-btn svg{width:15px;height:15px}
+@media(max-width:1080px){.grid{grid-template-columns:1fr}.rail{right:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <span class="view-img-tab">View Image</span>
+    <button class="hide-btn">Hide Details</button>
+  </div>
+
+  <div class="grid">
+    <!-- LEFT: metadata -->
+    <div>
+      <div class="card">
+        <div class="card-label">Title</div>
+        <div class="title-h">Ghost forces and ghost victims</div>
+      </div>
+      <div class="card">
+        <div class="stat-row">
+          <div><div class="stat-k">STORY VALUE</div><div class="stat-v">5.29</div></div>
+          <div><div class="stat-k">AVE</div><div class="stat-v">PHP 295.9K</div></div>
+        </div>
+        <button class="freq-btn">Show Frequency Distribution</button>
+      </div>
+      <div class="card" style="padding-top:8px;padding-bottom:8px">
+        <div class="meta-row"><span class="meta-k">Mentions <svg class="info-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></span><span class="meta-v">3</span></div>
+        <div class="meta-row"><span class="meta-k">Publisher</span><span class="meta-v">Daily Tribune</span></div>
+        <div class="meta-row"><span class="meta-k">Author</span><span class="meta-v">Jun Ledesma</span></div>
+        <div class="meta-row"><span class="meta-k">Section</span><span class="meta-v">Commentary</span></div>
+        <div class="meta-row"><span class="meta-k">Emphasis <svg class="info-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></span><span class="meta-v">main</span></div>
+        <div class="meta-row"><span class="meta-k">Date Published</span><span class="meta-v">May 29, 2026<div class="meta-sub">15 hours ago</div></span></div>
+      </div>
+      <div class="card">
+        <div class="card-label">KEYWORDS</div>
+        <div class="kw-wrap">
+          <span class="kw">Dela Rosa</span><span class="kw">ICC</span><span class="kw">EJK</span>
+          <span class="kw">drug war</span><span class="kw">accountability</span><span class="kw">Senate probe</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER: article reader -->
+    <div class="reader">
+      <div class="kicker">Commentary · Daily Tribune</div>
+      <h1>Ghost forces and ghost victims</h1>
+      <div class="byline">By Jun Ledesma · May 29, 2026</div>
+      <p class="drop">This preview stands in for the full article text as it appears on the Media Meter reader. The live page renders the publisher's content here; the panel on the left carries the story value, reach, and metadata your team uses for monitoring.</p>
+      <p>Use the buttons on the right edge of the page to act on this article. The megaphone opens the Activity Tracker, where you can attach this piece to one of your existing activities or spin it into a brand-new one. The download and email buttons behave exactly as they do today.</p>
+      <p>Everything below the headline is placeholder copy so the layout reads naturally; none of the publisher's original wording is reproduced in this prototype.</p>
+    </div>
+
+    <!-- RIGHT: column image -->
+    <div>
+      <div class="card-label" style="margin-bottom:8px">Column</div>
+      <div class="col-image">
+        <div class="frame">
+          <div class="np-masthead"><div class="mh1">COMMENTARY · A5</div></div>
+          <div class="np-cols">
+            <div>
+              <div class="np-h">Loyalty on trial</div>
+              <div class="np-line"></div><div class="np-line"></div><div class="np-line s"></div>
+              <div class="np-photo">illustration</div>
+              <div class="np-line"></div><div class="np-line"></div><div class="np-line s"></div>
+              <div class="np-h" style="margin-top:8px">Ghost forces and ghost victims</div>
+              <div class="np-line"></div><div class="np-line"></div><div class="np-line"></div><div class="np-line s"></div>
+            </div>
+            <div>
+              <div class="np-line"></div><div class="np-line"></div><div class="np-line"></div><div class="np-line s"></div>
+              <div class="np-photo" style="height:48px">photo</div>
+              <div class="np-h" style="margin-top:6px">Your honor, you are dishonorable</div>
+              <div class="np-line"></div><div class="np-line"></div><div class="np-line"></div><div class="np-line"></div><div class="np-line s"></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-cap">Daily Tribune · Print column scan</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── RIGHT-SIDE ACTION RAIL: megaphone ABOVE download + envelope ── -->
+<div class="rail">
+  <button class="rail-btn is-mega" id="mega-btn" onclick="openATModal()" title="Activity Tracker">
+    <span class="rail-new" id="mega-new" style="display:none">Tracked</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a3 3 0 0 1 0 6"/><path d="M10 8v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-3"/><path d="M12 8h0l4.524-3.77A.9.9 0 0 1 18 4.922v12.156a.9.9 0 0 1-1.476.692L12 14H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1h8"/></svg>
+    <span class="tip">Add to Activity Tracker</span>
+  </button>
+  <button class="rail-btn" onclick="railToast('Preparing article download…')" title="Download">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M7 11l5 5 5-5"/><path d="M12 4v12"/></svg>
+    <span class="tip">Download</span>
+  </button>
+  <button class="rail-btn" onclick="railToast('Opening email composer…')" title="Email article">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+    <span class="tip">Email article</span>
+  </button>
+</div>
+
+<!-- modal mount + toast -->
+<div id="at-modal-root"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── article being viewed ──
+const ARTICLE={
+  title:'Ghost forces and ghost victims',
+  media:'Print', source:'Daily Tribune',
+  date:'May 29, 2026', value:296, score:null,
+  url:'https://app.media-meter.com/main/view-article/U2FsdGVkX19vRDFlRnFwbTJyRUluQTVLK1o5TDluTUM4cm8yUDNQUU9LMURianFrYjVmM2tyZm81eVNlSlhBRjBIRE1ZUitmbDhGM0lEUDdhYzRhR1k3RDZUZXJzV3JXZnZlSnArTlJZcVNJMGhqN1JJOEVTU2dCdzkybmxkN0tiMng2S2E1aVVmL0RMOVpoM1ZqZEZ1OFZicEhOZWRNQlRIS1NPNDJOT0hpSEJjNi9RWEtIanpyVDFaMFRZazRBbldwWmU3V3JLQ1c4czBidXRjd3hRU25ZV01LV3hPUmROaW5pWlE9PQ=='
+};
+
+// ── existing activities (matches image 3) ──
+let nid=13;
+let acts=[
+  {id:1,type:'Trending',ic:'ic-tr',badge:'type-tr',date:'2026-06-05',title:'Dela Rosa can be surrendered — DOJ invokes RA 9851',
+   content:'Tracked from the article "Dela Rosa can be surrendered — DOJ invokes RA 9851" (Business Mirror Online). High-velocity ICC accountability story.',
+   matches:[{title:'Dela Rosa can be surrendered — DOJ invokes RA 9851',value:198}]},
+  {id:2,type:'Press Release',ic:'ic-pr',badge:'type-pr',date:'2026-04-15',title:'Marcos Admin Q1 Infrastructure Report',
+   content:'47 infrastructure projects completed across Luzon Visayas Mindanao Q1 2026 PHP 12.4 billion Build Better More road networks bridges flood control.',
+   matches:[{title:'a',value:308},{title:'b',value:520},{title:'c',value:890},{title:'d',value:195}]},
+  {id:3,type:'Crisis',ic:'ic-cr',badge:'type-cr',date:'2026-06-03',title:'Dela Rosa ICC Response — Official Statement',
+   content:'Official statement ICC warrant proceedings Senator Ronald dela Rosa due process Republic Act 9851 international obligations surrender.',
+   matches:[{title:'e',value:198},{title:'f',value:245},{title:'g',value:710},{title:'h',value:480}]},
+  {id:4,type:'Press Release',ic:'ic-pr',badge:'type-pr',date:'2026-05-16',title:'Ayala Malls Refreshes Trinoma — New Dining & Retail',
+   content:'Trinoma by Ayala Malls introduces refreshed spaces, expanded dining and retail, upgraded Activity Center and green outdoor areas in Quezon City.',
+   matches:[{title:'i',value:412},{title:'j',value:188},{title:'k',value:265}]},
+  {id:5,type:'Trending',ic:'ic-tr',badge:'type-tr',date:'2026-05-20',title:'Marcos State Visit to Japan — Trade Deals Signed',
+   content:'President Marcos secures investment pledges and infrastructure cooperation during Tokyo state visit; economic agenda dominates coverage.',
+   matches:[{title:'l',value:620},{title:'m',value:430},{title:'n',value:150}]},
+  {id:6,type:'Crisis',ic:'ic-cr',badge:'type-cr',date:'2026-05-28',title:'Senate Probe — Confidential Funds Hearing',
+   content:'Senate blue ribbon committee resumes hearing on confidential and intelligence funds; agencies asked to justify 2026 allocations.',
+   matches:[{title:'o',value:540},{title:'p',value:295},{title:'q',value:880},{title:'r',value:120}]},
+  {id:7,type:'Press Release',ic:'ic-pr',badge:'type-pr',date:'2026-05-10',title:'DOTr Opens MRT-7 Partial Operations',
+   content:'Department of Transportation announces partial revenue operations for MRT-7, connecting Quezon City to Bulacan along Commonwealth Avenue.',
+   matches:[{title:'s',value:330},{title:'t',value:210}]},
+  {id:8,type:'Trending',ic:'ic-tr',badge:'type-tr',date:'2026-06-02',title:'Peso Hits 58 vs Dollar — Market Reaction',
+   content:'Peso slides to 58 against the US dollar amid global headwinds; BSP signals readiness to intervene as analysts weigh in.',
+   matches:[{title:'u',value:475},{title:'v',value:260},{title:'w',value:90}]},
+  {id:9,type:'Press Release',ic:'ic-pr',badge:'type-pr',date:'2026-04-30',title:'BSP Holds Interest Rates Steady in Q2',
+   content:'Bangko Sentral keeps benchmark rate unchanged, citing easing inflation and stable growth outlook for the second quarter.',
+   matches:[{title:'x',value:355},{title:'y',value:240}]},
+  {id:10,type:'Crisis',ic:'ic-cr',badge:'type-cr',date:'2026-05-25',title:'Typhoon Aghon — Relief Operations Update',
+   content:'Local governments and DSWD ramp up relief operations as Typhoon Aghon affects parts of Luzon; evacuations and road closures reported.',
+   matches:[{title:'z',value:610},{title:'aa',value:340},{title:'bb',value:175}]},
+  {id:11,type:'Trending',ic:'ic-tr',badge:'type-tr',date:'2026-06-01',title:'PBA Finals Game 7 — Social Buzz',
+   content:'PBA Finals Game 7 drives a surge in social conversation and online coverage; sponsors and broadcasters report record engagement.',
+   matches:[{title:'cc',value:520},{title:'dd',value:300}]},
+  {id:12,type:'Press Release',ic:'ic-pr',badge:'type-pr',date:'2026-06-04',title:'Ayala Land H1 Earnings Briefing',
+   content:'Ayala Land reports first-half results, highlighting mall, residential and leasing performance and outlook for the rest of 2026.',
+   matches:[{title:'ee',value:445},{title:'ff',value:280},{title:'gg',value:160}]},
+];
+
+let atOpen=false, atSelSet=new Set(), tracked=false;
+const AT_PER_PAGE=5;    // activities shown per page in the modal
+let atPage=1;           // current modal page
+let atQuery='';         // search text (activity title)
+let atFrom='';          // date released filter — on or after (ISO yyyy-mm-dd)
+let atTo='';            // date released filter — on or before (ISO yyyy-mm-dd)
+let dpOpen=false;       // date-range calendar open?
+let dpView=null;        // {y,m} left month shown in the calendar
+let atHelp=false;       // user manual / help panel open?
+
+// ── icons (inline svg) ──
+const SVG={
+  mega:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a3 3 0 0 1 0 6"/><path d="M10 8v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-3"/><path d="M12 8h0l4.524-3.77A.9.9 0 0 1 18 4.922v12.156a.9.9 0 0 1-1.476.692L12 14H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1h8"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  ccheck:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  tr:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>',
+  pr:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 3h9l5 5v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M9 9h1M9 13h6M9 17h6"/></svg>',
+  cr:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.3 2 19a1 1 0 0 0 .9 1.5h18.2A1 1 0 0 0 22 19L13.7 4.3a1 1 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+  chevL:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
+  chevR:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>'
+};
+const TYPEIC={'ic-tr':SVG.tr,'ic-pr':SVG.pr,'ic-cr':SVG.cr};
+
+function fv(v){return v>=1000?(v/1000).toFixed(v>=10000?0:1)+'M':v+'K';}
+function tAve(m){return fv(m.reduce((s,x)=>s+x.value,0));}
+
+// ── rail buttons ──
+function railToast(msg){
+  const t=document.getElementById('toast');
+  t.innerHTML=msg;t.classList.add('show');
+  clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ── modal ──
+function fmtDate(iso){ if(!iso)return ''; const d=new Date(iso+'T00:00:00'); return isNaN(d.getTime())?iso:d.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}); }
+// ── recommendations: score each activity's relevance to the current article ──
+// concepts are drawn from the article's keywords + headline (Dela Rosa / ICC / drug war / EJK / accountability / Senate probe / RA 9851 / surrender)
+const REC_CONCEPTS=[
+  {w:3, any:['dela rosa']},
+  {w:2, any:['icc','international criminal court']},
+  {w:2, any:['9851']},
+  {w:2, any:['drug war','war on drugs']},
+  {w:1, any:['ejk','extrajudicial']},
+  {w:1, any:['surrender']},
+  {w:1, any:['accountability']},
+  {w:1, any:['senate probe','senate']},
+];
+const REC_MAX=10;          // weight sum that represents a strong topical match (calibration reference)
+const REC_THRESHOLD=80;    // % at or above which an activity is flagged "Recommended"
+function relPct(act){
+  const hay=((act.title||'')+' '+(act.content||'')+' '+(act.type||'')).toLowerCase();
+  let m=0; REC_CONCEPTS.forEach(c=>{ if(c.any.some(t=>hay.indexOf(t)>=0)) m+=c.w; });
+  return Math.min(100, Math.round(m/REC_MAX*100));
+}
+// an activity is recommended if it's relevant AND doesn't already contain this article
+// recommended is based purely on relevance, so the badge + % stay even after the article is added
+function isRec(act){ return relPct(act)>=REC_THRESHOLD; }
+function atFiltered(){
+  const q=atQuery.trim().toLowerCase();
+  return acts.filter(a=>{
+    if(q && a.title.toLowerCase().indexOf(q)<0) return false;     // search by title
+    if(atFrom && (!a.date || a.date < atFrom)) return false;       // released on/after
+    if(atTo   && (!a.date || a.date > atTo))   return false;       // released on/before
+    return true;
+  });
+}
+function atPageCount(){return Math.max(1,Math.ceil(atFiltered().length/AT_PER_PAGE));}
+function atGoPage(n){atPage=Math.min(Math.max(1,n),atPageCount());renderATList();}
+function openATModal(){atOpen=true;atSelSet.clear();atPage=1;atQuery='';atFrom='';atTo='';atHelp=false;dpClose();renderATModal();}
+function closeATModal(){atOpen=false;atSelSet.clear();dpClose();renderATModal();}
+function toggleHelp(){ atHelp=!atHelp; if(atHelp)dpClose(); renderATModal(); }
+// ── user manual shown inside the megaphone / Activity Tracker ──
+function helpRow(icon,title,body){
+  return `<div class="hm-row"><div class="hm-ic">${icon}</div><div class="hm-tx"><div class="hm-h">${title}</div><div class="hm-b">${body}</div></div></div>`;
+}
+function helpPanelHTML(){
+  const star='<svg viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 17l-6.1 3.9 1.6-6.8L2.3 8.9l6.9-.6z"/></svg>';
+  const cal='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>';
+  const srch='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>';
+  const rows=[
+    helpRow(SVG.mega,'Activity Tracker','Tap the megaphone on the article\u2019s action rail to open the Activity Tracker. A small badge on it shows this article\u2019s status \u2014 <strong>Tracked</strong> or <strong>Added</strong>.'),
+    helpRow(star,'Recommended activities','Activities most relevant to this article are tagged <strong>Recommended</strong> with a <strong>% match</strong> and sorted to the top. Anything at 80% or above is flagged.'),
+    helpRow(SVG.plus,'Add to activities','pick one or more activities, then press <strong>Add to Activities</strong>. The article is attached to each \u2014 they turn green with an <strong>Added</strong> label. Your selection is kept across pages.'),
+    helpRow(SVG.mega,'Track this article','Press <strong>Track this article</strong> to spin it into a brand-new activity. It appears at the top of the list and the button switches to <strong>Tracked</strong>.'),
+    helpRow(SVG.x,'Remove / undo','On an added activity press <strong>Remove</strong> to detach the article. Removing a tracked activity deletes that activity.'),
+    helpRow(srch,'Search by title','Type in the search box to filter activities by title, instantly as you type.'),
+    helpRow(cal,'Filter by date released','Open the <strong>Released</strong> range, pick a start date then an end date \u2014 the covered range is highlighted. <strong>Clear</strong> resets the search and dates.'),
+    helpRow(SVG.chevR,'Pages','The list shows 5 activities per page. Use the pager at the bottom to move between pages; search and date filters re-page automatically.'),
+  ].join('');
+  return `<div class="at-help">
+    <div class="hm-head">${SVG.mega}<span class="hm-title">How to use the Activity Tracker</span><button class="at-close" onclick="toggleHelp()" title="Close">${SVG.x}</button></div>
+    <div class="hm-body">${rows}</div>
+    <div class="hm-foot"><button class="btn-add" onclick="toggleHelp()">${SVG.check} Got it</button></div>
+  </div>`;
+}
+// filter handlers — update only the list so the search box keeps focus while typing
+function atSearch(v){atQuery=v;atPage=1;renderATList();}
+function atClearDates(){ atFrom='';atTo='';atPage=1;renderATList();dpSyncTrigger();if(dpOpen)dpRender(); }
+function atClearFilters(){
+  atQuery='';atFrom='';atTo='';atPage=1;
+  const s=document.getElementById('at-search');if(s)s.value='';
+  dpClose();renderATList();dpSyncTrigger();
+}
+
+// ── date-range calendar (From → To with a highlighted range) ──
+const DR_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DR_WD=['Su','Mo','Tu','We','Th','Fr','Sa'];
+function fmtDateLong(iso){ if(!iso)return ''; const d=new Date(iso+'T00:00:00'); return isNaN(d.getTime())?iso:d.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'2-digit'}); }
+function dpTriggerHTML(){
+  const x='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+  return `<span class="dr-seg ${atFrom?'':'ph'}">${atFrom?fmtDateLong(atFrom):'Start date'}</span>`
+    +`<span class="dr-arrow">\u2192</span>`
+    +`<span class="dr-seg ${atTo?'':'ph'}">${atTo?fmtDateLong(atTo):'End date'}</span>`
+    +((atFrom||atTo)?`<span class="dr-clear" onclick="event.stopPropagation();atClearDates()" title="Clear dates">${x}</span>`:'');
+}
+function dpSyncTrigger(){ const tr=document.getElementById('dr-trigger'); if(tr)tr.innerHTML=dpTriggerHTML(); }
+function dpToggle(e){ if(e)e.stopPropagation(); if(dpOpen){dpClose();return;} dpOpen=true; const base=atFrom?new Date(atFrom+'T00:00:00'):new Date(); dpView={y:base.getFullYear(),m:base.getMonth()}; dpRender(); }
+function dpClose(){ dpOpen=false; const root=document.getElementById('dr-pop-root'); if(root)root.innerHTML=''; }
+function dpShift(d){ let mm=dpView.m+d, yy=dpView.y; yy+=Math.floor(mm/12); mm=((mm%12)+12)%12; dpView={y:yy,m:mm}; dpRender(); }
+function dpPick(iso){
+  if(!atFrom || (atFrom && atTo)){ atFrom=iso; atTo=''; }      // start a new range
+  else { if(iso<atFrom){ atFrom=iso; } else { atTo=iso; } }     // complete (or move start earlier)
+  atPage=1; renderATList(); dpSyncTrigger(); dpRender();
+}
+function dpMonthGrid(y,m){
+  const startDow=new Date(y,m,1).getDay();
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const prevDays=new Date(y,m,0).getDate();
+  let cells='';
+  for(let i=startDow-1;i>=0;i--) cells+=`<div class="dr-day muted">${prevDays-i}</div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const iso=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isStart=atFrom&&iso===atFrom, isEnd=atTo&&iso===atTo;
+    const inRange=atFrom&&atTo&&iso>atFrom&&iso<atTo;
+    const cls=['dr-day'];
+    if(inRange)cls.push('inrange');
+    if(isStart||isEnd)cls.push('sel');
+    cells+=`<div class="${cls.join(' ')}" onclick="dpPick('${iso}')">${d}</div>`;
+  }
+  const total=startDow+daysInMonth, trailing=(7-(total%7))%7;
+  for(let d=1;d<=trailing;d++) cells+=`<div class="dr-day muted">${d}</div>`;
+  return `<div class="dr-cal"><div class="dr-mhead">${DR_MONTHS[m]} ${y}</div>`
+    +`<div class="dr-wd">${DR_WD.map(w=>`<span>${w}</span>`).join('')}</div>`
+    +`<div class="dr-grid">${cells}</div></div>`;
+}
+function dpRender(){
+  let root=document.getElementById('dr-pop-root');
+  if(!root){ root=document.createElement('div'); root.id='dr-pop-root'; document.body.appendChild(root); }
+  if(!dpOpen){ root.innerHTML=''; return; }
+  const y=dpView.y, m=dpView.m, m2=(m+1)%12, y2=m===11?y+1:y;
+  root.innerHTML=`<div class="dr-backdrop" onclick="dpClose()"></div>
+    <div class="dr-pop">
+      <div class="dr-bar">
+        <button class="dr-arw" onclick="dpShift(-12)" title="Previous year">\u00ab</button>
+        <button class="dr-arw" onclick="dpShift(-1)" title="Previous month">\u2039</button>
+        <div class="dr-bar-sp"></div>
+        <button class="dr-arw" onclick="dpShift(1)" title="Next month">\u203a</button>
+        <button class="dr-arw" onclick="dpShift(12)" title="Next year">\u00bb</button>
+      </div>
+      <div class="dr-cals">${dpMonthGrid(y,m)}${dpMonthGrid(y2,m2)}</div>
+    </div>`;
+  dpPosition();
+}
+function dpPosition(){
+  const root=document.getElementById('dr-pop-root'); if(!root)return;
+  const pop=root.querySelector('.dr-pop'), tr=document.getElementById('dr-trigger');
+  if(!pop||!tr)return;
+  const r=tr.getBoundingClientRect(), pw=pop.offsetWidth, ph=pop.offsetHeight, M=8;
+  let left=r.left, top=r.bottom+6;
+  if(left+pw>window.innerWidth-M) left=Math.max(M,window.innerWidth-M-pw);
+  if(top+ph>window.innerHeight-M) top=Math.max(M,r.top-6-ph);   // flip above if no room below
+  pop.style.left=left+'px'; pop.style.top=top+'px';
+}
+window.addEventListener('resize',()=>{ if(dpOpen)dpPosition(); });
+function selectATActivity(id){
+  const act=acts.find(x=>x.id===id);
+  if(act&&act.matches.some(m=>m.title===ARTICLE.title))return; // already added — not selectable
+  if(atSelSet.has(id))atSelSet.delete(id); else atSelSet.add(id); // toggle
+  renderATList();
+}
+function addToActivity(){
+  if(atSelSet.size===0)return;
+  let added=0;
+  atSelSet.forEach(id=>{
+    const tgt=acts.find(x=>x.id===id);
+    if(tgt && !tgt.matches.some(m=>m.title===ARTICLE.title)){
+      tgt.matches.push({title:ARTICLE.title,value:ARTICLE.value});
+      added++;
+    }
+  });
+  atSelSet.clear();   // selection cleared; each added activity now shows the green Added state
+  updateMegaBadge();
+  renderATModal();
+  if(added>0) railToast(`Added to ${added} ${added===1?'activity':'activities'}`);
+}
+// megaphone badge: "Tracked" after Track this article, "Added" after Add to Activity, hidden otherwise
+function updateMegaBadge(){
+  const el=document.getElementById('mega-new');if(!el)return;
+  const addedToExisting=acts.some(a=>!a.fromTrack && a.matches.some(m=>m.title===ARTICLE.title));
+  if(tracked){ el.textContent='Tracked'; el.style.display='block'; }
+  else if(addedToExisting){ el.textContent='Added'; el.style.display='block'; }
+  else { el.style.display='none'; }
+}
+function trackArticleFromModal(){
+  if(tracked)return;
+  tracked=true;
+  const today=new Date().toISOString().slice(0,10);
+  acts.unshift({id:nid++,type:'Trending',ic:'ic-tr',badge:'type-tr',date:(ARTICLE.date||today),title:ARTICLE.title,fromTrack:true,
+    content:`Tracked from the article "${ARTICLE.title}" (${ARTICLE.source} · ${ARTICLE.media}). New activity created from the article view.`,
+    matches:[{title:ARTICLE.title,value:ARTICLE.value}]});
+  updateMegaBadge();
+  renderATModal();
+}
+function removeFromActivity(id){
+  const act=acts.find(x=>x.id===id);if(!act)return;
+  if(act.fromTrack){
+    acts=acts.filter(x=>x.id!==id);
+    tracked=false;
+  } else {
+    act.matches=act.matches.filter(m=>m.title!==ARTICLE.title);
+  }
+  atSelSet.delete(id);
+  updateMegaBadge();
+  renderATModal();
+}
+
+// builds the static modal shell (header, sub, filter bar, list+pager containers, and the pinned footer with Track / Add)
+function renderATModal(){
+  const root=document.getElementById('at-modal-root');
+  if(!atOpen){root.innerHTML='';return;}
+  const SEARCH_IC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>';
+  root.innerHTML=`<div class="at-overlay" onclick="if(event.target===this)closeATModal()">
+    <div class="at-modal">
+      ${atHelp?helpPanelHTML():''}
+      <div class="at-head">${SVG.mega}<span class="at-head-title">Activity Tracker</span><button class="at-help-btn" onclick="toggleHelp()" title="How to use this">?</button><button class="at-close" onclick="closeATModal()">${SVG.x}</button></div>
+      <div class="at-sub">Select one or more activities to add <strong>${ARTICLE.title}</strong> to, or track it as a brand-new activity.</div>
+      <div class="at-filters">
+        <div class="at-search">${SEARCH_IC}<input id="at-search" type="text" placeholder="Search activity title…" value="${atQuery.replace(/"/g,'&quot;')}" oninput="atSearch(this.value)" autocomplete="off"></div>
+        <div class="at-dates">
+          <span class="at-dlbl">Released</span>
+          <button class="dr-trigger" id="dr-trigger" type="button" onclick="dpToggle(event)">${dpTriggerHTML()}</button>
+          <button class="at-clear" onclick="atClearFilters()" title="Clear search and date filters">Clear</button>
+        </div>
+      </div>
+      <div class="at-body" id="at-list"></div>
+      <div id="at-pager-wrap"></div>
+      <div class="at-foot">
+        <button class="btn-track" ${tracked?'disabled':''} onclick="trackArticleFromModal()">${tracked?SVG.check+' Tracked':SVG.mega+' Track this article'}</button>
+        <button class="btn-add" id="at-add-btn" onclick="addToActivity()"></button>
+      </div>
+    </div>
+  </div>`;
+  renderATList();
+}
+
+// updates ONLY the list, pager and Add button — leaves the filter inputs (and their focus) and the footer intact
+function renderATList(){
+  if(!atOpen)return;
+  const listEl=document.getElementById('at-list');
+  const pagerEl=document.getElementById('at-pager-wrap');
+  const addBtn=document.getElementById('at-add-btn');
+  if(!listEl||!pagerEl||!addBtn)return;
+  const list=atFiltered();
+  // recommended activities float to the top (highest relevance first); the rest keep their order
+  list.sort((a,b)=>{ const ra=isRec(a)?relPct(a):-1, rb=isRec(b)?relPct(b):-1; return rb-ra; });
+  const PER=AT_PER_PAGE, total=list.length, pageCount=Math.max(1,Math.ceil(total/PER));
+  if(atPage>pageCount)atPage=pageCount;
+  const start=(atPage-1)*PER;
+  const pageActs=list.slice(start,start+PER);
+  const from=total===0?0:start+1, to=Math.min(start+PER,total);
+  if(total===0){
+    listEl.innerHTML=`<div class="at-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><div>No activities match your search or date filter.</div></div>`;
+  } else {
+    listEl.innerHTML=pageActs.map(act=>{
+      const contains=act.matches.some(m=>m.title===ARTICLE.title);
+      const sel=atSelSet.has(act.id);
+      const rec=isRec(act); const pct=rec?relPct(act):0;
+      const recRow=rec?`<div class="rec-row"><span class="rec-pill"><svg class="rec-star" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 17l-6.1 3.9 1.6-6.8L2.3 8.9l6.9-.6z"/></svg>Recommended</span><span class="rec-pct">${pct}% match</span></div>`:'';
+      return `<div class="at-card${sel?' sel':''}${contains?' added':''}${rec?' rec':''}" onclick="selectATActivity(${act.id})">
+        <div class="at-ic ${act.ic}">${TYPEIC[act.ic]}</div>
+        <div class="at-card-body">
+          ${recRow}
+          <div class="at-card-top"><span class="at-card-title">${act.title}</span><span class="ac-type ${act.badge}">${act.type}</span></div>
+          <div class="at-card-prev">${act.content.substring(0,92)}…</div>
+          <div class="at-card-meta"><span class="mt-mch">${act.matches.length} matches</span><span class="mt-ave">PHP ${tAve(act.matches)} AVE</span><span class="mt-date">${fmtDate(act.date)}</span></div>
+        </div>
+        ${contains?`<div class="at-actions"><span class="at-check">${SVG.ccheck} Added</span><button class="at-remove" onclick="event.stopPropagation();removeFromActivity(${act.id})" title="${act.fromTrack?'Delete this tracked activity':'Remove this article from the activity'}">${SVG.x} Remove</button></div>`:`<div class="at-cbox">${sel?SVG.check:''}</div>`}
+      </div>`;
+    }).join('');
+  }
+  pagerEl.innerHTML=`<div class="at-pager">
+    <span class="at-pager-info">${from}-${to} of ${total} ${total===1?'activity':'activities'}</span>
+    ${pageCount>1?`<span class="at-pager-ctrls">
+      <button class="pg-btn" ${atPage===1?'disabled':''} onclick="atGoPage(${atPage-1})" title="Previous page">${SVG.chevL}</button>
+      ${Array.from({length:pageCount},(_,i)=>i+1).map(n=>`<button class="pg-btn${n===atPage?' active':''}" onclick="atGoPage(${n})">${n}</button>`).join('')}
+      <button class="pg-btn" ${atPage===pageCount?'disabled':''} onclick="atGoPage(${atPage+1})" title="Next page">${SVG.chevR}</button>
+    </span>`:''}
+  </div>`;
+  const n=atSelSet.size;
+  addBtn.innerHTML = n===0 ? SVG.plus+' Add to Activity' : SVG.plus+` Add to ${n} ${n===1?'Activity':'Activities'}`;
+  addBtn.disabled = (n===0);
+}
+</script>
+</body>
+</html>

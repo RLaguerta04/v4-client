@@ -847,6 +847,52 @@ function openExport(){
   validateExport();
   initIcons();
 }
+// ── Compare Topics modal (dashboard) ──
+const COMPARE_CATS=[
+  {group:'Company News - DITO Telecommunity',topics:['Brand Identity','Awards & Recognition','CSR & Public Affairs','Product & Plans','Connectivity & Network','Products & Plans','Corporate & Investors','Tech & Innovation','Regulatory & Policy']},
+  {group:'Competitor News - Globe Telecom',topics:['Brand and Identity','Awards and Recognition','CSR and Public Affairs','Connectivity and Network','Products and Plans','Corporate and Investors','Tech and Innovation','Regulatory and Policy']},
+  {group:'Competitor News - PLDT / Smart Communications',topics:['(Brand & Identity)','(Awards & Recognition)','(CSR & Public Affairs)','(Connectivity & Network)','(Products & Plans)','(Corporate & Investors)','(Tech & Innovation)','(Regulatory & Policy)','(Connectivity & Speed)','(Mobile & Plans)','(Industry & Market)','(Awards & Benchmarks)','(CSR & Social Impact)']}
+];
+function renderCompareModal(){
+  const body=document.getElementById('cmp-body');if(!body)return;
+  body.innerHTML=COMPARE_CATS.map((c,gi)=>
+    `<label class="cmp-group"><input type="checkbox" class="cmp-cb cmp-parent" data-g="${gi}" onchange="cmpParentToggle(${gi})"><span>${c.group}</span></label>`+
+    c.topics.map(t=>`<label class="cmp-topic"><input type="checkbox" class="cmp-cb cmp-child" data-g="${gi}" onchange="cmpUpdate()"><span>${t}</span></label>`).join('')
+  ).join('');
+}
+function openCompareModal(){
+  const ov=document.getElementById('cmp-overlay');if(!ov)return;
+  renderCompareModal();
+  ov.style.display='flex';requestAnimationFrame(()=>ov.classList.add('open'));
+  cmpUpdate();initIcons();
+}
+function closeCompareModal(){const ov=document.getElementById('cmp-overlay');if(ov){ov.classList.remove('open');setTimeout(()=>{ov.style.display='none';},180);}}
+function cmpParentToggle(gi){
+  const parent=document.querySelector('.cmp-parent[data-g="'+gi+'"]');
+  document.querySelectorAll('.cmp-child[data-g="'+gi+'"]').forEach(ch=>{ch.checked=parent.checked;ch.disabled=parent.checked;});
+  cmpUpdate();
+}
+function cmpUpdate(){
+  // A "selection" = a whole checked group (parent) OR each standalone checked topic (parent unchecked). Compare needs ≥2.
+  let count=0;
+  COMPARE_CATS.forEach((c,gi)=>{
+    const parent=document.querySelector('.cmp-parent[data-g="'+gi+'"]');
+    if(parent&&parent.checked)count++;
+    else count+=document.querySelectorAll('.cmp-child[data-g="'+gi+'"]:checked').length;
+  });
+  const btn=document.getElementById('cmp-compare');
+  if(btn)btn.disabled=count<2;
+}
+function doCompare(){
+  const sel=[];
+  COMPARE_CATS.forEach((c,gi)=>{
+    const parent=document.querySelector('.cmp-parent[data-g="'+gi+'"]');
+    const anyChild=document.querySelectorAll('.cmp-child[data-g="'+gi+'"]:checked').length>0;
+    if((parent&&parent.checked)||anyChild)sel.push(c.group);
+  });
+  closeCompareModal();
+  if(window.openCompareView)window.openCompareView(sel);
+}
 function closeExport(){
   const ov=document.getElementById('exp-overlay');
   ov.classList.remove('open');
@@ -4147,15 +4193,15 @@ function initDashboard(){
       tlRow('#16a34a','Total Results',p.results));
   }
   let tlRange=7,tlSelectedDate=null;
-  function buildTimeline(rangeDays){
-    tlRange=rangeDays;
+  function buildTimeline(rangeDays,mountId){
+    if(!mountId)tlRange=rangeDays;
     const data=TL_FULL.slice(-rangeDays);
     const maxR=Math.max(...data.map(d=>d.results),10);
     // Alternating single-day stripes (zebra), full plot height
     const stripes=[];
     for(let i=0;i<data.length;i+=2)
       stripes.push(RC(ReferenceArea,{key:'st'+i,yAxisId:'r',x1:data[i].date,x2:data[i].date,fill:'rgba(24,29,38,0.04)',fillOpacity:1,stroke:'none'}));
-    dbMount('db-timeline',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+    dbMount(mountId||'db-timeline',RC(ResponsiveContainer,{width:'99%',height:'100%'},
       RC(ComposedChart,{data,margin:{top:16,right:18,bottom:4,left:48}},
         ...stripes,
         RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
@@ -4189,7 +4235,7 @@ function initDashboard(){
   const toneColor=t=>t==='positive'?'#16a34a':t==='negative'?'#e94f37':'#9ca3af';
   const tlData=()=>TL_FULL.slice(-tlRange);
   const rangeLabel=()=>({3:'last 3 days',7:'last 7 days',15:'last 15 days',30:'last 30 days'}[tlRange]||('last '+tlRange+' days'));
-  let tiOpen=false,tiMode='overview',tiKey=null,tiSource='timeline';
+  let tiOpen=false,tiMode='overview',tiKey=null,tiSource='timeline',_insSuppressClose=false;
   function dayArticles(day){
     const list=mentionData.filter(d=>d.date===day.fullDate);
     let seed=0;for(let i=0;i<day.fullDate.length;i++)seed=(seed*31+day.fullDate.charCodeAt(i))>>>0;
@@ -4223,18 +4269,21 @@ function initDashboard(){
     const tone=d.tone==='positive'?'positive':d.tone==='negative'?'negative':'neutral';
     const t=(d.title||'').replace(/"/g,'&quot;');
     return `<tr class="ti-arttbl-row" data-i="${i}"${i>=per?' hidden':''} onclick="openInsArticle(${i})">
-      <td class="ti-arttbl-hl"><div class="ti-arttbl-hlwrap"><span class="hl-icon ${ic.cls}"><i data-lucide="${ic.icon}"></i></span><span class="ti-arttbl-title" title="${t}">${d.title}</span></div></td>
-      <td class="ti-arttbl-sent">${sentimentCellHtml(tone)}</td>
+      <td class="ti-arttbl-hl"><div class="ti-arttbl-hlwrap"><span class="hl-icon ${ic.cls}"><i data-lucide="${ic.icon}"></i></span><div class="ti-arttbl-hltext"><span class="ti-arttbl-title" title="${t}">${d.title}</span><span class="ti-arttbl-meta">${d.sub||''}${d.date?' · '+d.date:''}</span></div></div></td>
+      <td class="ti-arttbl-sv">${d.sv}</td>
+      <td class="ti-arttbl-ave">${d.ave}</td>
       <td class="ti-arttbl-act"><button class="ti-arttbl-more" title="More" onclick="event.stopPropagation()"><i data-lucide="more-horizontal"></i></button></td>
     </tr>`;
   }
   // Article preview (publishers-style 3-column) opened from an Insights table row.
-  let insArts=[],insPrevIdx=-1,insSidebarWasCollapsed=false;
+  let insArts=[],insPrevIdx=-1,insSidebarWasCollapsed=false,insSrcSub='',insSrcTitle='';
   window.openInsArticle=function(i){
     const d=insArts[i];if(!d)return;
     const page=document.getElementById('page-dashboard');
     if(!page||!document.getElementById('adp-col-mid'))return;
     insPrevIdx=i;
+    // Capture where this list came from (e.g. "Timeline · last 7 days" / "Jun 17, 2026") before closing the panel
+    const s=curSrc();insSrcSub=(s&&s.sub&&s.sub())||'';insSrcTitle=(s&&s.detailTitle&&s.detailTitle())||'';
     if(window.closeInsights)window.closeInsights();          // tuck the Insights slide-over away
     const sb=document.querySelector('.sidebar');
     insSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
@@ -4257,6 +4306,22 @@ function initDashboard(){
     const sb=document.querySelector('.sidebar');
     if(sb&&!insSidebarWasCollapsed)sb.classList.remove('collapsed');
   };
+  // Open the 3-column preview for an arbitrary article list + heading (Explore-view graphs / publisher cards).
+  window.openInsArticlesFor=function(arts,title,sub){
+    if(!arts||!arts.length)return;
+    const page=document.getElementById('page-dashboard');
+    if(!page||!document.getElementById('adp-col-mid'))return;
+    insArts=arts;insPrevIdx=0;insSrcTitle=title||'';insSrcSub=sub||'';
+    const sb=document.querySelector('.sidebar');
+    insSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
+    if(sb)sb.classList.add('collapsed');
+    mdSpotCtx=null;mdActCtx=null;mdActive=-1;
+    page.classList.add('ent-detail-open');
+    renderInlineDetail(arts[0]);
+    _renderInsPrevList();
+    initIcons();
+  };
+  window.openInsPubArticles=function(name,el){window.openInsListPanel(getEntityArticles('pub',name),name,'Top Publisher',el);};
   // Left column: the current Insights article list as a compact table (Headline · Sentiment · ⋯), mirrors the publishers preview.
   function _renderInsPrevList(){
     const left=document.getElementById('adp-col-left');if(!left)return;
@@ -4267,7 +4332,7 @@ function initDashboard(){
       </div>`).join('');
     left.innerHTML=`<div class="spot-panel ctx-act">
       <div class="ent-prev-head">
-        <div class="ent-prev-head-l"><div class="spot-panel-title">Related articles</div></div>
+        <div class="ent-prev-head-l ins-prev-head-l"><div class="spot-panel-title">${insSrcTitle||'Related articles'}</div>${insSrcSub?`<div class="ins-prev-src">${insSrcSub}</div>`:''}</div>
         <div class="ent-detail-stats"><div class="ent-stat"><div class="ent-stat-val">${insArts.length}</div><div class="ent-stat-lbl">Articles</div></div></div>
       </div>
       <div class="spot-cov-tbl">
@@ -4281,7 +4346,7 @@ function initDashboard(){
     const per=15,total=arts.length,pages=Math.max(1,Math.ceil(total/per)),shown=Math.min(per,total);
     const rows=arts.map((d,i)=>artTr(d,i,per)).join('');
     return `<div class="ti-arttbl-wrap" data-per="${per}" data-page="1">
-      <table class="ti-arttbl"><thead><tr><th>Headline</th><th class="ti-c-sent">Sentiment</th><th class="ti-c-act" aria-label="actions"></th></tr></thead><tbody>${rows}</tbody></table>
+      <table class="ti-arttbl"><thead><tr><th>Headline</th><th class="ti-c-sv">Story Value</th><th class="ti-c-ave">AVE</th><th class="ti-c-act" aria-label="actions"></th></tr></thead><tbody>${rows}</tbody></table>
       ${pages>1?`<div class="ti-arttbl-pager"><div class="ti-arttbl-info">1–${shown} of ${total}</div><div class="ti-arttbl-btns">${tiArtPagerBtns(1,pages)}</div></div>`:''}
     </div>`;
   }
@@ -4378,17 +4443,46 @@ function initDashboard(){
   }
   // Source-aware panel controller (Timeline + Media Exposure plug in here)
   function tiHeadHTML(label,sub,detailTitle){
+    const exportBtn=`<button class="btn-export ti-head-export" onclick="showTrackerToast('Articles exported')">Export</button>`;
     return tiMode==='overview'
       ?`<span class="ti-head-badge"><i data-lucide="sparkles"></i></span>
          <div class="ti-head-titles"><div class="ti-head-title">${label}</div><div class="ti-head-sub">${sub}</div></div>
+         ${exportBtn}
          <button class="ti-x" onclick="closeInsights()" title="Close"><i data-lucide="x"></i></button>`
       :`<span class="ti-head-badge"><i data-lucide="file-text"></i></span>
          <div class="ti-head-titles"><div class="ti-head-title">${detailTitle}</div><div class="ti-head-sub">${sub}</div></div>
+         ${exportBtn}
          <button class="ti-x" onclick="closeInsights()" title="Close"><i data-lucide="x"></i></button>`;
   }
   // Chart sources register here: {card, sub(), detailTitle(), overview(), detail(), clear()}
   const SRC={};
   SRC.timeline={card:'db-timeline-card',sub:()=>'Timeline · '+rangeLabel(),detailTitle:()=>tiKey,overview:()=>tiOverviewHTML(),detail:()=>tiDetailHTML(),clear:()=>{tlSelectedDate=null;buildTimeline(tlRange);}};
+  // Ephemeral Insights source: an arbitrary article list. Explore-view graphs/cards slide the panel in with this.
+  let exListArts=[],exListTitle='',exListSub='';
+  SRC.exlist={card:null,sub:()=>exListSub,detailTitle:()=>exListTitle,overview:()=>renderArtTable(exListArts),detail:()=>renderArtTable(exListArts),clear:()=>{}};
+  window.openInsListPanel=function(arts,title,sub,focusEl){
+    if(!arts||!arts.length)return;
+    exListArts=arts;exListTitle=title||'';exListSub=sub||'';
+    tiSource='exlist';tiMode='detail';tiKey=null;
+    tiRender();tiShow();
+    // Focus the clicked element + dim the rest of the explore view (after tiShow, so tiSpotlight's clear doesn't wipe it)
+    if(focusEl){
+      focusEl.classList.add('is-focused');
+      const inner=focusEl.closest('.db-explore-inner,.db-content-inner');
+      let host=focusEl;while(host&&host.parentElement!==inner)host=host.parentElement;
+      if(host)host.classList.add('has-focus');
+      setTimeout(()=>focusEl.scrollIntoView({behavior:'smooth',block:'center'}),60);   // center the focused card
+    }
+  };
+  // Helper: open the sliding article panel for a chart-mark click, focusing that chart's card.
+  const openInsCard=(arts,title,sub,cardId)=>window.openInsListPanel(arts,title,sub,document.getElementById(cardId));
+  // Article sets for chart-mark clicks: reuse real filters where possible, seeded mentionData sample otherwise.
+  function _insSample(seedStr,n){
+    let seed=0;for(let i=0;i<String(seedStr).length;i++)seed=(seed*31+String(seedStr).charCodeAt(i))>>>0;
+    const out=[];for(let k=0;out.length<n&&k<mentionData.length*3;k++){const c=mentionData[(seed+k*7)%mentionData.length];if(!out.includes(c))out.push(c);}return out;
+  }
+  const _insByTone=t=>{const m={Positive:'positive',Neutral:'neutral',Negative:'negative'}[t]||t;const list=mentionData.filter(d=>(d.tone||d.brand)===m);return list.length?list:_insSample('tone-'+t,4);};
+  window.openInsEntity=name=>openInsCard(_insSample('ent-'+name,6),name,'Entities Map','db-entities-card');
   const curSrc=()=>SRC[tiSource]||SRC.timeline;
   function renderTIHead(){
     const head=document.getElementById('ti-head');if(!head)return;
@@ -4399,7 +4493,7 @@ function initDashboard(){
   function tiRender(){
     renderTIHead();
     const body=document.getElementById('ti-body');
-    if(body)body.innerHTML=tiBodyHTML();
+    if(body){body.innerHTML=tiBodyHTML();body.classList.toggle('ti-body-flush',tiSource==='exlist'||(tiMode==='detail'&&(tiSource==='exposure'||tiSource==='emphasis')));}
     initIcons();
   }
   const tiFocusCard=()=>document.getElementById(curSrc().card);
@@ -4424,6 +4518,8 @@ function initDashboard(){
     if(firstOpen&&card)setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'center'}),60);
     requestAnimationFrame(()=>{ov.classList.add('open');document.body.classList.add('ins-open');});
     tiOpen=true;
+    // Ignore the click that opened the panel so the click-outside handler doesn't immediately close it
+    _insSuppressClose=true;setTimeout(()=>{_insSuppressClose=false;},0);
   }
   function tiClearSel(){Object.values(SRC).forEach(s=>s.clear&&s.clear());}
   function tiOpenSource(src){tiSource=src;tiMode='overview';tiKey=null;tiClearSel();tiRender();tiShow();}
@@ -4446,7 +4542,7 @@ function initDashboard(){
   // Geometry-based (not .contains) so a bar click — which re-renders the chart and detaches
   // the clicked element — doesn't get mistaken for an outside click.
   document.addEventListener('click',e=>{
-    if(!tiOpen)return;
+    if(!tiOpen||_insSuppressClose)return;
     const inRect=el=>{const r=el&&el.getBoundingClientRect();return r&&e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;};
     if(inRect(document.getElementById('ti-overlay'))||inRect(document.querySelector('.is-focused')))return;
     closeInsights();
@@ -4502,7 +4598,7 @@ function initDashboard(){
           isAnimationActive:false,cursor:expIsSocial?'default':'pointer',
           fillOpacity:(dimKey&&dimKey!==s.key)?0.3:1,
           onMouseEnter:()=>setHov(s.key),
-          onClick:expIsSocial?undefined:()=>window.openExposureChannel(s.key),
+          onClick:expIsSocial?undefined:()=>{const p=document.getElementById('page-dashboard');if(p&&p.classList.contains('explore-open')){const c=document.querySelector('.db-explore-wrap.on .db-explore-exp-chart');window.openInsListPanel(expChannelArticles(s.key),s.label,'Media Exposure',c&&c.closest('.db-card'));}else window.openExposureChannel(s.key);},
           radius:i===0?[5,0,0,5]:i===expSeries.length-1?[0,5,5,0]:0},
           RC(LabelList,{dataKey:s.key,position:'center',formatter:v=>v>=10?`${s.label.toUpperCase()}: ${v}%`:'',style:{fontSize:11,fontWeight:600,fill:s.labelColor}})
         ))
@@ -4561,17 +4657,7 @@ function initDashboard(){
     const r=rows[idx],above=idx>0?rows[idx-1]:null;
     const gap=above?+(above.pct-r.pct).toFixed(2):0;
     const arts=expChannelArticles(tiKey);
-    return `
-      <div class="ti-stats">
-        <div class="ti-stat"><div class="ti-stat-lbl">Share</div><div class="ti-stat-val">${r.pct}%</div><div class="ti-stat-sub">of all coverage</div></div>
-        <div class="ti-stat"><div class="ti-stat-lbl">Articles</div><div class="ti-stat-val">${r.count}</div><div class="ti-stat-sub">of ${a.total}</div></div>
-        <div class="ti-stat"><div class="ti-stat-lbl">Rank</div><div class="ti-stat-val">#${idx+1}</div><div class="ti-stat-sub">of ${rows.length} channels</div></div>
-        <div class="ti-stat"><div class="ti-stat-lbl">${above?'Gap to #'+idx:'Position'}</div><div class="ti-stat-val">${above?'−'+gap+'%':'Top'}</div><div class="ti-stat-sub">${above?'vs '+above.label:'leading channel'}</div></div>
-      </div>
-      <div>
-        <div class="ti-sec-title"><i data-lucide="file-text"></i> Related articles</div>
-        ${renderArtTable(arts)}
-      </div>`;
+    return renderArtTable(arts);
   }
   SRC.exposure={card:'db-exposure-card',sub:()=>expIsSocial?'Platform Exposure · post share':'Media Exposure · article share',detailTitle:()=>expChannelLabel(tiKey),overview:()=>expOverviewHTML(),detail:()=>expDetailHTML(),clear:()=>{expSelected=null;renderExposure();}};
 
@@ -4713,19 +4799,7 @@ function initDashboard(){
     if(idx<0)return empOverviewHTML();
     const r=rows[idx],other=rows[1-idx],diff=+(r.pct-other.pct).toFixed(1);
     const arts=empCatArticles(tiKey);
-    const desc=r.key==='main'?'Stories primarily about the brand':'Stories that reference the brand in passing';
-    return `
-      <div class="ti-stats">
-        <div class="ti-stat"><div class="ti-stat-lbl">Share</div><div class="ti-stat-val">${r.pct}%</div><div class="ti-stat-sub">of all coverage</div></div>
-        <div class="ti-stat"><div class="ti-stat-lbl">Articles</div><div class="ti-stat-val">${r.count}</div><div class="ti-stat-sub">of ${a.total}</div></div>
-        <div class="ti-stat"><div class="ti-stat-lbl">Rank</div><div class="ti-stat-val">#${idx+1}</div><div class="ti-stat-sub">of ${rows.length}</div></div>
-        <div class="ti-stat"><div class="ti-stat-lbl">vs ${other.label}</div><div class="ti-stat-val ${diff>=0?'ti-up':'ti-down'}">${diff>=0?'+':''}${diff}%</div><div class="ti-stat-sub">difference</div></div>
-      </div>
-      <div>
-        <div class="ti-sec-title"><i data-lucide="file-text"></i> Related articles</div>
-        <p style="font-size:12px;color:var(--muted);margin:0 0 6px">${desc}.</p>
-        ${renderArtTable(arts)}
-      </div>`;
+    return renderArtTable(arts);
   }
   SRC.emphasis={card:'db-emphasis-card',sub:()=>'Topic Emphasis · subject prominence',detailTitle:()=>empCatLabel(tiKey),overview:()=>empOverviewHTML(),detail:()=>empDetailHTML(),clear:()=>{empSelected=null;renderEmphasis();}};
   window.openEmphasisInsights=()=>tiOpenSource('emphasis');
@@ -4757,7 +4831,7 @@ function initDashboard(){
   }
   dbMount('db-tonality-donut',RC(ResponsiveContainer,{width:'99%',height:'100%'},
     RC(PieChart,{},
-      RC(Pie,{data:tonPie,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none'},
+      RC(Pie,{data:tonPie,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none',cursor:'pointer',onClick:(d)=>{const n=d&&(d.name||(d.payload&&d.payload.name));if(n)openInsCard(_insByTone(n),n+' tonality','Tonality Distribution','db-tonality-card');}},
         ...tonPie.map(d=>RC(Cell,{key:d.name,fill:tonColors[d.name]}))),
       RC(Tooltip,{content:TonDonutTip})
     )));
@@ -4775,9 +4849,9 @@ function initDashboard(){
       RC(XAxis,{dataKey:'date',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
       RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:28}),
       RC(Tooltip,{content:TonBarTip,cursor:{fill:'rgba(24,29,38,0.04)'}}),
-      RC(Bar,{dataKey:'Positive',stackId:'s',fill:'#16a34a',maxBarSize:48,shape:tonShape('Positive')}),
-      RC(Bar,{dataKey:'Neutral',stackId:'s',fill:'#9ca3af',maxBarSize:48,shape:tonShape('Neutral')}),
-      RC(Bar,{dataKey:'Negative',stackId:'s',fill:'#dc2626',maxBarSize:48,shape:tonShape('Negative')})
+      RC(Bar,{dataKey:'Positive',stackId:'s',fill:'#16a34a',maxBarSize:48,shape:tonShape('Positive'),cursor:'pointer',onClick:()=>openInsCard(_insByTone('Positive'),'Positive tonality','Tonality Distribution','db-tonality-card')}),
+      RC(Bar,{dataKey:'Neutral',stackId:'s',fill:'#9ca3af',maxBarSize:48,shape:tonShape('Neutral'),cursor:'pointer',onClick:()=>openInsCard(_insByTone('Neutral'),'Neutral tonality','Tonality Distribution','db-tonality-card')}),
+      RC(Bar,{dataKey:'Negative',stackId:'s',fill:'#dc2626',maxBarSize:48,shape:tonShape('Negative'),cursor:'pointer',onClick:()=>openInsCard(_insByTone('Negative'),'Negative tonality','Tonality Distribution','db-tonality-card')})
     )));
 
   // ── Frequency Distribution (story-value histogram + brush, focus-&-dim hover) ──
@@ -4795,7 +4869,7 @@ function initDashboard(){
         RC(XAxis,{dataKey:'value',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Story Value',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
         RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:36,label:{value:'Article Count',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
         RC(Tooltip,{content:FreqTip,cursor:false}),
-        RC(Bar,{dataKey:'count',maxBarSize:24,radius:[3,3,0,0],isAnimationActive:false,onMouseEnter:(d,i)=>setHov(i)},
+        RC(Bar,{dataKey:'count',maxBarSize:24,radius:[3,3,0,0],isAnimationActive:false,cursor:'pointer',onMouseEnter:(d,i)=>setHov(i),onClick:(d)=>openInsCard(_insSample('freq-'+d.value,Math.max(4,d.count||0)),'Story Value '+d.value,'Frequency Distribution','db-frequency-card')},
           ...freqDistData.map((d,i)=>RC(Cell,{key:i,fill:(hov===null||hov===i)?'#b9a4f7':'#e8e1fb'})),
           RC(LabelList,{dataKey:'count',position:'top',style:{fontSize:11,fontWeight:600,fill:'#6b7280'}})
         ),
@@ -4851,7 +4925,7 @@ function initDashboard(){
             RC(XAxis,{type:'number',dataKey:'articles',name:'Article Count',domain:[0,15],tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Article Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
             RC(YAxis,{type:'number',dataKey:'sv',name:'Story Value',domain:[0,5],tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:40,label:{value:'Story Value',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
             RC(Tooltip,{content:PubTip,cursor:{strokeDasharray:'3 3',stroke:'rgba(0,0,0,0.12)'}}),
-            RC(Scatter,{data:shown,shape:PubDot})
+            RC(Scatter,{data:shown,shape:PubDot,cursor:'pointer',onClick:(d)=>{const n=d&&(d.name||(d.payload&&d.payload.name));if(n)openInsCard(getEntityArticles('pub',n),n,'Publisher Score','db-pubscore-card');}})
           ))),
       RC('div',{className:'db-pub-legend'},pubScoreData.map(p=>RC('span',{key:p.name,className:'db-pub-leg-item'},
         RC('span',{className:'dot',style:{background:p.color}}),p.name))),
@@ -4908,8 +4982,398 @@ function initDashboard(){
       RC(XAxis,{type:'number',dataKey:'x',domain:tpDomain,ticks:tpTicks,orientation:'top',tickFormatter:ts=>{const d=new Date(ts);return TP_DOWS[d.getDay()]+' '+d.getDate();},tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
       RC(YAxis,{type:'category',dataKey:'name',tick:TpYTick,axisLine:false,tickLine:false,width:170,reversed:true}),
       RC(Tooltip,{content:TpTip,cursor:{stroke:'#e4e6ea'}}),
-      RC(Scatter,{data:topPubData,shape:TpDot})
+      RC(Scatter,{data:topPubData,shape:TpDot,cursor:'pointer',onClick:(d)=>{const n=d&&(d.name||(d.payload&&d.payload.name));if(n)openInsCard(getEntityArticles('pub',n),n,'Top Publishers','db-toppub-card');}})
     )));
+
+  // ── Timeline "Explore Data" → full-page "Total Articles Count" drill-down ──
+  const EXPLORE_MEDIUM_COLOR={'Online News':'#dc4a8f','TV':'#16a34a','Broadsheet':'#2563eb'};
+  const explorePubs=[
+    {name:'Philstar Online',medium:'Online News',articles:23,score:'2.19',ave:'10.6M',svalue:'0.00',exposure:'0.00'},
+    {name:'Inquirer Online',medium:'Online News',articles:21,score:'3.16',ave:'8.2M',svalue:'0.00',exposure:'0.00'},
+    {name:'Manila Standard Online',medium:'Online News',articles:20,score:'1.23',ave:'4.2M',svalue:'0.00',exposure:'0.00'},
+    {name:'News Stringer TV',medium:'Online News',articles:19,score:'0.25',ave:'6.0M',svalue:'0.00',exposure:'0.00'},
+    {name:'Bllyonaryo News Channel',medium:'TV',articles:15,score:'0.10',ave:'46.8M',svalue:'0.00',exposure:'0.00'},
+    {name:'Manila Times Online',medium:'Online News',articles:14,score:'1.57',ave:'5.9M',svalue:'0.00',exposure:'0.00'},
+    {name:'The Philippine Star',medium:'Broadsheet',articles:14,score:'6.74',ave:'5.2M',svalue:'0.00',exposure:'0.00'},
+    {name:'Head Topics Online',medium:'Online News',articles:13,score:'9.45',ave:'2.8M',svalue:'0.00',exposure:'0.00'},
+    {name:'Philippine Daily Inquirer',medium:'Broadsheet',articles:12,score:'6.77',ave:'6.3M',svalue:'0.00',exposure:'0.00'},
+    {name:'Business World Online',medium:'Online News',articles:12,score:'3.15',ave:'2.7M',svalue:'0.00',exposure:'0.00'},
+    {name:'Manila Standard',medium:'Broadsheet',articles:12,score:'1.74',ave:'3.3M',svalue:'0.00',exposure:'0.00'},
+    {name:'BusinessWorld',medium:'Broadsheet',articles:11,score:'1.74',ave:'4.8M',svalue:'0.00',exposure:'0.00'}
+  ];
+  function ExplorePubBar(){
+    const data=explorePubs.map(p=>({name:p.name+' ('+p.medium+')',pub:p.name,articles:p.articles,fill:EXPLORE_MEDIUM_COLOR[p.medium]||'#9ca3af'}));
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data,layout:'vertical',margin:{top:8,right:40,bottom:24,left:8}},
+        RC(CartesianGrid,{horizontal:false,stroke:'#eef0f2'}),
+        RC(XAxis,{type:'number',domain:[0,25],ticks:[0,5,10,15,20,25],tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'ARTICLES COUNT',position:'insideBottom',offset:-10,fontSize:10,fill:'#9ca3af'}}),
+        RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#4b5563'},width:240,axisLine:false,tickLine:false}),
+        RC(Tooltip,{cursor:{fill:'rgba(0,0,0,0.03)'}}),
+        RC(Bar,{dataKey:'articles',radius:[0,4,4,0],maxBarSize:15,isAnimationActive:false,cursor:'pointer',onClick:(d)=>{if(d&&d.pub){const c=document.querySelector('.db-explore-wrap.on .db-explore-toppub-chart');window.openInsPubArticles(d.pub,c&&c.closest('.db-card'));}}},
+          ...data.map((d,i)=>RC(Cell,{key:i,fill:d.fill})))
+      ));
+  }
+  function renderEntityCards(gridId,data,scoreLabel,kind){
+    const grid=document.getElementById(gridId);if(!grid)return;
+    grid.innerHTML=data.map((p,i)=>`<div class="ex-pub-card" onclick="openInsEntityCard('${kind}','${p.name.replace(/'/g,"\\'")}', this)">
+      <div class="ex-pub-hd">
+        <div class="ex-pub-hd-l"><div class="ex-pub-name" title="${p.name}">${p.name}</div><div class="ex-pub-socialrow">${renderSocialIcons()}</div></div>
+        <span class="ex-pub-avatar">${p.name.charAt(0)}</span>
+      </div>
+      <div class="ex-pub-metrics">
+        <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Article Count</div><div class="ex-pub-stat-val">${p.articles}</div></div>
+        <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">${scoreLabel}</div><div class="ex-pub-stat-val">${p.score}</div></div>
+        <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Total AVE</div><div class="ex-pub-stat-val">${p.ave}</div></div>
+        <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Total SValue</div><div class="ex-pub-stat-val">${p.svalue}</div></div>
+        <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Media Exposure</div><div class="ex-pub-stat-val">${p.exposure}</div></div>
+      </div>
+    </div>`).join('');
+  }
+  window.openInsEntityCard=function(kind,name,el){window.openInsListPanel(getEntityArticles(kind,name),name,kind==='author'?'Top Author':'Top Publisher',el);};
+  window.openMostArticlesPanel=function(el){window.openInsListPanel(_insSample('mostarticles',8),'May 23, 2026','Most articles in a day',el);};
+  // Whiten a sticky crumb once its wrap is scrolled (bind once; reset to top on open)
+  function _bindExploreScroll(wrap){
+    if(!wrap)return;
+    wrap.scrollTop=0;wrap.classList.remove('scrolled');
+    if(!wrap._scrollBound){wrap.addEventListener('scroll',()=>wrap.classList.toggle('scrolled',wrap.scrollTop>0));wrap._scrollBound=true;}
+  }
+  function _showExplore(wrapId){
+    const page=document.getElementById('page-dashboard');if(!page)return null;
+    document.querySelectorAll('.db-explore-wrap.on').forEach(e=>e.classList.remove('on'));
+    page.classList.add('explore-open');
+    const wrap=document.getElementById(wrapId);if(wrap)wrap.classList.add('on');
+    return wrap;
+  }
+  window.openTimelineExplore=function(){
+    const wrap=_showExplore('db-explore');if(!wrap)return;
+    renderEntityCards('db-pubcards-explore',explorePubs,'Pub Score','pub');
+    dbMount('db-exp-explore',RC(ExposureBar));
+    dbMount('db-toppub-explore',RC(ExplorePubBar));
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  window.openTonalityExplore=function(){
+    const wrap=_showExplore('db-tonality-explore');if(!wrap)return;
+    dbMount('db-ton-timeline',RC(TonTimeline));
+    window.renderMentionsTable('db-ton-table',0,'Tonality','All articles');
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  window.closeTimelineExplore=function(){
+    const page=document.getElementById('page-dashboard');if(page)page.classList.remove('explore-open');
+    document.querySelectorAll('.db-explore-wrap.on').forEach(e=>e.classList.remove('on'));
+  };
+  // ── Tonality "Explore Data" view: Tonality Timeline (lines) + mentions-style article table ──
+  const tonTimeline=[
+    {date:'Jun 30, 2026',Negative:6,Neutral:2,Positive:2},
+    {date:'Jul 01, 2026',Negative:5,Neutral:3,Positive:5},
+    {date:'Jul 02, 2026',Negative:4,Neutral:4,Positive:4},
+    {date:'Jul 03, 2026',Negative:3,Neutral:3,Positive:4},
+    {date:'Jul 04, 2026',Negative:2,Neutral:1,Positive:5},
+    {date:'Jul 05, 2026',Negative:1,Neutral:1,Positive:1},
+    {date:'Jul 06, 2026',Negative:2,Neutral:3,Positive:8}
+  ];
+  const TON_LINE={Negative:'#dc2626',Neutral:'#9ca3af',Positive:'#16a34a'};
+  function TonTimeline(){
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(ComposedChart,{data:tonTimeline,margin:{top:16,right:28,bottom:8,left:0}},
+        RC(CartesianGrid,{vertical:false,stroke:'#eef0f2'}),
+        RC(XAxis,{dataKey:'date',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
+        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:28,domain:[0,8]}),
+        RC(Tooltip,{}),
+        RC(Legend,{iconType:'plainline',wrapperStyle:{fontSize:12,paddingTop:10}}),
+        ...['Negative','Neutral','Positive'].map(k=>RC(Line,{key:k,type:'linear',dataKey:k,stroke:TON_LINE[k],strokeWidth:2,dot:{r:4,fill:TON_LINE[k],strokeWidth:0},activeDot:{r:5}}))
+      ));
+  }
+  // Mentions-style article table, reused by any Explore view (target host id + heading for the row preview).
+  let _mtblTitle='',_mtblSub='';
+  function _mentionsPager(hostId,page,pages,total,per){
+    const start=page*per,end=Math.min(total,start+per);
+    let b=`<button class="ti-pgb" onclick="goMentionsTablePage('${hostId}',${page-1})"${page<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+    for(let p=0;p<pages;p++)b+=`<button class="ti-pgb${p===page?' on':''}" onclick="goMentionsTablePage('${hostId}',${p})">${p+1}</button>`;
+    b+=`<button class="ti-pgb" onclick="goMentionsTablePage('${hostId}',${page+1})"${page>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+    return `<div class="tbl-footer"><div class="ti-arttbl-info">${start+1}–${end} of ${total} results</div><div class="ti-arttbl-btns">${b}</div></div>`;
+  }
+  window.renderMentionsTable=function(hostId,page,title,sub){
+    const host=document.getElementById(hostId);if(!host)return;
+    if(title!=null)_mtblTitle=title;if(sub!=null)_mtblSub=sub;
+    const per=10,total=mentionData.length,pages=Math.max(1,Math.ceil(total/per));
+    page=Math.max(0,Math.min(page||0,pages-1));
+    const rows=mentionData.slice(page*per,page*per+per).map((d,i)=>renderTableRow(d,page*per+i)).join('');
+    host.innerHTML=`<div class="tbl-scroll"><table class="tbl"><thead><tr>
+        <th style="width:46px"><span class="tcb"></span></th>
+        <th style="width:130px"><span class="th-inner">Story Value <i data-lucide="info" class="info-i"></i></span></th>
+        <th style="width:130px">AVE</th>
+        <th>Headline</th>
+        <th style="width:220px"><span class="th-inner">Media Outlet <i data-lucide="filter" class="th-filter icon-sm"></i></span></th>
+        <th style="width:130px">Sentiment</th>
+        <th style="width:170px">Date Published</th>
+        <th style="width:40px"></th>
+      </tr></thead><tbody>${rows}</tbody></table></div>${_mentionsPager(hostId,page,pages,total,per)}`;
+    host.querySelectorAll('tbody tr[data-idx]').forEach(tr=>{tr.style.cursor='pointer';tr.onclick=()=>window.openMentionsArticle(+tr.dataset.idx);});
+    initIcons();
+  };
+  window.goMentionsTablePage=function(hostId,p){window.renderMentionsTable(hostId,p);};
+  window.openMentionsArticle=function(idx){
+    const d=mentionData[idx];if(!d)return;
+    const page=document.getElementById('page-dashboard');if(!page||!document.getElementById('adp-col-mid'))return;
+    insArts=mentionData;insPrevIdx=idx;insSrcTitle=_mtblTitle;insSrcSub=_mtblSub;
+    const sb=document.querySelector('.sidebar');insSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');if(sb)sb.classList.add('collapsed');
+    mdSpotCtx=null;mdActCtx=null;mdActive=-1;
+    page.classList.add('ent-detail-open');
+    renderInlineDetail(d);_renderInsPrevList();initIcons();
+  };
+  // ── Publisher Score "Explore Data": Top Publishers + media-type breakdown cards + article table ──
+  const PS_BAR={'Online News':'#d6337f','Broadsheet':'#2563eb','Blogs':'#d6337f','Tabloid':'#2563eb','Provincial':'#2563eb','TV':'#16a34a','Radio':'#16a34a'};
+  const pubScoreMedia=[
+    {name:'Online News',icon:'newspaper',cls:'type-online',articles:16,words:'722.94',pubs:[['Business Mirror Online',3],['Head Topics Online',2],['Inquirer Online',1],['Manila Bulletin Online',1],['Manila Times Online',1]]},
+    {name:'Broadsheet',icon:'file-text',cls:'type-broadsheet',articles:3,words:'464.33',pubs:[['Philippine Daily Inquirer',1],['Manila Times',1],['United Daily News',1]]},
+    {name:'Blogs',icon:'rss',cls:'type-blog',articles:3,words:'800',pubs:[['Out of Town Blog',1],['Modern Journal Trends',1],['Tech Sabado',1]]},
+    {name:'TV',icon:'tv',cls:'type-tv',articles:15,words:'3.1K',pubs:[['Bllyonaryo News Channel',6],['GMA 7',3],['DZMM Teleradyo',3],['IBC 13',1],['UN TV',1]]},
+    {name:'Radio',icon:'radio',cls:'type-radio',articles:8,words:'4.7K',pubs:[['DZBB',3],['DZMM',3],['DZRB',1],['Radyo5',1]]}
+  ];
+  function renderMediaCards(gridId,data){
+    const grid=document.getElementById(gridId);if(!grid)return;
+    grid.innerHTML=data.map(m=>{
+      const max=Math.max(...m.pubs.map(p=>p[1])),bc=PS_BAR[m.name]||'#9ca3af';
+      const pubs=m.pubs.map(([n,c])=>`<div class="ps-media-pub">
+          <div class="ps-media-pub-name">${n}</div>
+          <div class="ps-media-bar"><div class="ps-media-bar-fill" style="width:${Math.round(c/max*100)}%;background:${bc}"></div><span class="ps-media-bar-lbl${c===max?' over-fill':''}">${c} Article/s</span></div>
+        </div>`).join('');
+      return `<div class="ps-media-card">
+        <div class="ps-media-hd"><span class="hl-icon ${m.cls}"><i data-lucide="${m.icon}"></i></span><span class="ps-media-name">${m.name}</span></div>
+        <div class="ps-media-stats">
+          <div><div class="ps-media-stat-lbl">Total Articles</div><div class="ps-media-stat-val">${m.articles}</div></div>
+          <div><div class="ps-media-stat-lbl">Avg. Word Count</div><div class="ps-media-stat-val">${m.words}</div></div>
+        </div>
+        <div class="ps-media-pubs">${pubs}</div>
+      </div>`;
+    }).join('');
+  }
+  window.openPubScoreExplore=function(){
+    const wrap=_showExplore('db-pubscore-explore');if(!wrap)return;
+    dbMount('db-pubscore-exp',RC(ExposureBar));
+    dbMount('db-pubscore-toppub',RC(ExplorePubBar));
+    renderMediaCards('db-pubscore-media',pubScoreMedia);
+    window.renderMentionsTable('db-pubscore-table',0,'Publisher Score','All articles');
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  // ── "Top Exposure by Medium" → Top Exposure explore: Pubscore Distribution + Top Publishers + Timeline + table ──
+  const pubscoreDistData=[69,105,30,49,5,0,0,2,0,13,15].map((c,v)=>({score:v.toFixed(1),count:c}));
+  function PubscoreDistChart(){
+    const [hov,setHov]=React.useState(null);
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data:pubscoreDistData,margin:{top:24,right:14,bottom:18,left:6},onMouseLeave:()=>setHov(null)},
+        RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
+        RC(XAxis,{dataKey:'score',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'PUBLICATION SCORE',position:'insideBottom',offset:-12,fontSize:10,fill:'#9ca3af'}}),
+        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:38,label:{value:'ARTICLE COUNT',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
+        RC(Tooltip,{cursor:false}),
+        RC(Bar,{dataKey:'count',maxBarSize:34,radius:[3,3,0,0],isAnimationActive:false,cursor:'pointer',onMouseEnter:(d,i)=>setHov(i),onClick:(d)=>openInsCard(_insSample('pubscore-'+d.score,Math.max(4,Math.min(8,Math.round((d.count||0)/12)+3))),'Publication Score '+d.score,'Pubscore Distribution','db-expmed-pubscore-card')},
+          ...pubscoreDistData.map((d,i)=>RC(Cell,{key:i,fill:(hov===null||hov===i)?'#6d5ae6':'#c9c0f2'})),
+          RC(LabelList,{dataKey:'count',position:'top',style:{fontSize:11,fontWeight:600,fill:'#6b7280'}})
+        ),
+        RC(Brush,{dataKey:'score',height:28,stroke:'#b9a4f7',travellerWidth:8,tickFormatter:()=>''},
+          RC(Area,{dataKey:'count',type:'monotone',stroke:'#b9a4f7',fill:'#ece6fb',fillOpacity:0.6}))
+      ));
+  }
+  window.openExposureMediumExplore=function(){
+    const wrap=_showExplore('db-expmed-explore');if(!wrap)return;
+    dbMount('db-expmed-pubscore',RC(PubscoreDistChart));
+    dbMount('db-expmed-toppub',RC(ExplorePubBar));
+    buildTimeline(7,'db-expmed-timeline');
+    document.querySelectorAll('#db-expmed-ranges .db-tl-range').forEach(b=>b.classList.toggle('on',+b.dataset.r===7));
+    window.renderMentionsTable('db-expmed-table',0,'Top Exposure · Online News','All articles');
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  window.setExpMedRange=function(n){
+    buildTimeline(n,'db-expmed-timeline');
+    document.querySelectorAll('#db-expmed-ranges .db-tl-range').forEach(b=>b.classList.toggle('on',+b.dataset.r===n));
+  };
+  // ── "Top Publisher" → Top Media Exposure by Publisher: Media Exposure + Top Publishers + 7 media cards + table ──
+  const pubMediaFull=[
+    {name:'Online News',icon:'newspaper',cls:'type-online',articles:293,words:'578.88',pubs:[['Philstar Online',23],['Inquirer Online',21],['Manila Standard Online',20],['News Stringer TV',19],['Manila Times Online',14]]},
+    {name:'Blogs',icon:'rss',cls:'type-blog',articles:80,words:'572.28',pubs:[['Techno Baboy',5],['AppGadget',5],['Tekkie Pinas',5],['manilainsight',5],['Astig Ph Online',4]]},
+    {name:'Broadsheet',icon:'file-text',cls:'type-broadsheet',articles:60,words:'480.62',pubs:[['The Philippine Star',14],['Philippine Daily Inquirer',12],['Manila Standard',12],['BusinessWorld',11],['Malaya Business Insight',11]]},
+    {name:'Tabloid',icon:'scroll-text',cls:'type-tabloid',articles:11,words:'451.45',pubs:[['Peoples Journal',3],['Abante',3],['Bulgar',2],['Peoples Tonight',1],['Remate',1]]},
+    {name:'Provincial',icon:'map-pin',cls:'type-provincial',articles:3,words:'403',pubs:[['Sun Star Cebu',1],['The Freeman',1],['Mindanao Daily News',1]]},
+    {name:'TV',icon:'tv',cls:'type-tv',articles:63,words:'1.6K',pubs:[['Bllyonaryo News Channel',15],['ANC',11],['IBC 13',8],['PTV4',8],['GMA 7',5]]},
+    {name:'Radio',icon:'radio',cls:'type-radio',articles:16,words:'2.5K',pubs:[['DZBB',5],['DZMM',4],['DZRB',4],['Radyo5',2],['DZRH AM',1]]}
+  ];
+  window.openTopPubMedExplore=function(){
+    const wrap=_showExplore('db-toppubmed-explore');if(!wrap)return;
+    dbMount('db-toppubmed-exp',RC(ExposureBar));
+    dbMount('db-toppubmed-toppub',RC(ExplorePubBar));
+    renderMediaCards('db-toppubmed-media',pubMediaFull);
+    window.renderMentionsTable('db-toppubmed-table',0,'Top Publisher','All articles');
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  // ── "Top Author" → Top Authors explore: Media Exposure + Top Authors bar + media cards + author cards + table ──
+  const topAuthorsBar=[
+    {name:'Vicky Morales',articles:8,color:'#3b82f6'},{name:'Emil Sumangil',articles:8,color:'#9ca3af'},
+    {name:'Mel Tiangco',articles:8,color:'#34d399'},{name:'Iya Villana-Arellano',articles:8,color:'#a7f3d0'},
+    {name:'William Thio',articles:7,color:'#64748b'},{name:'Monique Tuzon',articles:6,color:'#8b5cf6'},
+    {name:'Bryan Rilloraza',articles:5,color:'#eab308'},{name:'Jervie David Montejar',articles:5,color:'#fde047'},
+    {name:'Lourd de Veyra',articles:4,color:'#7c3aed'},{name:'Alvin Elchico',articles:4,color:'#3b82f6'},
+    {name:'Noli De Castro',articles:4,color:'#22d3ee'},{name:'Ron Cruz',articles:4,color:'#67e8f9'}
+  ];
+  function TopAuthorsBar(){
+    const data=topAuthorsBar.map(a=>({name:a.name,articles:a.articles,fill:a.color,pub:a.name}));
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data,layout:'vertical',margin:{top:8,right:40,bottom:24,left:8}},
+        RC(CartesianGrid,{horizontal:false,stroke:'#eef0f2'}),
+        RC(XAxis,{type:'number',domain:[0,8],ticks:[0,2,4,6,8],tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'ARTICLES COUNT',position:'insideBottom',offset:-10,fontSize:10,fill:'#9ca3af'}}),
+        RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#4b5563'},width:160,axisLine:false,tickLine:false}),
+        RC(Tooltip,{cursor:{fill:'rgba(0,0,0,0.03)'}}),
+        RC(Bar,{dataKey:'articles',radius:[0,4,4,0],maxBarSize:15,isAnimationActive:false,cursor:'pointer',onClick:(d)=>{if(d&&d.pub){const c=document.querySelector('.db-explore-wrap.on .db-explore-toppub-chart');window.openInsEntityCard('author',d.pub,c&&c.closest('.db-card'));}}},
+          ...data.map((d,i)=>RC(Cell,{key:i,fill:d.fill})))
+      ));
+  }
+  const authorCards=[
+    {name:'Vicky Morales',articles:8,score:'0.94',ave:'41.8M',svalue:'0.00',exposure:'0.00'},
+    {name:'Emil Sumangil',articles:8,score:'4.38',ave:'41.8M',svalue:'0.00',exposure:'0.00'},
+    {name:'Mel Tiangco',articles:8,score:'0.99',ave:'41.8M',svalue:'0.00',exposure:'0.00'},
+    {name:'Iya Villana-Arellano',articles:8,score:'1.03',ave:'41.8M',svalue:'0.00',exposure:'0.00'},
+    {name:'William Thio',articles:7,score:'0.00',ave:'2.9M',svalue:'0.00',exposure:'0.00'},
+    {name:'Monique Tuzon',articles:6,score:'0.00',ave:'5.5M',svalue:'0.00',exposure:'0.00'},
+    {name:'Bryan Rilloraza',articles:5,score:'0.00',ave:'296.4K',svalue:'0.00',exposure:'0.00'},
+    {name:'Jervie David Montejar',articles:5,score:'0.00',ave:'819.6K',svalue:'0.00',exposure:'0.00'},
+    {name:'Lourd de Veyra',articles:4,score:'7.22',ave:'26.2M',svalue:'0.00',exposure:'0.00'},
+    {name:'Alvin Elchico',articles:4,score:'5.42',ave:'19.1M',svalue:'0.00',exposure:'0.00'},
+    {name:'Noli De Castro',articles:4,score:'4.53',ave:'10.8M',svalue:'0.00',exposure:'0.00'},
+    {name:'Ron Cruz',articles:4,score:'1.43',ave:'54.0M',svalue:'0.00',exposure:'0.00'}
+  ];
+  window.openTopAuthorExplore=function(){
+    const wrap=_showExplore('db-author-explore');if(!wrap)return;
+    dbMount('db-author-exp',RC(ExposureBar));
+    dbMount('db-author-toppub',RC(TopAuthorsBar));
+    renderMediaCards('db-author-media',pubMediaFull);
+    renderEntityCards('db-author-cards',authorCards,'Author Score','author');
+    window.renderMentionsTable('db-author-table',0,'Top Author','All articles');
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  // ── "Top Entities" → Top Entities explore: Top Entities bar + Keywords cloud + Entities Map ──
+  const topEntitiesBar=[['GCash',102],['Philippines',72],['Filipinos',71],['Filipino',51],['Philippine',36],['Globe',35],['Alex Eala',34],['Eala',33],['BSP',25],['InstaPay',24],['Maya',24],['Globe Telecom',22]];
+  function TopEntitiesBar(){
+    const data=topEntitiesBar.map(([n,c])=>({name:n,count:c,pub:n}));
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data,layout:'vertical',margin:{top:8,right:40,bottom:24,left:8}},
+        RC(CartesianGrid,{horizontal:false,stroke:'#eef0f2'}),
+        RC(XAxis,{type:'number',domain:[0,120],ticks:[0,30,60,90,120],tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'ARTICLES COUNT',position:'insideBottom',offset:-10,fontSize:10,fill:'#9ca3af'}}),
+        RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#4b5563'},width:120,axisLine:false,tickLine:false}),
+        RC(Tooltip,{cursor:{fill:'rgba(0,0,0,0.03)'}}),
+        RC(Bar,{dataKey:'count',radius:[0,4,4,0],maxBarSize:16,isAnimationActive:false,fill:'#6d5ae6',cursor:'pointer',onClick:(d)=>{if(d&&d.pub)window.openInsEntity(d.pub);}})
+      ));
+  }
+  const entKeywords=[['GCash',102],['Philippines',72],['Filipinos',71],['Filipino',51],['Philippine',36],['Globe',35],['Alex Eala',34],['Eala',33],['BSP',25],['InstaPay',24],['Maya',24],['Globe Telecom',22],['RCBC',21],['BPI',20],['Filipina',19],['Mynt',19],['PESONet',19],['SEC',18],['Globe Telecom Bank of the Philippine Islands',17],['Pilipinas',17],['MANILA',15],['the Middle East',15],['Metro Manila',14],['Pilipino',14],['Pinoy',14],['Alex',13],['BPI Globe Telecom',13],['PSE',13],['GCashs',12],['Maya Joint',12],['Pero',12],['Southeast Asia',12],['US',12],['Starlink',11],['Gcash',10],['Kasi',10],['ng',10],['Android',9],['Carl Cruz',9],['Cebu',9],['Eli Remolona Jr',9],['Facebook',9],['Globes',9],['Iga Swiatek',9],['LTFRB',9],['Rizal Commercial Banking Corp',9],['Shopee',9],['Starlinks',9],['Ayala',8],['Bangko Sentral ng Pilipinas',8]];
+  function renderEntKeywords(){
+    const host=document.getElementById('db-entities-kw');if(!host)return;
+    host.innerHTML=entKeywords.map(([n,c])=>`<span class="ent-kw-pill" onclick="openInsEntity('${n.replace(/'/g,"\\'")}')"><span class="ent-kw-count">${c}</span>${n}</span>`).join('');
+  }
+  const entMapFull=[
+    {name:'ORG',value:37.12,color:'#8d7ba8',desc:'Organization Entities: businesses, societies, associations.'},
+    {name:'PERSON',value:33.64,color:'#6b7fb0',desc:'Person Entities: names of people, including fictional.'},
+    {name:'GPE',value:13.03,color:'#6bb0bd',desc:'Geopolitical Entities: countries, cities, states.'},
+    {name:'NORP',value:6.77,color:'#5fb088',desc:'Nationalities or religious / political groups.'},
+    {name:'PRODUCT',value:3.07,color:'#b6d95a',desc:'Products: objects, vehicles, foods, etc.'},
+    {name:'LOC',value:1.34,color:'#5cc98a',desc:'Non-GPE locations: mountains, bodies of water.'},
+    {name:'LAW',value:5.03,color:'#e8c14a',desc:'Named legal documents / laws.'}
+  ];
+  function renderEntMap(hostId,data){
+    const grid=document.getElementById(hostId);if(!grid)return;
+    const left=data.slice(0,2),right=data.slice(2),sum=a=>a.reduce((s,e)=>s+e.value,0);
+    const cell=e=>`<div class="db-entmap-cell" style="flex:${e.value};background:${e.color};cursor:pointer" onclick="openInsEntity('${e.name}')" data-btip="${_makeTip({label:e.name+' ('+e.value.toFixed(2)+'%)',detail:e.desc})}">${e.name} (${e.value.toFixed(2)}%)</div>`;
+    grid.innerHTML=`<div class="db-entmap-col" style="flex:${sum(left)}">${left.map(cell).join('')}</div><div class="db-entmap-col" style="flex:${sum(right)}">${right.map(cell).join('')}</div>`;
+    const leg=document.getElementById('db-entities-legend');
+    if(leg)leg.innerHTML=data.map(e=>`<span class="db-ent-leg-item"><span class="sq" style="background:${e.color}"></span>${e.name}</span>`).join('');
+  }
+  window.openTopEntitiesExplore=function(){
+    const wrap=_showExplore('db-entities-explore');if(!wrap)return;
+    dbMount('db-entities-bar',RC(TopEntitiesBar));
+    renderEntKeywords();
+    renderEntMap('db-entities-map',entMapFull);
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  // ── Compare view (Phase 1): chips + Overview table + Timeline + Media Exposure + Share of Voice ──
+  const CMP_COLORS=['#7c3aed','#ea580c','#2563eb','#16a34a'];
+  let _cmpCats=[];
+  const CMP_OVERVIEW=[
+    ['Total Results',['82','92%'],['573','100%'],['','']],
+    ['Top Media Exposure by Publisher',['Manila Times Online','96%'],['Philstar Online','100%'],['5 articles published','23 articles published']],
+    ['Top Author',['Logan Kat-D M. Zap…','100%'],['Vicky Morales','100%'],['4 articles published','8 articles published']],
+    ['Top Media Exposure by Medium',['Online News','96%'],['Online News','79%'],['53 articles published','311 articles published']],
+    ['Most Articles in a day',['27 Article/s',''],['102 Article/s','100%'],['July 3, 2026','July 6, 2026']],
+    ['Tonality',['Positive','100%'],['Positive','100%'],['58 articles published','311 articles published']],
+    ['Top Entity',['Eric Alberto','100%'],['GCash','100%'],['11 articles published','102 articles published']],
+    ['Most Dominant Section',['News',''],['News','58%'],['34 articles published','311 articles published']]
+  ];
+  function renderCompareChips(){
+    const host=document.getElementById('db-compare-chips');if(!host)return;
+    host.innerHTML=_cmpCats.map(c=>`<span class="cmp-chip" style="border-color:${c.color};color:${c.color}"><span class="cmp-chip-dot" style="background:${c.color}"></span>${c.name}</span>`).join('')+`<button class="cmp-chip-clear" onclick="closeTimelineExplore()">Clear All</button>`;
+  }
+  function renderCompareOverview(){
+    const host=document.getElementById('db-compare-overview');if(!host)return;
+    const rows=CMP_OVERVIEW.map(r=>`<tr>
+      <td class="cmp-ov-lbl">${r[0]}</td>
+      <td class="cmp-ov-cell"><div class="cmp-ov-val">${r[1][0]}</div>${r[3][0]?`<div class="cmp-ov-sub">${r[3][0]}</div>`:''}${r[1][1]?`<span class="cmp-ov-pct">${r[1][1]}</span>`:''}</td>
+      <td class="cmp-ov-cell"><div class="cmp-ov-val">${r[2][0]}</div>${r[3][1]?`<div class="cmp-ov-sub">${r[3][1]}</div>`:''}${r[2][1]?`<span class="cmp-ov-pct">${r[2][1]}</span>`:''}</td>
+    </tr>`).join('');
+    host.innerHTML=`<table class="cmp-ov-tbl"><thead><tr><th>Metric</th>${_cmpCats.map(c=>`<th style="color:${c.color}">${c.name}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  const cmpTimelineData=[{date:'Jun 30',c0:45,c1:52},{date:'Jul 01',c0:52,c1:70},{date:'Jul 02',c0:40,c1:55},{date:'Jul 03',c0:30,c1:48},{date:'Jul 04',c0:8,c1:35},{date:'Jul 05',c0:35,c1:88},{date:'Jul 06',c0:52,c1:60},{date:'Jul 07',c0:20,c1:30}];
+  function CompareTimeline(){
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(ComposedChart,{data:cmpTimelineData,margin:{top:16,right:24,bottom:8,left:0}},
+        RC(CartesianGrid,{vertical:false,stroke:'#eef0f2'}),
+        RC(XAxis,{dataKey:'date',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
+        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:36}),
+        RC(Tooltip,{}),RC(Legend,{iconType:'plainline',wrapperStyle:{fontSize:11,paddingTop:10}}),
+        ..._cmpCats.map((c,i)=>RC(Line,{key:i,type:'linear',dataKey:'c'+i,name:c.name,stroke:c.color,strokeWidth:2,dot:{r:3,fill:c.color},activeDot:{r:5}}))
+      ));
+  }
+  const CMP_MEDIA_COLORS={'Online News':'#d67db3','Blogs':'#a8548f','Broadsheet':'#2f6fb0','Tabloid':'#29b6d8','Provincial':'#4a90d9','TV':'#1b7d3f','Radio':'#43a047'};
+  const CMP_MEDIA_DIST=[
+    [['Online News',65.43,53],['Blogs',16.05,13],['Broadsheet',9.88,8],['Tabloid',2.47,2],['Provincial',1.23,1],['TV',1.23,3],['Radio',1.23,1]],
+    [['Online News',56.30,295],['Blogs',15.46,81],['Broadsheet',10.11,53],['Tabloid',2.10,11],['Provincial',0.57,3],['TV',3.05,64],['Radio',0.57,17]]
+  ].map(cat=>cat.map(([name,value,count])=>({name,value,count,color:CMP_MEDIA_COLORS[name]})));
+  function CmpMediaDonut(ci){
+    const data=CMP_MEDIA_DIST[ci]||CMP_MEDIA_DIST[0];
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(PieChart,{},RC(Pie,{data,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none'},...data.map((d,i)=>RC(Cell,{key:i,fill:d.color}))),RC(Tooltip,{})));
+  }
+  function renderCompareMedia(){
+    _cmpCats.forEach((cat,ci)=>{
+      const hdEl=document.getElementById('db-compare-media-hd-'+ci);if(hdEl)hdEl.style.color=cat.color;
+      const nameEl=document.getElementById('db-compare-media-name-'+ci);if(nameEl)nameEl.textContent=cat.name;
+      const leg=document.getElementById('db-compare-media-leg-'+ci);
+      const data=CMP_MEDIA_DIST[ci]||CMP_MEDIA_DIST[0];
+      if(leg)leg.innerHTML=data.map(d=>`<div class="cmp-leg-item"><span class="cmp-leg-dot" style="background:${d.color}"></span>${d.name}: ${d.value.toFixed(2)}% (${d.count})</div>`).join('');
+      dbMount('db-compare-media-'+ci,CmpMediaDonut(ci));
+    });
+  }
+  const CMP_SOV=[{label:'Articles',vals:[363,573]},{label:'Story Value',vals:[95,120]},{label:'AVE',vals:[18.32,279.9]}];
+  function CmpSoVDonut(mi){
+    const m=CMP_SOV[mi];
+    const data=_cmpCats.map((c,i)=>({name:c.name,value:m.vals[i]||1,color:c.color}));
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(PieChart,{},RC(Pie,{data,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none'},...data.map((d,i)=>RC(Cell,{key:i,fill:d.color}))),RC(Tooltip,{})));
+  }
+  window.openCompareView=function(cats){
+    if(!cats||cats.length<2)cats=['Company News - DITO Telecommunity','Competitor News - Globe Telecom'];
+    _cmpCats=cats.slice(0,2).map((n,i)=>({name:n,color:CMP_COLORS[i%CMP_COLORS.length]}));
+    const wrap=_showExplore('db-compare-explore');if(!wrap)return;
+    renderCompareChips();
+    renderCompareOverview();
+    dbMount('db-compare-timeline',CompareTimeline());
+    renderCompareMedia();
+    [0,1,2].forEach(mi=>dbMount('db-compare-sov-'+mi,CmpSoVDonut(mi)));
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
 
   // ── Author Story Value Distribution (tabbed: bubble plot + horizontal bar) ──
   const authorData=[
@@ -4947,7 +5411,7 @@ function initDashboard(){
             RC(XAxis,{type:'number',dataKey:'articles',name:'Article Count',domain:[0,authorMaxX],tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Article Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
             RC(YAxis,{type:'number',dataKey:'sv',name:'Story Value',domain:[0,10],tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:40,label:{value:'Story Value',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
             RC(Tooltip,{content:AuthorTip,cursor:{strokeDasharray:'3 3',stroke:'rgba(0,0,0,0.12)'}}),
-            RC(Scatter,{data:shown,shape:AuthorDot})
+            RC(Scatter,{data:shown,shape:AuthorDot,cursor:'pointer',onClick:(d)=>{const n=d&&(d.name||(d.payload&&d.payload.name));if(n)openInsCard(getEntityArticles('author',n),n,'Author Story Value','db-author-card');}})
           ))),
       RC('div',{className:'db-pub-legend'},authorData.map(a=>RC('span',{key:a.name,className:'db-pub-leg-item'},RC('span',{className:'dot',style:{background:a.color}}),a.name))),
       RC('div',{style:{height:30,flexShrink:0}},
@@ -4993,7 +5457,7 @@ function initDashboard(){
   ];
   const entEl=document.getElementById('db-entities');
   if(entEl){
-    const cell=e=>'<div class="db-entmap-cell" style="flex:'+e.value+';background:'+e.color+'" data-btip="'+_makeTip({label:e.name+' ('+e.value.toFixed(2)+'%)',detail:e.desc})+'">'+e.name+' ('+e.value.toFixed(2)+'%)</div>';
+    const cell=e=>'<div class="db-entmap-cell" style="flex:'+e.value+';background:'+e.color+';cursor:pointer" onclick="openInsEntity(\''+e.name+'\')" data-btip="'+_makeTip({label:e.name+' ('+e.value.toFixed(2)+'%)',detail:e.desc})+'">'+e.name+' ('+e.value.toFixed(2)+'%)</div>';
     const leftSum=entityData[0].value+entityData[1].value,rightSum=entityData[2].value+entityData[3].value;
     entEl.innerHTML='<div class="db-entmap-col" style="flex:'+leftSum+'">'+cell(entityData[0])+cell(entityData[1])+'</div>'+
                     '<div class="db-entmap-col" style="flex:'+rightSum+'">'+cell(entityData[2])+cell(entityData[3])+'</div>';
@@ -5632,7 +6096,7 @@ function _paneEntities(kind,name){
   // Two-column layout: largest in left column, rest in right column
   const left=[data[0]];
   const right=data.slice(1);
-  const cell=e=>`<div class="db-entmap-cell" style="flex:${e.value};background:${e.color}" data-btip="${_makeTip({label:e.name+' ('+e.value.toFixed(2)+'%)',detail:e.desc})}">${e.name} (${e.value.toFixed(2)}%)</div>`;
+  const cell=e=>`<div class="db-entmap-cell" style="flex:${e.value};background:${e.color};cursor:pointer" onclick="openInsEntity('${e.name}')" data-btip="${_makeTip({label:e.name+' ('+e.value.toFixed(2)+'%)',detail:e.desc})}">${e.name} (${e.value.toFixed(2)}%)</div>`;
   const leftSum=left.reduce((s,e)=>s+e.value,0);
   const rightSum=right.reduce((s,e)=>s+e.value,0);
   return `<div class="ent-entities-wrap">

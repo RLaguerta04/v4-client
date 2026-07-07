@@ -759,6 +759,23 @@ body.aireport-open .app-body{margin-right:var(--aa-w)}
 .exp-send{font-size:12.5px;padding:8px 18px;background:var(--ink);color:#fff;border:1px solid var(--ink);border-radius:var(--radius-sm);cursor:pointer;font-weight:500;font-family:inherit;transition:background 0.12s}
 .exp-send:hover:not(:disabled){background:var(--accent-hover)}
 .exp-send:disabled{background:var(--canvas);border-color:var(--border);color:var(--muted);cursor:not-allowed}
+/* Compare Topics modal — reuses the .exp-* shell; scrollable checkbox list + purple primary */
+.cmp-modal{width:520px}
+.cmp-modal .exp-head{border-bottom:1px solid var(--border)}
+.cmp-body{max-height:56vh;overflow-y:auto;gap:0;padding:16px 24px 20px;scrollbar-width:thin;scrollbar-color:transparent transparent}
+.cmp-body::-webkit-scrollbar{width:8px}
+.cmp-body::-webkit-scrollbar-thumb{background:transparent;border-radius:4px}
+.cmp-body:hover{scrollbar-color:var(--border) transparent}
+.cmp-body:hover::-webkit-scrollbar-thumb{background:var(--border)}
+.cmp-group{display:flex;align-items:center;gap:12px;padding:8px 0 4px;font-size:14.5px;font-weight:700;color:var(--ink);font-family:var(--font-display);letter-spacing:-0.01em;cursor:pointer}
+.cmp-group:not(:first-child){margin-top:14px;padding-top:18px;border-top:1px solid var(--border)}
+.cmp-topic{display:flex;align-items:center;gap:12px;padding:7px 0 7px 30px;font-size:13.5px;color:var(--ink-2);cursor:pointer}
+.cmp-topic:hover{color:var(--ink)}
+.cmp-cb{width:16px;height:16px;flex-shrink:0;accent-color:#6d5ae6;cursor:pointer}
+.cmp-child:disabled{cursor:default}
+.cmp-child:disabled + span{color:var(--muted)}
+.cmp-compare:not(:disabled){background:#6d5ae6;border-color:#6d5ae6}
+.cmp-compare:not(:disabled):hover{background:#5b4bd4;border-color:#5b4bd4}
 
 /* Mention detail drawer */
 .md-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.28);z-index:550;display:none;justify-content:flex-end}
@@ -1672,6 +1689,113 @@ body.ws-shared #page-mentions.detail-open .tbl td:nth-child(9){display:none}
 .ins-preview-bar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
 .ins-pv-filters{display:flex;align-items:center;gap:8px}
 .ins-pv-right{display:flex;align-items:center;gap:8px}
+/* Preview left-header — date primary on top, source muted below (mirrors the Insights panel header).
+   .ent-prev-head-l.ins-prev-head-l (0,2,0) out-specifies .ent-prev-head-l{align-items:center}. */
+.ent-prev-head-l.ins-prev-head-l{flex-direction:column;align-items:flex-start;gap:3px}
+.ins-prev-head-l .spot-panel-title{margin-bottom:0}
+.ins-prev-src{font-size:11.5px;font-weight:500;color:var(--muted)}
+/* ── Explore Data drill-down (Total Articles Count): Media Exposure + Top Publishers + publisher cards ── */
+.db-explore-wrap{display:none}
+#page-dashboard.explore-open{overflow:hidden}
+#page-dashboard.explore-open .db-export-pdf-btn{display:none}   /* no PDF export in explore pages */
+#page-dashboard.explore-open .db-content{display:none}
+#page-dashboard.explore-open .db-explore-wrap.on{display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;overflow-y:overlay;padding:0 0 32px;animation:dbExploreIn 0.34s cubic-bezier(.16,1,.3,1) both}
+/* When an article preview opens from the explore view, hide the explore grid; closing it returns here (explore-open persists) */
+#page-dashboard.ent-detail-open .db-explore-wrap{display:none}
+@keyframes dbExploreIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.db-explore-inner{display:flex;flex-direction:column;gap:20px;max-width:1280px;width:100%;margin:0 auto;padding:8px 24px 0}
+/* Full-width sticky crumb bar; text centered in a max-width span to line up with the cards.
+   Transparent at the top, turns white + shadow once the view is scrolled (JS toggles .scrolled). */
+.db-explore-crumb{position:sticky;top:0;z-index:5;padding:14px 24px;background:transparent;transition:background 0.2s ease,box-shadow 0.2s ease,border-color 0.2s ease;border-bottom:1px solid transparent}
+.db-explore-crumb-in{display:flex;align-items:center;gap:8px;font-size:14px;max-width:1280px;width:100%;margin:0 auto}
+.db-explore-wrap.scrolled .db-explore-crumb{background:#fff;border-bottom-color:var(--border);box-shadow:0 4px 12px -4px rgba(24,29,38,0.12)}
+.db-crumb-link{color:var(--muted);cursor:pointer}
+.db-crumb-link:hover{color:var(--ink);text-decoration:underline}
+.db-crumb-sep{color:var(--border)}
+.db-crumb-cur{font-weight:700;color:var(--ink)}
+/* Publisher-cards section = plain container on the canvas. .db-card.ex-pub-section (0,2,0)
+   out-specifies .db-card{background:#fff;padding:20px} regardless of source order. */
+.db-card.ex-pub-section{background:transparent;border:none;box-shadow:none;padding:0}
+.db-card.ex-pub-section:hover{box-shadow:none}
+/* Tonality Explore toolbar — tighten the gap to the table below it */
+.db-ton-toolbar{padding-bottom:2px;margin-bottom:-14px}
+/* Tonality Explore table card — transparent, table flush to the edges, footer inside */
+.db-card.db-ton-table-card{background:transparent;border:none;box-shadow:none;padding:0;overflow:hidden;gap:0}
+.db-card.db-ton-table-card:hover{box-shadow:none}
+.db-ton-table-card .tbl-scroll{overflow-x:auto}
+.db-ton-table-card .tbl-footer{border-top:1px solid var(--border)}
+/* Publisher Score — media-type breakdown cards */
+.ps-media-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:16px}
+/* Compare view — chips, 2/3-col chart grids, overview table */
+.cmp-chips{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.cmp-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border:1px solid;border-radius:20px;font-size:12.5px;font-weight:600;background:#fff}
+.cmp-chip-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.cmp-chip-clear{margin-left:4px;background:none;border:none;color:var(--muted);font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit}
+.cmp-chip-clear:hover{color:var(--ink);text-decoration:underline}
+.cmp-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.cmp-donut-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:10px}
+.cmp-donut-body{display:flex;align-items:center;gap:14px}
+.cmp-donut-body .db-chart-wrap{flex:1;min-width:0}
+.cmp-donut-legend{flex-shrink:0;display:flex;flex-direction:column;gap:9px}
+.cmp-leg-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2);white-space:nowrap}
+.cmp-leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.cmp-3col{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.cmp-sov-lbl{text-align:center;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px}
+.cmp-ov-section .db-card-hd{margin-bottom:12px}
+#db-compare-overview{border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden}
+.cmp-ov-tbl{width:100%;border-collapse:collapse}
+.cmp-ov-tbl thead th{background:#e8e6e0}
+.cmp-ov-tbl tbody td{background:#fff}
+.cmp-ov-tbl tbody tr:last-child td{border-bottom:none}
+.cmp-ov-tbl th{text-align:left;font-size:12.5px;font-weight:700;font-family:var(--font-display);padding:12px 16px;border-bottom:1px solid var(--border)}
+.cmp-ov-tbl th:first-child{width:38%;font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em}
+.cmp-ov-tbl td{padding:14px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+.cmp-ov-lbl{font-size:13px;color:var(--muted)}
+.cmp-ov-cell{position:relative}
+.cmp-ov-val{font-size:14px;font-weight:600;color:var(--ink)}
+.cmp-ov-sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+.cmp-ov-pct{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:#16a34a}
+/* Top Entities explore — keyword pills */
+.ent-kw-cloud{display:flex;flex-wrap:wrap;gap:10px}
+.ent-kw-pill{display:inline-flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;background:var(--surface);border:1px solid var(--border);border-radius:20px;font-size:12.5px;color:var(--ink);cursor:pointer;transition:border-color 0.12s,background 0.12s}
+.ent-kw-pill:hover{border-color:#f59e0b;background:#fff7ed}
+.ent-kw-count{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;border-radius:50%;background:#f59e0b;color:#fff;font-size:11px;font-weight:700}
+.ps-media-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:16px}
+.ps-media-hd{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.ps-media-hd .hl-icon{width:28px;height:28px;flex-shrink:0}
+.ps-media-name{font-size:16px;font-weight:700;color:var(--ink);font-family:var(--font-display);letter-spacing:-0.01em}
+.ps-media-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.ps-media-stats{padding-bottom:14px;border-bottom:1px solid var(--border)}
+.ps-media-stat-lbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:3px}
+.ps-media-stat-val{font-size:20px;font-weight:700;color:#181d26;font-family:var(--font-display);letter-spacing:-0.01em}
+.ps-media-pub{margin-bottom:14px}
+.ps-media-pub:last-child{margin-bottom:0}
+.ps-media-pub-name{font-size:12.5px;font-weight:500;color:var(--ink);margin-bottom:6px}
+.ps-media-bar{position:relative;height:20px;background:#eef0f3;border-radius:5px;overflow:hidden;display:flex;align-items:center}
+.ps-media-bar-fill{position:absolute;left:0;top:0;height:100%;border-radius:5px;opacity:0.9}
+/* Count label: dark on the gray track, white when it sits over the colored fill (full bar) */
+.ps-media-bar-lbl{position:absolute;right:10px;font-size:11px;font-weight:600;color:#181d26}
+.ps-media-bar-lbl.over-fill{color:#fff}
+.ex-pub-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.ex-pub-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;cursor:pointer;transition:box-shadow 0.2s ease,transform 0.2s ease,border-color 0.2s ease}
+.ex-pub-card:hover{box-shadow:0 8px 24px rgba(24,29,38,0.1);transform:translateY(-2px);border-color:#d4d7dd}
+.ex-pub-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:16px}
+.ex-pub-hd-l{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ex-pub-name{font-size:16px;font-weight:700;color:var(--ink);font-family:var(--font-display);letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ex-pub-avatar{flex-shrink:0;width:34px;height:34px;border-radius:50%;background:var(--canvas);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+.ex-pub-socialrow{display:flex;align-items:center;justify-content:flex-start;gap:8px}
+/* Overlapping social stack with hover fan-out — same treatment as publishers.html */
+.ex-pub-socialrow .md-socials{display:flex;flex-wrap:nowrap;gap:0;width:fit-content}
+.ex-pub-socialrow .md-soc{margin-left:-8px;border:2px solid #fff;transition:margin-left 0.2s ease}
+.ex-pub-socialrow .md-socials .md-soc:first-child{margin-left:0}
+.ex-pub-socialrow .md-socials:hover .md-soc{margin-left:2px}
+.ex-pub-socialrow .md-socials:hover .md-soc:first-child{margin-left:0}
+.ex-pub-rank{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#7c3aed;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.ex-pub-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 10px}
+.ex-pub-metrics .ex-pub-stat:nth-child(5){grid-column:span 2}   /* Media Exposure spans cols 2-3 so its label stays one line */
+.ex-pub-stat{min-width:0}
+.ex-pub-stat-lbl{font-size:11px;color:var(--muted);margin-bottom:4px}
+.ex-pub-stat-val{font-size:18px;font-weight:700;color:#181d26;font-family:var(--font-display);letter-spacing:-0.01em}
 /* Preview mode retains the filter bar; only the list/detail body is swapped for the 3-column preview */
 .ent-page.ent-detail-open > .ent-body{display:none}
 .ent-page.ent-detail-open > .ent-preview-wrap{display:flex;flex-direction:column;flex:1;min-height:0}
@@ -1899,7 +2023,8 @@ body.ws-shared #page-mentions.detail-open .tbl td:nth-child(9){display:none}
 /* Tracker (incl. Shared View): strip the card chrome so the article sits flush, mirroring the mentions preview */
 #page-tracker .adp-article,
 #page-publishers .adp-article,
-#page-authors .adp-article{border:none;padding:0;background:transparent;box-shadow:none;border-radius:0}
+#page-authors .adp-article,
+#page-dashboard .adp-article{border:none;padding:0;background:transparent;box-shadow:none;border-radius:0}
 .adp-title{font-size:22px;font-weight:700;color:var(--ink);font-family:var(--font-display);line-height:1.3;letter-spacing:-0.02em;margin-bottom:14px}
 .adp-hero{width:100%;aspect-ratio:16/9;max-height:280px;border-radius:var(--radius-md);overflow:hidden;margin-bottom:16px;position:relative;display:flex;align-items:flex-end;justify-content:flex-end;background:linear-gradient(140deg,#181d26,#272d3a 52%,#3a4252)}
 /* Small pill button (used by the Preview full broadsheet action) */
@@ -2472,6 +2597,8 @@ body.ws-shared .sb-progress-fill{background:var(--ws-accent,#2563eb)!important}
 /* KPI grid */
 .db-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:16px;flex-shrink:0}
 .db-kpi-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:20px;display:flex;flex-direction:column;gap:4px;transition:box-shadow 0.2s,transform 0.2s}
+.db-kpi-card.db-kpi-clickable{cursor:pointer}
+.db-kpi-card.db-kpi-clickable:hover{box-shadow:0 8px 24px rgba(24,29,38,0.1);transform:translateY(-2px);border-color:#d4d7dd}
 .db-kpi-card:hover{box-shadow:0 8px 24px rgba(24,29,38,0.1);transform:translateY(-2px)}
 .db-kpi-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px}
 .db-kpi-val{font-size:26px;font-weight:700;color:var(--ink);font-family:var(--font-display);letter-spacing:-0.02em;line-height:1.15;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2512,7 +2639,7 @@ body.ws-shared .sb-progress-fill{background:var(--ws-accent,#2563eb)!important}
 .db-tl-insights:hover{background:rgba(124,58,237,0.07);border-color:rgba(124,58,237,0.5)}
 .db-tl-insights i,.db-tl-insights svg{width:14px;height:14px}
 /* ── Insights slide-over (push mode) — shared by Timeline + Media Exposure ── */
-:root{--ti-w:440px}
+:root{--ti-w:520px}
 .ti-overlay{width:var(--ti-w)}
 body.ins-open .app-right{transition:padding-right 0.28s cubic-bezier(0.4,0,0.2,1);padding-right:var(--ti-w)}
 @media (max-width:1180px){body.ins-open .app-right{padding-right:0}}
@@ -2525,6 +2652,12 @@ body.ins-open .db-export-pdf-btn .db-btn-label{display:none}
 .db-content-inner>*{transition:opacity 0.3s ease,filter 0.3s ease}
 body.ins-open .db-content-inner>*:not(.has-focus){opacity:0.35;filter:saturate(0.55);pointer-events:none}
 body.ins-open .has-focus .db-card:not(.is-focused){opacity:0.35;filter:saturate(0.55);pointer-events:none}
+.db-kpi-card{transition:box-shadow 0.2s,transform 0.2s,opacity 0.3s ease,filter 0.3s ease}
+body.ins-open .has-focus .db-kpi-card:not(.is-focused){opacity:0.35;filter:saturate(0.55);pointer-events:none}
+/* Same focus/dim in the Explore-view (Total Articles Count) when the Insights panel opens from a graph/publisher */
+.db-explore-inner>*,.ex-pub-card{transition:opacity 0.3s ease,filter 0.3s ease}
+body.ins-open .db-explore-inner>*:not(.has-focus){opacity:0.35;filter:saturate(0.55);pointer-events:none}
+body.ins-open .has-focus .ex-pub-card:not(.is-focused){opacity:0.35;filter:saturate(0.55);pointer-events:none}
 .db-card{transition:box-shadow 0.2s,opacity 0.3s ease,filter 0.3s ease}
 body.ins-open .is-focused{box-shadow:0 0 0 2px rgba(124,58,237,0.45),0 12px 32px rgba(24,29,38,0.12)}
 .ti-head{padding:15px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:11px;flex-shrink:0}
@@ -2539,6 +2672,7 @@ body.ins-open .is-focused{box-shadow:0 0 0 2px rgba(124,58,237,0.45),0 12px 32px
 .ti-back{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;font-family:inherit;margin-bottom:2px}
 .ti-back:hover{color:var(--ink)}
 .ti-back i,.ti-back svg{width:13px;height:13px}
+.ti-head-export{flex-shrink:0;padding:6px 13px;margin-left:0}
 .ti-x{width:30px;height:30px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ti-x:hover{background:var(--canvas);color:var(--ink)}
 .ti-body{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:18px}
@@ -2599,6 +2733,13 @@ body.ins-open .is-focused{box-shadow:0 0 0 2px rgba(124,58,237,0.45),0 12px 32px
 .ti-arttbl thead th{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;background:var(--canvas)}
 .ti-arttbl th.ti-c-sent,.ti-arttbl td.ti-arttbl-sent{width:120px}
 .ti-arttbl th.ti-c-act,.ti-arttbl td.ti-arttbl-act{width:44px;text-align:right}
+/* Story Value · AVE columns + media-outlet/date meta under the headline */
+.ti-arttbl th.ti-c-sv,.ti-arttbl td.ti-arttbl-sv{width:70px}
+.ti-arttbl th.ti-c-ave,.ti-arttbl td.ti-arttbl-ave{width:90px}
+.ti-arttbl-sv{font-size:13px;font-weight:600;color:var(--ink)}
+.ti-arttbl-ave{font-size:12px;color:var(--muted);white-space:nowrap}
+.ti-arttbl-hltext{display:flex;flex-direction:column;min-width:0}
+.ti-arttbl-meta{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .ti-arttbl-row[hidden]{display:none}
 .ti-arttbl-row{cursor:pointer}
 .ti-arttbl-row:hover{background:var(--canvas)}
@@ -2609,6 +2750,9 @@ body.ins-open .is-focused{box-shadow:0 0 0 2px rgba(124,58,237,0.45),0 12px 32px
 .ti-arttbl-more:hover{background:var(--border);color:var(--ink)}
 .ti-arttbl-more i,.ti-arttbl-more svg{width:16px;height:16px}
 .ti-arttbl-pager{display:flex;align-items:center;justify-content:space-between;padding:14px 2px 2px}
+/* Insights list panel (exlist): flush table + pagination pinned to the bottom of the scrolling panel */
+.ti-body.ti-body-flush{padding:0}
+.ti-body-flush .ti-arttbl-pager{position:sticky;bottom:0;margin:0;padding:12px 16px;background:#fff;border-top:1px solid var(--border)}
 .ti-arttbl-info{font-size:12px;color:var(--muted)}
 .ti-arttbl-btns{display:flex;align-items:center;gap:4px}
 .ti-pgb{min-width:28px;height:28px;padding:0 6px;border:1px solid var(--border);background:#fff;border-radius:6px;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}

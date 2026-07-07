@@ -112,7 +112,7 @@
           <input type="text" placeholder="Search articles, topics, sources…">
           <div class="fc-search-kbd"><kbd>⌘</kbd><kbd>K</kbd></div>
         </div>
-        <button class="db-compare-btn" title="Compare Categories/Buckets">Compare Categories/Buckets</button>
+        <button class="db-compare-btn" title="Compare Categories/Buckets" onclick="openCompareModal()">Compare Categories/Buckets</button>
         <button class="db-export-pdf-btn" title="Export to PDF"><i data-lucide="file-text" class="icon-sm"></i> <span class="db-btn-label">Export to PDF</span></button>
       </div>
 
@@ -121,28 +121,28 @@
       <!-- KPI Cards — 2 rows × 4 columns -->
       <div class="db-kpi-grid">
         <!-- Row 1 -->
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openTimelineExplore()">
           <div class="db-kpi-label">Total Results</div>
           <div class="db-kpi-val">248</div>
           <div class="db-kpi-detail">Online: 168 · Print: 52 · Broadcast: 28</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-up">9% <span class="db-kpi-arrow">▲</span></div>
         </div>
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openExposureMediumExplore()">
           <div class="db-kpi-label">Top Exposure by Medium</div>
           <div class="db-kpi-val">Online News</div>
           <div class="db-kpi-detail">168 articles count</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-up">14% <span class="db-kpi-arrow">▲</span></div>
         </div>
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openTopPubMedExplore()">
           <div class="db-kpi-label">Top Publisher</div>
           <div class="db-kpi-val db-kpi-val--md">Philippine Daily Inquirer</div>
           <div class="db-kpi-detail">38 article/s published</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-up">60% <span class="db-kpi-arrow">▲</span></div>
         </div>
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openTopAuthorExplore()">
           <div class="db-kpi-label">Top Author</div>
           <div class="db-kpi-val">Daxim L. Lucas</div>
           <div class="db-kpi-detail">14 article/s published</div>
@@ -150,28 +150,28 @@
           <div class="db-kpi-delta db-kpi-up">50% <span class="db-kpi-arrow">▲</span></div>
         </div>
         <!-- Row 2 -->
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openMostArticlesPanel(this)">
           <div class="db-kpi-label">Most Articles in a Day</div>
           <div class="db-kpi-val">42 Article/s</div>
           <div class="db-kpi-detail">May 23, 2026</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-up">12% <span class="db-kpi-arrow">▲</span></div>
         </div>
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openTonalityExplore()">
           <div class="db-kpi-label">Top Tonality</div>
           <div class="db-kpi-val db-kpi-green">Positive</div>
           <div class="db-kpi-detail">184 article/s published</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-up">15% <span class="db-kpi-arrow">▲</span></div>
         </div>
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openTopEntitiesExplore()">
           <div class="db-kpi-label">Top Entities</div>
           <div class="db-kpi-val">DITO Telecommunity</div>
           <div class="db-kpi-detail">38 article/s published</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-down">-25% <span class="db-kpi-arrow">▼</span></div>
         </div>
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openTimelineExplore()">
           <div class="db-kpi-label">Most Dominant Section</div>
           <div class="db-kpi-val">News</div>
           <div class="db-kpi-detail">156 article/s published</div>
@@ -187,7 +187,7 @@
             <span class="db-card-title">Timeline <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
               <button class="db-tl-explore db-tl-insights" onclick="openTimelineInsights()"><i data-lucide="sparkles"></i> Insights</button>
-              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-explore" onclick="openTimelineExplore()">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
           </div>
@@ -208,7 +208,7 @@
             <span class="db-card-title">Media Exposure (Article Count) <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
               <button class="db-tl-explore db-tl-insights" onclick="openExposureInsights()"><i data-lucide="sparkles"></i> Insights</button>
-              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-explore" onclick="openTimelineExplore()">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
           </div>
@@ -219,7 +219,7 @@
             <span class="db-card-title">Topic Emphasis <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
               <button class="db-tl-explore db-tl-insights" onclick="openEmphasisInsights()"><i data-lucide="sparkles"></i> Insights</button>
-              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-explore" onclick="openTimelineExplore()">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
           </div>
@@ -237,7 +237,7 @@
             <span class="db-card-title">Tonality Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
               <button class="db-tl-explore db-tl-insights" onclick="openTonalityInsights()"><i data-lucide="sparkles"></i> Insights</button>
-              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-explore" onclick="openTonalityExplore()">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
           </div>
@@ -256,7 +256,7 @@
             <span class="db-card-title">Frequency Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
               <button class="db-tl-explore db-tl-insights" onclick="openFrequencyInsights()"><i data-lucide="sparkles"></i> Insights</button>
-              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-explore" onclick="openTimelineExplore()">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
           </div>
@@ -271,7 +271,7 @@
             <span class="db-card-title">Publisher Score Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
               <button class="db-tl-explore db-tl-insights" onclick="openPubScoreInsights()"><i data-lucide="sparkles"></i> Insights</button>
-              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-explore" onclick="openPubScoreExplore()">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
           </div>
@@ -284,7 +284,7 @@
             <span class="db-card-title">Author Story Value Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
               <button class="db-tl-explore db-tl-insights" onclick="openAuthorInsights()"><i data-lucide="sparkles"></i> Insights</button>
-              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-explore" onclick="openTimelineExplore()">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
           </div>
@@ -304,7 +304,7 @@
             <span class="db-card-title">Top Publishers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
               <button class="db-tl-explore db-tl-insights" onclick="openTopPubInsights()"><i data-lucide="sparkles"></i> Insights</button>
-              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-explore" onclick="openTimelineExplore()">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
           </div>
@@ -320,7 +320,7 @@
             <span class="db-card-title">Entities Map <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
               <button class="db-tl-explore db-tl-insights" onclick="openEntitiesInsights()"><i data-lucide="sparkles"></i> Insights</button>
-              <button class="db-tl-explore">Explore Data</button>
+              <button class="db-tl-explore" onclick="openTimelineExplore()">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
           </div>
@@ -331,6 +331,394 @@
 
       </div><!-- /db-content-inner -->
       </div><!-- /db-content -->
+
+      <!-- Explore Data drill-down: Total Articles Count (Media Exposure + Top Publishers + publisher cards) -->
+      <div class="db-explore-wrap" id="db-explore">
+        <div class="db-explore-crumb">
+          <div class="db-explore-crumb-in">
+            <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
+            <span class="db-crumb-sep">/</span>
+            <span class="db-crumb-cur">Total Articles Count</span>
+          </div>
+        </div>
+        <div class="db-explore-inner">
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Media Exposure (Article Count) <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions"><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div>
+            </div>
+            <div class="db-chart-wrap db-explore-exp-chart" id="db-exp-explore" style="height:110px"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Top Publishers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions">
+                <button class="db-tl-explore">Go to Influencers</button>
+                <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+              </div>
+            </div>
+            <div class="db-chart-wrap db-explore-toppub-chart" id="db-toppub-explore" style="height:560px"></div>
+          </div>
+          <div class="db-card ex-pub-section">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Top Publishers for Competitor News - Globe Telecom <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions">
+                <select class="pub-sort" aria-label="Publisher count"><option>Top 12 publishers</option><option>Top 24 publishers</option></select>
+                <button class="db-tl-explore">Go to Influencers</button>
+              </div>
+            </div>
+            <div class="ex-pub-grid" id="db-pubcards-explore"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Explore Data drill-down: Tonality (Tonality Timeline + article table) -->
+      <div class="db-explore-wrap" id="db-tonality-explore">
+        <div class="db-explore-crumb">
+          <div class="db-explore-crumb-in">
+            <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
+            <span class="db-crumb-sep">/</span>
+            <span class="db-crumb-cur">Tonality</span>
+          </div>
+        </div>
+        <div class="db-explore-inner">
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Tonality Timeline <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions"><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div>
+            </div>
+            <div class="db-chart-wrap" id="db-ton-timeline" style="height:380px"></div>
+          </div>
+          <!-- Table toolbar (copied from mentions.html) — display-only -->
+          <div class="tbl-header db-ton-toolbar">
+            <div class="tbl-header-left">
+              <div class="tbl-select"><select>
+                <option>Newest Articles</option>
+                <option>Oldest Articles</option>
+                <option>Highest Value</option>
+                <option>Lowest Value</option>
+              </select></div>
+              <div class="tbl-select"><select>
+                <option>Saved Articles</option>
+                <option>All Articles</option>
+                <option>Unsaved Articles</option>
+              </select></div>
+            </div>
+            <div class="tbl-header-right">
+              <div class="tbl-view-toggle">
+                <button class="tbl-view-btn on" title="Table view"><i data-lucide="table-2"></i></button>
+                <button class="tbl-view-btn" title="Card view"><i data-lucide="layout-grid"></i></button>
+              </div>
+              <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
+              <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
+              <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+              <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+              <button class="btn-export">Export</button>
+            </div>
+          </div>
+          <div class="db-card db-ton-table-card" id="db-ton-table"></div>
+        </div>
+      </div>
+
+      <!-- Explore Data drill-down: Publisher Score (Top Publishers + media-type cards + article table) -->
+      <div class="db-explore-wrap" id="db-pubscore-explore">
+        <div class="db-explore-crumb">
+          <div class="db-explore-crumb-in">
+            <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
+            <span class="db-crumb-sep">/</span>
+            <span class="db-crumb-cur">Publisher Score</span>
+          </div>
+        </div>
+        <div class="db-explore-inner">
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Media Exposure (Article Count) <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions"><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div>
+            </div>
+            <div class="db-chart-wrap db-explore-exp-chart" id="db-pubscore-exp" style="height:110px"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Top Publishers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions">
+                <button class="db-tl-explore">Go to Influencers</button>
+                <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+              </div>
+            </div>
+            <div class="db-chart-wrap db-explore-toppub-chart" id="db-pubscore-toppub" style="height:560px"></div>
+          </div>
+          <div class="ps-media-grid" id="db-pubscore-media"></div>
+          <div class="tbl-header db-ton-toolbar">
+            <div class="tbl-header-left">
+              <div class="tbl-select"><select><option>Newest Articles</option><option>Oldest Articles</option><option>Highest Value</option><option>Lowest Value</option></select></div>
+              <div class="tbl-select"><select><option>Saved Articles</option><option>All Articles</option><option>Unsaved Articles</option></select></div>
+            </div>
+            <div class="tbl-header-right">
+              <div class="tbl-view-toggle">
+                <button class="tbl-view-btn on" title="Table view"><i data-lucide="table-2"></i></button>
+                <button class="tbl-view-btn" title="Card view"><i data-lucide="layout-grid"></i></button>
+              </div>
+              <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
+              <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
+              <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+              <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+              <button class="btn-export">Export</button>
+            </div>
+          </div>
+          <div class="db-card db-ton-table-card" id="db-pubscore-table"></div>
+        </div>
+      </div>
+
+      <!-- Explore Data drill-down: Top Exposure for Online News (Pubscore Dist + Top Publishers + Timeline + table) -->
+      <div class="db-explore-wrap" id="db-expmed-explore">
+        <div class="db-explore-crumb">
+          <div class="db-explore-crumb-in">
+            <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
+            <span class="db-crumb-sep">/</span>
+            <span class="db-crumb-cur">Top Exposure for Online News</span>
+          </div>
+        </div>
+        <div class="db-explore-inner">
+          <div class="db-card" id="db-expmed-pubscore-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Pubscore Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions"><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div>
+            </div>
+            <div class="db-chart-wrap" id="db-expmed-pubscore" style="height:360px"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Top Publishers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions">
+                <button class="db-tl-explore">Go to Publishers</button>
+                <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+              </div>
+            </div>
+            <div class="db-chart-wrap db-explore-toppub-chart" id="db-expmed-toppub" style="height:560px"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-tl-ranges" id="db-expmed-ranges">
+              <button class="db-tl-range" data-r="3" onclick="setExpMedRange(3)">3D</button>
+              <button class="db-tl-range on" data-r="7" onclick="setExpMedRange(7)">7D</button>
+              <button class="db-tl-range" data-r="15" onclick="setExpMedRange(15)">15D</button>
+              <button class="db-tl-range" data-r="30" onclick="setExpMedRange(30)">1M</button>
+            </div>
+            <div class="db-chart-wrap" id="db-expmed-timeline" style="height:420px"></div>
+          </div>
+          <div class="tbl-header db-ton-toolbar">
+            <div class="tbl-header-left">
+              <div class="tbl-select"><select><option>Newest Articles</option><option>Oldest Articles</option><option>Highest Value</option><option>Lowest Value</option></select></div>
+              <div class="tbl-select"><select><option>Saved Articles</option><option>All Articles</option><option>Unsaved Articles</option></select></div>
+            </div>
+            <div class="tbl-header-right">
+              <div class="tbl-view-toggle">
+                <button class="tbl-view-btn on" title="Table view"><i data-lucide="table-2"></i></button>
+                <button class="tbl-view-btn" title="Card view"><i data-lucide="layout-grid"></i></button>
+              </div>
+              <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
+              <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
+              <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+              <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+              <button class="btn-export">Export</button>
+            </div>
+          </div>
+          <div class="db-card db-ton-table-card" id="db-expmed-table"></div>
+        </div>
+      </div>
+
+      <!-- Explore Data drill-down: Top Media Exposure by Publisher (Media Exposure + Top Publishers + 7 media cards + table) -->
+      <div class="db-explore-wrap" id="db-toppubmed-explore">
+        <div class="db-explore-crumb">
+          <div class="db-explore-crumb-in">
+            <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
+            <span class="db-crumb-sep">/</span>
+            <span class="db-crumb-cur">Top Media Exposure by Publisher</span>
+          </div>
+        </div>
+        <div class="db-explore-inner">
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Media Exposure (Article Count) <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions"><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div>
+            </div>
+            <div class="db-chart-wrap db-explore-exp-chart" id="db-toppubmed-exp" style="height:110px"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Top Publishers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions">
+                <button class="db-tl-explore">Go to Publishers</button>
+                <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+              </div>
+            </div>
+            <div class="db-chart-wrap db-explore-toppub-chart" id="db-toppubmed-toppub" style="height:560px"></div>
+          </div>
+          <div class="ps-media-grid" id="db-toppubmed-media"></div>
+          <div class="tbl-header db-ton-toolbar">
+            <div class="tbl-header-left">
+              <div class="tbl-select"><select><option>Newest Articles</option><option>Oldest Articles</option><option>Highest Value</option><option>Lowest Value</option></select></div>
+              <div class="tbl-select"><select><option>Saved Articles</option><option>All Articles</option><option>Unsaved Articles</option></select></div>
+            </div>
+            <div class="tbl-header-right">
+              <div class="tbl-view-toggle">
+                <button class="tbl-view-btn on" title="Table view"><i data-lucide="table-2"></i></button>
+                <button class="tbl-view-btn" title="Card view"><i data-lucide="layout-grid"></i></button>
+              </div>
+              <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
+              <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
+              <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+              <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+              <button class="btn-export">Export</button>
+            </div>
+          </div>
+          <div class="db-card db-ton-table-card" id="db-toppubmed-table"></div>
+        </div>
+      </div>
+
+      <!-- Explore Data drill-down: Top Authors (Media Exposure + Top Authors + media cards + author cards + table) -->
+      <div class="db-explore-wrap" id="db-author-explore">
+        <div class="db-explore-crumb">
+          <div class="db-explore-crumb-in">
+            <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
+            <span class="db-crumb-sep">/</span>
+            <span class="db-crumb-cur">Top Authors</span>
+          </div>
+        </div>
+        <div class="db-explore-inner">
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Media Exposure (Article Count) <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions"><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div>
+            </div>
+            <div class="db-chart-wrap db-explore-exp-chart" id="db-author-exp" style="height:110px"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Top Authors <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions">
+                <button class="db-tl-explore">Go to Authors</button>
+                <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+              </div>
+            </div>
+            <div class="db-chart-wrap db-explore-toppub-chart" id="db-author-toppub" style="height:440px"></div>
+          </div>
+          <div class="ps-media-grid" id="db-author-media"></div>
+          <div class="db-card ex-pub-section">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Top Authors for Competitor News - Globe Telecom <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions">
+                <select class="pub-sort" aria-label="Author count"><option>Top 12 Authors</option><option>Top 24 Authors</option></select>
+                <button class="db-tl-explore">Go to Authors</button>
+              </div>
+            </div>
+            <div class="ex-pub-grid" id="db-author-cards"></div>
+          </div>
+          <div class="tbl-header db-ton-toolbar">
+            <div class="tbl-header-left">
+              <div class="tbl-select"><select><option>Newest Articles</option><option>Oldest Articles</option><option>Highest Value</option><option>Lowest Value</option></select></div>
+              <div class="tbl-select"><select><option>Saved Articles</option><option>All Articles</option><option>Unsaved Articles</option></select></div>
+            </div>
+            <div class="tbl-header-right">
+              <div class="tbl-view-toggle">
+                <button class="tbl-view-btn on" title="Table view"><i data-lucide="table-2"></i></button>
+                <button class="tbl-view-btn" title="Card view"><i data-lucide="layout-grid"></i></button>
+              </div>
+              <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
+              <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
+              <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+              <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+              <button class="btn-export">Export</button>
+            </div>
+          </div>
+          <div class="db-card db-ton-table-card" id="db-author-table"></div>
+        </div>
+      </div>
+
+      <!-- Explore Data drill-down: Top Entities (Top Entities bar + Keywords + Entities Map) -->
+      <div class="db-explore-wrap" id="db-entities-explore">
+        <div class="db-explore-crumb">
+          <div class="db-explore-crumb-in">
+            <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
+            <span class="db-crumb-sep">/</span>
+            <span class="db-crumb-cur">Top Entities</span>
+          </div>
+        </div>
+        <div class="db-explore-inner">
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Top Entities <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions">
+                <select class="pub-sort" aria-label="Entity count"><option>Top 12 publishers</option><option>Top 24 publishers</option></select>
+                <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+              </div>
+            </div>
+            <div class="db-chart-wrap" id="db-entities-bar" style="height:460px"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Keywords <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+            </div>
+            <div class="ent-kw-cloud" id="db-entities-kw"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Entities Map <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions"><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div>
+            </div>
+            <div class="db-entmap" id="db-entities-map"></div>
+            <div class="db-ent-legend" id="db-entities-legend"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compare view (Phase 1): Overview + Timeline + Media Exposure + Share of Voice -->
+      <div class="db-explore-wrap" id="db-compare-explore">
+        <div class="db-explore-crumb">
+          <div class="db-explore-crumb-in">
+            <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
+            <span class="db-crumb-sep">/</span>
+            <span class="db-crumb-cur">Compare Topics</span>
+          </div>
+        </div>
+        <div class="db-explore-inner">
+          <div class="cmp-chips" id="db-compare-chips"></div>
+          <div class="db-card ex-pub-section cmp-ov-section">
+            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Overview <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+            <div id="db-compare-overview"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Timeline <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+            <div class="db-chart-wrap" id="db-compare-timeline" style="height:320px"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Media Exposure <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+            <div class="cmp-2col">
+              <div class="cmp-donut-block">
+                <div class="cmp-donut-hd" id="db-compare-media-hd-0"><span class="cmp-donut-name" id="db-compare-media-name-0"></span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div>
+                <div class="cmp-donut-body">
+                  <div class="cmp-donut-legend" id="db-compare-media-leg-0"></div>
+                  <div class="db-chart-wrap" id="db-compare-media-0" style="height:280px"></div>
+                </div>
+              </div>
+              <div class="cmp-donut-block">
+                <div class="cmp-donut-hd" id="db-compare-media-hd-1"><span class="cmp-donut-name" id="db-compare-media-name-1"></span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div>
+                <div class="cmp-donut-body">
+                  <div class="cmp-donut-legend" id="db-compare-media-leg-1"></div>
+                  <div class="db-chart-wrap" id="db-compare-media-1" style="height:280px"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Share of Voice <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+            <div class="cmp-3col">
+              <div><div class="cmp-sov-lbl">Articles</div><div class="db-chart-wrap" id="db-compare-sov-0" style="height:220px"></div></div>
+              <div><div class="cmp-sov-lbl">Story Value</div><div class="db-chart-wrap" id="db-compare-sov-1" style="height:220px"></div></div>
+              <div><div class="cmp-sov-lbl">AVE</div><div class="db-chart-wrap" id="db-compare-sov-2" style="height:220px"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Article preview (publishers-style 3-column) opened from an Insights table row -->
       <div class="ent-preview-wrap ins-preview-wrap">
@@ -370,6 +758,18 @@
 </div>
 
 <!-- Timeline Insights slide-over (reuses .nl-panel shell, push mode) -->
+<!-- Compare Topics modal -->
+<div class="exp-overlay cmp-overlay" id="cmp-overlay" onclick="if(event.target===this)closeCompareModal()">
+  <div class="exp-modal cmp-modal">
+    <div class="exp-head"><span>Compare Topics</span><button onclick="closeCompareModal()" title="Close"><i data-lucide="x"></i></button></div>
+    <div class="exp-body cmp-body" id="cmp-body"></div>
+    <div class="exp-foot">
+      <button class="exp-cancel" onclick="closeCompareModal()">Cancel</button>
+      <button class="exp-send cmp-compare" id="cmp-compare" onclick="doCompare()" disabled>Compare</button>
+    </div>
+  </div>
+</div>
+
 <div class="nl-overlay ti-overlay" id="ti-overlay">
   <div class="nl-panel">
     <div class="ti-head" id="ti-head"></div>
