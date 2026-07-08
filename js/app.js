@@ -268,9 +268,9 @@ function renderSocialArticleList(articles,listId,state){
     const t=SOCIAL_TYPES[a.type]||{icon:'message-square',cls:'type-online'};
     const sc=a.match>=85?'sc-hi':a.match>=70?'sc-mid':'sc-lo';
     const barColor=a.match>=85?'#16a34a':a.match>=70?'#d97706':'#9ca3af';
-    return`<tr class="match-tbl-row" style="animation-delay:${i*0.03}s;cursor:pointer" onclick="openSocialPost(${gi})">
-      <td><div class="hl-cell"><span class="hl-icon ${t.cls}" data-btip="${_makeTip({label:a.type||'Post'})}"><i data-lucide="${t.icon}"></i></span><span class="hl-text soc-post" data-btip="${_makeTip({detail:a.post||''})}">${a.post||''}</span></div></td>
-      <td style="width:54px"><span class="soc-src" title="${p.label}"><i class="fa-brands ${p.icon}" style="color:${p.color}"></i></span></td>
+    return`<tr class="match-tbl-row" style="animation-delay:${i*0.03}s;cursor:pointer" onclick="previewSocialPost('${listId}',${gi})">
+      <td><div class="hl-cell"><span class="hl-text soc-post" data-btip="${_makeTip({detail:a.post||''})}">${a.post||''}</span></div></td>
+      <td style="width:54px"><span class="soc-src" title="${p.label}">${socIcon(p)}</span></td>
       <td class="tbl-sent-cell" style="width:120px">${sentimentCellHtml(a.sentiment)}</td>
       <td style="width:140px"><span class="soc-influencer">${a.influencer||''}</span></td>
       <td style="width:130px"><span class="art-score-val ${sc}">${a.match}% match</span><div class="match-score-track" style="margin-top:4px"><div class="match-score-fill" style="width:${a.match}%;background:${barColor}"></div></div></td>
@@ -1016,8 +1016,8 @@ function renderSocialRow(d,gIdx){
     <td><span class="tcb"></span></td>
     <td><span class="sv-val">${d.reach}</span></td>
     <td><span class="eng-score">${d.engScore}</span></td>
-    <td><div class="hl-cell"><span class="hl-icon ${t.cls}" data-btip="${_makeTip({label:d.type||'Post'})}"><i data-lucide="${t.icon}"></i></span><span class="hl-text soc-post" data-btip="${_makeTip({detail:d.post||''})}">${d.post||''}</span></div></td>
-    <td><span class="soc-src" title="${p.label}"><i class="fa-brands ${p.icon}" style="color:${p.color}"></i></span></td>
+    <td><div class="hl-cell"><span class="hl-text soc-post" data-btip="${_makeTip({detail:d.post||''})}">${d.post||''}</span></div></td>
+    <td><span class="soc-src" title="${p.label}">${socIcon(p)}</span></td>
     <td class="tbl-sent-cell">${sentimentCellHtml(d.sentiment)}</td>
     <td><span class="soc-influencer">${d.influencer||''}</span></td>
     <td><div class="date-main">${d.date||''}</div><div class="date-ago">${d.ago||''}</div></td>
@@ -1059,6 +1059,13 @@ function renderTableRows(){
     }
   }
   if(mdActive>=0)highlightMentionRow(mdActive);
+  // Detail view (non-social): swap the condensed table for the reusable ti-arttbl rail
+  const pm=document.getElementById('page-mentions');
+  if(pm){
+    if(isDetail&&social&&window.renderSocialDetailRail){pm.classList.add('ment-rail');window.renderSocialDetailRail();}
+    else if(isDetail&&!social&&window.renderMentDetailRail){pm.classList.add('ment-rail');window.renderMentDetailRail();}
+    else pm.classList.remove('ment-rail');
+  }
   initIcons();
 }
 function goTblPage(n){
@@ -1192,6 +1199,23 @@ function openSocialPost(idx){
   renderTableRows();
   renderSocialDetail(idx);
 }
+// Open a social post FROM the spotlight — keeps the spotlight context (Tier 1 panel + coverage), like the news flow.
+function previewSocialPost(listId,idx){
+  const list=window.WS_DATA&&window.WS_DATA.socialMentions;if(!list||!list[idx])return;
+  // Tracker: an activity's coverage → open the activity-style preview (same 3-column layout)
+  if(document.getElementById('page-tracker')&&listId&&listId.indexOf('trk-')===0)return previewActSocialPost(+listId.split('-')[1],idx);
+  if(!document.getElementById('page-mentions'))return;   // display-only on other pages
+  mdSpotCtx=spotStoryFor(listId);mdSpotArticle=mdSpotCtx?{listId}:null;
+  if(!mdSpotCtx)return openSocialPost(idx);   // not a spotlight list → plain preview
+  mdSocialActive=idx;mdActive=-1;mdMode='split';
+  const sb=document.querySelector('.sidebar');
+  mdSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
+  if(sb)sb.classList.add('collapsed');
+  _updateDetailReturnBtn();
+  const page=document.getElementById('page-mentions');
+  page.classList.add('detail-open');page.classList.add('spot-detail');
+  renderSocialDetail(idx);
+}
 // Per-platform official embed → fixed-height iframe src (null ⇒ show the "View Post" fallback card)
 function socialEmbedSrc(platform,url,width){
   if(!url)return null;
@@ -1208,8 +1232,9 @@ function socialEmbedSrc(platform,url,width){
 function renderSocialDetail(idx){
   const list=window.WS_DATA&&window.WS_DATA.socialMentions,s=list&&list[idx];if(!s)return;
   const p=SOCIAL_PLATFORMS[s.platform]||{icon:'fa-globe',color:'#6b7280',label:s.platform||'—'};
-  const layout=document.getElementById('article-detail-panel');if(layout)layout.classList.add('social-detail');
-  const left=document.getElementById('adp-col-left');if(left)left.innerHTML='';
+  const framed=mdSpotCtx||mdActCtx;   // opened from a spotlight (mentions) or activity (tracker) → show the coverage panel
+  const layout=document.getElementById('article-detail-panel');if(layout)layout.classList.toggle('social-detail',!framed);
+  const left=document.getElementById('adp-col-left');if(left&&framed)left.innerHTML=mdSpotCtx?renderSpotPanel(s):renderActPanel();
   // ── Middle column: post details (mirrors the mentions.html middle column) ──
   const mid=document.getElementById('adp-col-mid');
   if(mid){
@@ -1258,8 +1283,8 @@ function renderSocialDetail(idx){
       </div>
       <div class="soc-mid-caption"><i data-lucide="info"></i><span>These details are from the last capture and don't update after scraping — the embedded post may show newer live content.</span></div>`;
   }
-  // ── Right column: live embed by default; unavailable/private/deleted posts (or no embed) → fallback card ──
-  renderSocialRight((s.unavailable||!socialEmbedSrc(s.platform,s.url))?'card':'embed');
+  // ── Right column: self-contained content card (image · caption · platform-specific engagement) ──
+  renderSocialRight();
   initIcons();
 }
 // Per-platform sizing for the (opt-in) live embed. ratio → responsive aspect box; h → fixed height.
@@ -1288,84 +1313,126 @@ window.addEventListener('message',function(e){
 //   'embed' → the live platform iframe (lazy, per-platform size, skeleton while loading)
 // Because iframes are cross-origin we cannot detect a failed/blank/deleted embed, so the card is the
 // default and the embed is a deliberate, reversible enhancement.
+// Platform-aware engagement metrics: platform → ordered [dataKey, label, lucide-icon].
+// Add a platform (or reorder/rename metrics) by editing one entry. The card reads post.engagement[dataKey].
+const SOCIAL_ENGAGEMENT={
+  facebook:[['reactions','Reactions','thumbs-up'],['comments','Comments','message-circle'],['shares','Shares','share-2']],
+  instagram:[['likes','Likes','heart'],['comments','Comments','message-circle']],
+  twitter:[['likes','Likes','heart'],['replies','Replies','message-circle'],['reposts','Reposts','repeat-2']],
+  linkedin:[['reactions','Reactions','thumbs-up'],['comments','Comments','message-circle'],['reposts','Reposts','repeat-2']],
+  youtube:[['views','Views','play'],['likes','Likes','thumbs-up'],['comments','Comments','message-circle']],
+  tiktok:[['likes','Likes','heart'],['comments','Comments','message-circle'],['shares','Shares','share-2']],
+  reddit:[['upvotes','Upvotes','arrow-up'],['comments','Comments','message-circle']]
+};
+// Compact count formatter: 640 → "640", 5900 → "5.9K", 128000 → "128K", 1.2M
+function fmtCount(n){n=+n||0;if(n>=1e6)return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M';if(n>=1e3)return (n/1e3).toFixed(1).replace(/\.0$/,'')+'K';return String(Math.round(n));}
+// Facebook reaction breakdown — split a total into the 6 reaction types with realistic proportions.
+function _fbReactions(total){
+  total=+total||0;
+  const types=[['👍','Like',0.68],['❤️','Love',0.16],['😆','Haha',0.08],['😮','Wow',0.04],['😢','Sad',0.025],['😠','Angry',0.015]];
+  return types.map(([emoji,label,pct])=>({emoji,label,count:Math.max(0,Math.round(total*pct))})).filter(r=>r.count>0);
+}
+// Shared comment pool — a stable, seeded selection renders per post (no per-post authoring).
+const SOCIAL_COMMENTS=[
+  {author:'Maria Santos',text:'Finally! Been waiting for this 🙌'},
+  {author:'Juan dela Cruz',text:'Is this available nationwide na?'},
+  {author:'Anna Reyes',text:'Signing up today, thanks for sharing!'},
+  {author:'Paolo Mendoza',text:'How\'s the coverage in the province?'},
+  {author:'Grace Lim',text:'Ang bilis naman ng speeds ngayon 🔥'},
+  {author:'Marco Villanueva',text:'Switched last month, no regrets so far.'},
+  {author:'Bea Cruz',text:'Does it work with my current phone?'},
+  {author:'Nathan Ong',text:'Good value for the price, honestly.'},
+  {author:'Isabel Garcia',text:'Sana all may ganito 😅'},
+  {author:'Kevin Tan',text:'Any promo code available right now?'},
+  {author:'Liza Ramos',text:'Subscriber since day one 💪'},
+  {author:'Diego Flores',text:'The 5G rollout is really picking up.'},
+  {author:'Camille Aquino',text:'Nice! Sharing this with the fam.'},
+  {author:'Rafael Bautista',text:'Customer service needs work though.'},
+  {author:'Trina Gomez',text:'Waiting for this in our area 🙏'},
+  {author:'Miguel Torres',text:'Solid coverage here in Metro Manila.'}
+];
+const _CMT_COLORS=['#1877f2','#16a34a','#e4405f','#f97316','#8b5cf6','#0891b2','#db2777','#d97706'];
+function _cmtColor(str){let h=0;for(let i=0;i<(str||'').length;i++)h=(h*31+str.charCodeAt(i))>>>0;return _CMT_COLORS[h%_CMT_COLORS.length];}
+// Deterministic per-post comments (stable across renders): seeds from the post, picks distinct pool entries.
+function _socComments(post){
+  const seed=(post.influencer||'')+'|'+(post.post||'').slice(0,16);
+  let h=0;for(let i=0;i<seed.length;i++)h=(h*31+seed.charCodeAt(i))>>>0;
+  const n=6+(h%3);   // 6–8 comments
+  const times=['1h','2h','3h','5h','7h','9h','12h','15h','18h','1d','2d'];
+  const out=[];
+  for(let i=0;i<n;i++){
+    const c=SOCIAL_COMMENTS[(h+i*7)%SOCIAL_COMMENTS.length];   // step 7 → distinct picks
+    const hh=(h+i*2654435761)>>>0;
+    out.push({author:c.author,text:c.text,time:times[hh%times.length],likes:(hh>>>6)%38});
+  }
+  return out;
+}
+window.toggleSocComments=function(btn){
+  const box=btn.closest('.soc-comments');if(!box)return;
+  const expand=btn.dataset.exp!=='1';
+  box.querySelectorAll('.soc-cmt-extra').forEach(e=>{e.hidden=!expand;});
+  btn.dataset.exp=expand?'1':'';
+  btn.textContent=expand?'Show fewer comments':('View all '+btn.dataset.count+' comments');
+};
+// Third column: the social post in the news-article preview layout (title · byline · actions · image · caption · engagement).
 function renderSocialRight(mode){
   const right=document.getElementById('adp-col-right');if(!right)return;
   const list=window.WS_DATA&&window.WS_DATA.socialMentions,s=list&&list[mdSocialActive];if(!s)return;
   const p=SOCIAL_PLATFORMS[s.platform]||{icon:'fa-globe',color:'#6b7280',label:s.platform||'—'};
-  // Facebook renders at a fixed pixel width, so measure the column and let the FB post fill it.
-  const colW=(right.clientWidth||600)-2;
-  const src=socialEmbedSrc(s.platform,s.url,colW);
   const handle=(s.influencer||'').replace(/^@/,''),av=(handle||'?').charAt(0).toUpperCase();
-  const viewBtn=`<a class="btn-filled soc-viewpost" href="${s.url||'#'}" target="_blank" rel="noopener"><i data-lucide="external-link" class="icon-lg"></i> View Post</a>`;
-  // Shared footer — identical markup on the live embed and the fallback card (consistent CTA + note).
-  const scrapeNote=`The likes, comments and shares shown here are a snapshot captured when the post was last scraped. They reflect engagement at that moment and don't refresh automatically.`;
-  // Live embed = View Post only (it's live; the snapshot caveat lives on column 2).
-  // Fallback card = View Post + note (the card itself IS the captured snapshot).
-  const footPlain=`<div class="soc-embed-foot">${viewBtn}</div>`;
-  const footRow=`<div class="soc-embed-foot">${viewBtn}<div class="soc-embed-notes"><div class="soc-embed-note">${scrapeNote}</div></div></div>`;
-  // Slim "no longer available" notice — used on the fallback card, and (for UI demo) atop a live embed via s.snapshotNotice.
-  const unavailNotice=`<div class="soc-card-unavail"><i data-lucide="alert-triangle"></i><span>This post is no longer available — showing the last saved snapshot.</span></div>`;
-  if(mode==='embed'&&src){
-    const sz=SOCIAL_EMBED_SIZE[s.platform]||{h:STD_FEED_H};
-    // Video (YouTube) keeps a fixed 16:9 box; feed posts use a fixed height that scrolls internally
-    // (taller posts scroll, so no clipping and no stretched-out empty gap when content is short).
-    const isVideo=!!sz.ratio;
-    const frameStyle=isVideo?`aspect-ratio:${sz.ratio};height:auto`:`height:${sz.h}px`;
-    // Article-style stacked header: post text · influencer byline · action row (Send/Export/View Post)
-    const infName=handle?('@'+handle):(s.influencer||p.label);
-    right.innerHTML=`<div class="soc-embed-wrap">
-      <div class="soc-embed-head">
-        <div class="soc-embed-title" data-btip="${_makeTip({detail:s.post||''})}">${s.post||''}</div>
-        <div class="soc-embed-byline">
-          <span class="soc-embed-inf">${infName}</span>
-          <span class="adp-pub-dot"></span>
-          <span class="soc-embed-posted">${p.label} · ${s.ago||s.date||''}</span>
-        </div>
-        <div class="qa-row soc-embed-actions">
-          <button class="qa-btn" onclick="qaEmail(event)"><i data-lucide="mail"></i> Send via Email</button>
-          <button class="qa-btn" onclick="qaPdf(event)"><i data-lucide="file-down"></i> Export as PDF</button>
-          ${viewBtn}
-        </div>
-      </div>
-      ${s.snapshotNotice?unavailNotice:''}
-      <div class="soc-embed-frame" style="${frameStyle}">
-        <div class="soc-embed-skel"><span class="soc-spin"></span><span>Loading live preview…</span></div>
-        <iframe class="soc-embed" src="${src}" loading="lazy" scrolling="${(isVideo||s.platform==='twitter')?'no':'yes'}" frameborder="0" allowtransparency="true" allow="encrypted-media; clipboard-write; picture-in-picture; web-share" allowfullscreen sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms" onload="this.classList.add('loaded')"></iframe>
-      </div>
-    </div>`;
-    // Stop the skeleton spinning forever if onload never fires (hard network failure)
-    const fr=right.querySelector('.soc-embed');
-    if(fr)setTimeout(()=>fr.classList.add('loaded'),6000);
-    initIcons();return;
-  }
-  // ── Card mode (default) ──
   const un=!!s.unavailable;
+  const unavailNotice=`<div class="soc-card-unavail"><i data-lucide="alert-triangle"></i><span>This post is no longer available — showing the last saved snapshot.</span></div>`;
+  // Post image (with colored platform placeholder fallback when missing or the image fails to load)
   const media=s.thumb
-    ? `<div class="soc-card-media"><img src="${s.thumb}" alt="" loading="lazy" onerror="this.closest('.soc-card-media').classList.add('failed')"><span class="soc-card-ph" style="background:${p.color}"><i class="fa-brands ${p.icon}"></i></span>${s.type==='Video'?'<span class="soc-card-play"><i data-lucide="play"></i></span>':''}</div>`
-    : `<div class="soc-card-media failed"><span class="soc-card-ph" style="background:${p.color}"><i class="fa-brands ${p.icon}"></i><span class="soc-card-ph-lbl">${s.type||'Post'}</span></span></div>`;
-  const chip=(ic,lbl,val)=>val==null||val===''||val==='-'?'':`<span class="soc-stat"><i data-lucide="${ic}"></i><b>${val}</b> ${lbl}</span>`;
-  right.innerHTML=`<div class="soc-card${un?' is-unavail':''}">
+    ? `<div class="soc-card-media"><img src="${s.thumb}" alt="" loading="lazy" onerror="this.closest('.soc-card-media').classList.add('failed')"><span class="soc-card-ph" style="background:${p.color}">${socIcon(p,'')}</span>${s.type==='Video'?'<span class="soc-card-play"><i data-lucide="play"></i></span>':''}<span class="adp-hero-credit">${p.label.toUpperCase()}</span></div>`
+    : '';   // no image on the post → omit the media block entirely (no placeholder)
+  // Platform-specific engagement — render each metric the platform defines, skipping any that's missing.
+  const eng=s.engagement||{},metrics=SOCIAL_ENGAGEMENT[s.platform];
+  const stat=(ic,lbl,val)=>(val==null||val==='')?'':`<span class="soc-eng-stat"><i data-lucide="${ic}"></i><b>${fmtCount(val)}</b><span class="soc-eng-lbl">${lbl}</span></span>`;
+  // Facebook: the Reactions stat reveals a per-type breakdown popover on hover
+  const reactStat=(ic,lbl,val)=>{
+    if(val==null||val==='')return '';
+    const br=_fbReactions(val);
+    const rows=br.map(r=>`<div class="soc-react-row"><span class="soc-react-emoji">${r.emoji}</span><span class="soc-react-lbl">${r.label}</span><span class="soc-react-num">${fmtCount(r.count)}</span></div>`).join('');
+    return `<span class="soc-eng-stat soc-react-stat"><i data-lucide="${ic}"></i><b>${fmtCount(val)}</b><span class="soc-eng-lbl">${lbl}</span><div class="soc-react-pop">${rows}</div></span>`;
+  };
+  let engHtml=metrics?metrics.map(([k,lbl,ic])=>(s.platform==='facebook'&&k==='reactions')?reactStat(ic,lbl,eng[k]):stat(ic,lbl,eng[k])).join(''):'';
+  if(!engHtml){ // unknown platform or no engagement captured → generic fallback (reach · engagement · followers)
+    const raw=(ic,lbl,val)=>(val==null||val===''||val==='-')?'':`<span class="soc-eng-stat"><i data-lucide="${ic}"></i><b>${val}</b><span class="soc-eng-lbl">${lbl}</span></span>`;
+    engHtml=raw('eye','Reach',s.reach)+raw('activity','Engagement',s.engScore)+raw('users','Followers',s.followers);
+  }
+  right.innerHTML=`<div class="adp-article soc-article${un?' is-unavail':''}">
     ${un?unavailNotice:''}
-    <div class="soc-card-hd">
-      <span class="soc-card-av" style="background:${p.color}">${av}<span class="soc-card-badge" style="color:${p.color}"><i class="fa-brands ${p.icon}"></i></span></span>
-      <div class="soc-card-meta">
-        <div class="soc-card-name">${handle||p.label}<i data-lucide="badge-check" class="soc-card-tick"></i></div>
-        <div class="soc-card-sub">${p.label} · ${s.ago||s.date||''}</div>
+    <div class="soc-hd">
+      <span class="soc-hd-av" style="background:${p.color}">${av}</span>
+      <div class="soc-hd-body">
+        <div class="soc-hd-name">${handle||p.label}<i data-lucide="badge-check" class="soc-title-tick"></i></div>
+        <div class="soc-hd-byline">
+          ${socIcon(p)}
+          <span>${p.label}</span>
+          <span class="soc-hd-dot"></span>
+          <span>${s.ago||s.date||''}</span>
+        </div>
       </div>
-      <a class="soc-card-go" href="${s.url||'#'}" target="_blank" rel="noopener" title="Open on ${p.label}"><i class="fa-brands ${p.icon}" style="color:${p.color}"></i></a>
+    </div>
+    <div class="qa-row">
+      <button class="qa-btn" onclick="qaEmail(event)"><i data-lucide="mail"></i> Send via Email</button>
+      <button class="qa-btn" onclick="qaPdf(event)"><i data-lucide="file-down"></i> Export as PDF</button>
+      <a class="qa-btn soc-view-btn" href="${s.url||'#'}" target="_blank" rel="noopener"><i data-lucide="external-link"></i> View Post</a>
     </div>
     ${media}
-    <div class="soc-card-text" id="soc-card-text">${s.post||''}</div>
-    <button class="soc-card-more" id="soc-card-more" style="display:none" onclick="document.getElementById('soc-card-text').classList.toggle('expanded');this.textContent=document.getElementById('soc-card-text').classList.contains('expanded')?'Show less':'Show more'">Show more</button>
-    <div class="soc-card-stats">
-      ${chip('eye','reach',s.reach)}${chip('activity','engagement',s.engScore)}${chip('users','followers',s.followers)}
-    </div>
-    ${footRow}
+    <p class="adp-excerpt">${s.post||''}</p>
+    ${engHtml?`<div class="soc-card-engagement">${engHtml}</div>`:''}
+    ${(()=>{const cm=_socComments(s),shown=3,cnt=(eng.comments!=null?eng.comments:cm.length);
+      if(!cm.length)return '';
+      const items=cm.map((c,i)=>`<div class="soc-cmt${i>=shown?' soc-cmt-extra':''}"${i>=shown?' hidden':''}>
+        <span class="soc-cmt-av" style="background:${_cmtColor(c.author)}">${(c.author||'?').charAt(0).toUpperCase()}</span>
+        <div class="soc-cmt-body"><div class="soc-cmt-head"><span class="soc-cmt-author">${c.author}</span><span class="soc-cmt-time">· ${c.time}</span></div><div class="soc-cmt-text">${c.text}</div>${c.likes?`<div class="soc-cmt-meta"><i data-lucide="heart"></i> ${c.likes}</div>`:''}</div>
+      </div>`).join('');
+      return `<div class="soc-comments">${items}${cm.length>shown?`<button class="soc-cmt-more" data-count="${cnt}" onclick="toggleSocComments(this)">View all ${cnt} comments</button>`:''}</div>`;
+    })()}
   </div>`;
   initIcons();
-  // Reveal "Show more" only when the post text is actually clamped
-  const txt=document.getElementById('soc-card-text'),more=document.getElementById('soc-card-more');
-  if(txt&&more&&txt.scrollHeight-txt.clientHeight>4)more.style.display='inline-flex';
 }
 // Contextual header-bar back button — label/handler swap based on whether the user is in
 // the spotlight preview flow (mdSpotCtx) or the plain article-detail flow.
@@ -1465,30 +1532,35 @@ function renderSpotPanel(d){
   const s=mdSpotCtx;if(!s)return'';
   const listId=mdSpotArticle?mdSpotArticle.listId:'spot';
   const arts=articlesForList(listId)||[];
-  const curHl=mdSpotArticle?mdSpotArticle.hl:d.title;
-  // If the active item isn't on the current page, flip to its page so the highlight is visible
-  if(curHl){
-    const activeIdx=arts.findIndex(x=>x.hl===curHl);
-    if(activeIdx>=0){
-      const activePage=Math.floor(activeIdx/SPOT_COV_PER_PAGE);
-      if(spotCovPage[listId]==null)spotCovPage[listId]=activePage;
-    }
-  }
+  const isSocial=!!(arts[0]&&arts[0].platform);   // Shared View: spotlight coverage is social posts
+  const all=isSocial?((window.WS_DATA&&window.WS_DATA.socialMentions)||[]):null;
+  // Flip to the active item's page so the highlight is visible
+  const activeIdx=isSocial?arts.indexOf(all[mdSocialActive]):arts.findIndex(x=>x.hl===(mdSpotArticle?mdSpotArticle.hl:d.title));
+  if(activeIdx>=0&&spotCovPage[listId]==null)spotCovPage[listId]=Math.floor(activeIdx/SPOT_COV_PER_PAGE);
   const total=arts.length;
   const pages=Math.max(1,Math.ceil(total/SPOT_COV_PER_PAGE));
   let page=Math.max(0,Math.min(spotCovPage[listId]||0,pages-1));
   spotCovPage[listId]=page;
   const pageArts=arts.slice(page*SPOT_COV_PER_PAGE,page*SPOT_COV_PER_PAGE+SPOT_COV_PER_PAGE);
   const chips=(s.chips||[]).map(ch=>`<span class="chip ${ch.cls}">${ch.t}</span>`).join('');
-  const rows=pageArts.map(a=>{
-    const ic=ATicn[a.media]||{cls:'type-online',icon:'newspaper'};
-    const sc=a.score>=85?'sc-hi':a.score>=70?'sc-mid':'sc-lo';
-    return `<div class="spot-cov-li${a.hl===curHl?' active':''}" onclick="selectSpotArticle('${encodeURIComponent(a.hl)}')">
-      <span class="md-li-ico ${ic.cls}"><i data-lucide="${ic.icon}"></i></span>
-      <div class="spot-cov-body"><div class="spot-cov-hl">${a.hl}</div><div class="spot-cov-meta">${a.source} · ${a.date}</div></div>
-      <span class="spot-cov-match-cell"><span class="art-score-val ${sc}">${a.score}% match</span></span>
-    </div>`;
-  }).join('');
+  const rows=isSocial
+    ? pageArts.map(a=>{
+        const gi=all.indexOf(a),p=SOCIAL_PLATFORMS[a.platform]||{icon:'fa-globe',color:'#6b7280',label:a.platform||'—'};
+        const sc=a.match>=85?'sc-hi':a.match>=70?'sc-mid':'sc-lo';
+        return `<div class="spot-cov-li${gi===mdSocialActive?' active':''}" onclick="previewSocialPost('${listId}',${gi})">
+          <span class="spot-cov-plat">${socIcon(p)}</span>
+          <div class="spot-cov-body"><div class="spot-cov-hl">${a.post||''}</div><div class="spot-cov-meta">${a.influencer||''} · ${a.date||''}</div></div>
+          <span class="spot-cov-match-cell"><span class="art-score-val ${sc}">${a.match}% match</span></span>
+        </div>`;
+      }).join('')
+    : pageArts.map(a=>{
+        const ic=ATicn[a.media]||{cls:'type-online',icon:'newspaper'},sc=a.score>=85?'sc-hi':a.score>=70?'sc-mid':'sc-lo',curHl=mdSpotArticle?mdSpotArticle.hl:d.title;
+        return `<div class="spot-cov-li${a.hl===curHl?' active':''}" onclick="selectSpotArticle('${encodeURIComponent(a.hl)}')">
+          <span class="md-li-ico ${ic.cls}"><i data-lucide="${ic.icon}"></i></span>
+          <div class="spot-cov-body"><div class="spot-cov-hl">${a.hl}</div><div class="spot-cov-meta">${a.source} · ${a.date}</div></div>
+          <span class="spot-cov-match-cell"><span class="art-score-val ${sc}">${a.score}% match</span></span>
+        </div>`;
+      }).join('');
   return `<div class="spot-panel">
     <div class="spot-act-head">
       <div class="spot-tier"><i data-lucide="star" class="icon-sm"></i> Tier 1 Spotlight</div>
@@ -1497,7 +1569,7 @@ function renderSpotPanel(d){
     <div class="spot-panel-why"><span class="spot-why-lbl"><i data-lucide="zap"></i> Why this was picked</span><span class="spot-why-txt">${s.why}</span></div>
     <div class="chips spot-panel-chips">${chips}</div>
     <div class="spot-cov-tbl">
-      <div class="spot-cov-thd"><span>Headline</span><span class="spot-cov-match-cell">Match</span></div>
+      <div class="spot-cov-thd"><span>${isSocial?'Post':'Headline'}</span><span class="spot-cov-match-cell">Match</span></div>
       <div class="spot-cov-list">${rows}</div>
     </div>
     ${_covPager(page,total,pages,'goSpotCovPage')}
@@ -1566,6 +1638,21 @@ function previewMatch(actId,matchId){
     renderInlineDetail(matchToMention(m));
   });
 }
+// Tracker (Shared View): open a social post from an activity's coverage — same 3-column preview as the mentions spotlight.
+function previewActSocialPost(actId,idx){
+  const a=acts.find(x=>x.id===actId);if(!a)return;
+  const list=window.WS_DATA&&window.WS_DATA.socialMentions;if(!list||!list[idx])return;
+  mdActCtx=a;mdActMatch=null;mdSpotCtx=null;mdSocialActive=idx;mdActive=-1;mdMode='split';
+  const sb=document.querySelector('.sidebar');
+  mdSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
+  if(sb)sb.classList.add('collapsed');
+  const page=document.getElementById('page-tracker');
+  if(page)page.classList.add('tk-detail-open');
+  const panel=document.getElementById('article-detail-panel');
+  if(panel)panel.style.setProperty('--ctx-accent',TYPE_ACCENT[a.type]||'#7c3aed');
+  _updateTrackerReturnBtn(true);
+  renderSocialDetail(idx);
+}
 // Header back-button toggle for the tracker activity-preview flow.
 // Swap: hide "New activity" + show "Back to activity" when previewing.
 function _updateTrackerReturnBtn(inDetail){
@@ -1602,27 +1689,42 @@ document.addEventListener('keydown',function(e){
 function renderActPanel(){
   const a=mdActCtx;if(!a)return'';
   const tc=(typeof TC!=='undefined'&&TC[a.type])?TC[a.type]:{icon:'flame'};
-  const matches=a.matches||[];
-  // Auto-flip to the page containing the active match (first render only — selectActMatch sets it explicitly thereafter)
-  if(mdActMatch&&actCovPage[a.id]==null){
-    const idx=matches.findIndex(m=>m.id===mdActMatch);
+  // Shared View: the activity's coverage is social posts, not news matches
+  const socialCov=(window.WS_DATA&&window.WS_DATA.socialMentions)?(articlesForList('trk-'+a.id)||[]):null;
+  const isSocial=!!(socialCov&&socialCov[0]&&socialCov[0].platform);
+  const all=isSocial?socialCov:null;
+  const items=isSocial?socialCov:(a.matches||[]);
+  // Auto-flip to the page containing the active item (first render only)
+  if(isSocial){
+    const ai=items.indexOf(all[mdSocialActive]);
+    if(ai>=0&&actCovPage[a.id]==null)actCovPage[a.id]=Math.floor(ai/SPOT_COV_PER_PAGE);
+  }else if(mdActMatch&&actCovPage[a.id]==null){
+    const idx=items.findIndex(m=>m.id===mdActMatch);
     if(idx>=0)actCovPage[a.id]=Math.floor(idx/SPOT_COV_PER_PAGE);
   }
-  const total=matches.length;
+  const total=items.length;
   const pages=Math.max(1,Math.ceil(total/SPOT_COV_PER_PAGE));
   let page=Math.max(0,Math.min(actCovPage[a.id]||0,pages-1));
   actCovPage[a.id]=page;
-  const pageMatches=matches.slice(page*SPOT_COV_PER_PAGE,page*SPOT_COV_PER_PAGE+SPOT_COV_PER_PAGE);
-  const rows=pageMatches.map(m=>{
-    const ic=ATicn[m.media]||{cls:'type-online',icon:'newspaper'};
-    const pct=m.score?Math.round(m.score*100):null;
-    const sc=pct>=85?'sc-hi':pct>=70?'sc-mid':'sc-lo';
-    return `<div class="spot-cov-li${m.id===mdActMatch?' active':''}" onclick="selectActMatch('${m.id}')">
-      <span class="md-li-ico ${ic.cls}"><i data-lucide="${ic.icon}"></i></span>
-      <div class="spot-cov-body"><div class="spot-cov-hl">${m.title}</div><div class="spot-cov-meta">${m.source} · ${m.date}</div></div>
-      ${pct?`<span class="spot-cov-match-cell"><span class="art-score-val ${sc}">${pct}% match</span></span>`:''}
-    </div>`;
-  }).join('');
+  const pageItems=items.slice(page*SPOT_COV_PER_PAGE,page*SPOT_COV_PER_PAGE+SPOT_COV_PER_PAGE);
+  const rows=isSocial
+    ? pageItems.map(x=>{
+        const gi=all.indexOf(x),p=SOCIAL_PLATFORMS[x.platform]||{icon:'fa-globe',color:'#6b7280',label:x.platform||'—'};
+        const sc=x.match>=85?'sc-hi':x.match>=70?'sc-mid':'sc-lo';
+        return `<div class="spot-cov-li${gi===mdSocialActive?' active':''}" onclick="previewActSocialPost(${a.id},${gi})">
+          <span class="spot-cov-plat">${socIcon(p)}</span>
+          <div class="spot-cov-body"><div class="spot-cov-hl">${x.post||''}</div><div class="spot-cov-meta">${x.influencer||''} · ${x.date||''}</div></div>
+          <span class="spot-cov-match-cell"><span class="art-score-val ${sc}">${x.match}% match</span></span>
+        </div>`;
+      }).join('')
+    : pageItems.map(m=>{
+        const ic=ATicn[m.media]||{cls:'type-online',icon:'newspaper'},pct=m.score?Math.round(m.score*100):null,sc=pct>=85?'sc-hi':pct>=70?'sc-mid':'sc-lo';
+        return `<div class="spot-cov-li${m.id===mdActMatch?' active':''}" onclick="selectActMatch('${m.id}')">
+          <span class="md-li-ico ${ic.cls}"><i data-lucide="${ic.icon}"></i></span>
+          <div class="spot-cov-body"><div class="spot-cov-hl">${m.title}</div><div class="spot-cov-meta">${m.source} · ${m.date}</div></div>
+          ${pct?`<span class="spot-cov-match-cell"><span class="art-score-val ${sc}">${pct}% match</span></span>`:''}
+        </div>`;
+      }).join('');
   return `<div class="spot-panel ctx-act">
     <div class="spot-act-head">
       <div class="spot-tier ctx-tier"><i data-lucide="${tc.icon}" class="icon-sm"></i> ${a.type}</div>
@@ -1630,7 +1732,7 @@ function renderActPanel(){
     </div>
     ${a.content?`<div class="spot-panel-why"><span class="spot-why-lbl"><i data-lucide="zap"></i> Activity context</span><span class="spot-why-txt">${a.content.length>180?a.content.slice(0,180)+'…':a.content}</span></div>`:''}
     <div class="spot-cov-tbl">
-      <div class="spot-cov-thd"><span>Headline</span><span class="spot-cov-match-cell">Match</span></div>
+      <div class="spot-cov-thd"><span>${isSocial?'Post':'Headline'}</span><span class="spot-cov-match-cell">Match</span></div>
       <div class="spot-cov-list">${rows}</div>
     </div>
     ${_covPager(page,total,pages,'goActCovPage')}
@@ -1711,9 +1813,24 @@ const MD_TONE_OPTS=[['positive','thumbs-up','Positive Tone','pos'],['mixed','min
 const MD_SOCIALS=[['fa-facebook-f','#1877F2'],['fa-x-twitter','#000000'],['fa-instagram','#E4405F'],['fa-linkedin-in','#0A66C2'],['fa-youtube','#FF0000'],['fa-pinterest-p','#E60023'],['fa-reddit-alien','#FF4500'],['fa-tiktok','#111111']];
 // X logo as inline SVG (Font Awesome 6.4.0 predates fa-x-twitter, so we draw it — works on every page)
 const X_SVG='<svg class="md-soc-x" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>';
+// Platform icon HTML — draws the X logo via inline SVG (FA 6.4.0 lacks fa-x-twitter), else the FA brand icon.
+// color: defaults to the platform color; pass '' to inherit (e.g. white on a colored placeholder).
+function socIcon(p,color){
+  const c=color!==undefined?color:(p&&p.color);
+  const st=c?` style="color:${c}"`:'';
+  return (p&&p.icon==='fa-x-twitter')
+    ? `<svg class="soc-x-ico" viewBox="0 0 24 24" fill="currentColor"${st} aria-hidden="true"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>`
+    : `<i class="fa-brands ${p?p.icon:'fa-globe'}"${st}></i>`;
+}
 function renderSocialIcons(){
   return `<div class="md-socials">${MD_SOCIALS.map(([c,col])=>`<span class="md-soc" style="background:${col}" onmouseenter="this.style.opacity='0.8'" onmouseleave="this.style.opacity='1'">${c==='fa-x-twitter'?X_SVG:`<i class="fa-brands ${c}"></i>`}</span>`).join('')}</div>`;
 }
+// Shared View: one platform icon per influencer, stably assigned from the name
+const ONE_SOC_SET=[['fa-facebook-f','#1877F2'],['fa-x-twitter','#000000'],['fa-instagram','#E4405F'],['fa-youtube','#FF0000'],['fa-reddit-alien','#FF4500'],['fa-tiktok','#111111']];
+function _oneSocFor(name){let h=0;const s=String(name||'');for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return ONE_SOC_SET[h%ONE_SOC_SET.length];}
+function renderOneSocialIcon(name){const [c,col]=_oneSocFor(name);return `<div class="md-socials"><span class="md-soc" style="background:${col}">${c==='fa-x-twitter'?X_SVG:`<i class="fa-brands ${c}"></i>`}</span></div>`;}
+function oneSocialBadge(name){const [c,col]=_oneSocFor(name);return `<span class="ent-row-soc" style="background:${col}">${c==='fa-x-twitter'?X_SVG:`<i class="fa-brands ${c}"></i>`}</span>`;}
+function oneSocialInline(name){const [c,col]=_oneSocFor(name);return `<span class="ent-title-soc" style="color:${col}">${c==='fa-x-twitter'?X_SVG:`<i class="fa-brands ${c}"></i>`}</span>`;}
 // Entities: typed icon + color (type inferred from the name)
 const ENT_TYPES={org:['building-2','#0d9488'],person:['user','#2563eb'],location:['map-pin','#d97706'],other:['tag','#6b7280']};
 function entityType(name){
@@ -2404,7 +2521,8 @@ function renderInlineDetail(d){
   const fq=buildFreq(d);
 
   // Left column: empty in normal mode; spotlight panel from a story; activity panel from the tracker
-  document.getElementById('adp-col-left').innerHTML=mdSpotCtx?renderSpotPanel(d):(mdActCtx?renderActPanel():'');
+  // Only write the left column when there's a spot/act panel to show; otherwise leave it (Insights preview manages its own rail)
+  if(mdSpotCtx||mdActCtx)document.getElementById('adp-col-left').innerHTML=mdSpotCtx?renderSpotPanel(d):renderActPanel();
 
   // Middle column (30%): all data cards stacked
   document.getElementById('adp-col-mid').innerHTML=`
@@ -2626,6 +2744,7 @@ document.addEventListener('click',function(){
   if(menu) menu.classList.remove('open');
   const sortMenu=document.getElementById('art-sort-menu');
   if(sortMenu) sortMenu.classList.remove('open');
+  document.querySelectorAll('.ti-hdr-menu.open').forEach(m=>m.classList.remove('open'));
 });
 
 function setAtFilter(k,v){
@@ -4136,6 +4255,370 @@ function dbMount(id,el){
   ro.observe(dom);
 }
 
+// ── Shared article table (ti-arttbl) — top-level so mentions/publishers/authors can reuse it ──
+  const TI_ICN={online:{cls:'type-online',icon:'newspaper'},broadsheet:{cls:'type-broadsheet',icon:'file-text'},provincial:{cls:'type-provincial',icon:'newspaper'},tabloid:{cls:'type-tabloid',icon:'newspaper'},blog:{cls:'type-blog',icon:'rss'},magazine:{cls:'type-magazine',icon:'book-open'},tv:{cls:'type-tv',icon:'tv'},radio:{cls:'type-radio',icon:'radio'}};
+  const tiIcn=t=>TI_ICN[t||'online']||TI_ICN.online;
+  // Insights article list as a paginated table (Headline · Sentiment · ⋯) — screenshot-2 style.
+  function tiArtPagerBtns(cur,pages){
+    let b=`<button class="ti-pgb" onclick="tiArtTblPage(this,${cur-1})"${cur<=1?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
+    for(let p=1;p<=pages;p++)b+=`<button class="ti-pgb num${p===cur?' on':''}" onclick="tiArtTblPage(this,${p})">${p}</button>`;
+    b+=`<button class="ti-pgb" onclick="tiArtTblPage(this,${cur+1})"${cur>=pages?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
+    return b;
+  }
+  // Sentiment → [dot-class, label] for the row dot + filter segments
+  function _sentInfo(brand){
+    if(brand==='positive')return['pos','Positive'];
+    if(brand==='negative')return['neg','Negative'];
+    if(brand==='neutral') return['neu','Neutral'];
+    return['none','Not set'];
+  }
+  // origI = index into insArts (used for click-through); pos = position within the filtered set (used for paging/hidden)
+  function artTr(d,origI,pos,per){
+    const sel=(_artMode==='select'&&origI===insPrevIdx)?' selected':'';
+    const clickFn=_artMode==='select'?_artSelFn:'openInsArticle';
+    const rowOpen=`<tr class="ti-arttbl-row${sel}" data-i="${origI}"${pos>=per?' hidden':''} onclick="${clickFn}(${origI})">`;
+    const more=`<td class="ti-arttbl-act"><button class="ti-arttbl-more" title="More" onclick="event.stopPropagation()"><i data-lucide="more-horizontal"></i></button></td>`;
+    if(_artVar==='social'){
+      const st=(typeof SOCIAL_TYPES!=='undefined'&&SOCIAL_TYPES[d.type])||{icon:'message-square',cls:'type-online'};
+      const p=(typeof SOCIAL_PLATFORMS!=='undefined'&&SOCIAL_PLATFORMS[d.platform])||{icon:'fa-globe',color:'#6b7280',label:d.platform||'—'};
+      const[sc,slbl]=_sentInfo(d.sentiment);
+      const pt=(d.post||'').replace(/"/g,'&quot;');
+      return `${rowOpen}
+      <td class="ti-arttbl-hl"><div class="ti-arttbl-hlwrap"><span class="soc-plat-ico" title="${p.label}">${socIcon(p)}</span><div class="ti-arttbl-hltext"><div class="ti-arttbl-titlerow"><span class="ti-row-sent-dot ${sc}" title="${slbl}"></span><span class="ti-arttbl-title" title="${pt}">${d.post||''}</span></div><span class="ti-arttbl-meta">${d.influencer||''}${d.date?' · '+d.date:''}</span></div></div></td>
+      <td class="ti-arttbl-sv">${d.reach}</td>
+      <td class="ti-arttbl-ave">${d.engScore}</td>
+      ${more}
+    </tr>`;
+    }
+    const ic=tiIcn(d.type);
+    const[sc,slbl]=_sentInfo(d.brand);
+    const t=(d.title||'').replace(/"/g,'&quot;');
+    return `${rowOpen}
+      <td class="ti-arttbl-hl"><div class="ti-arttbl-hlwrap"><span class="hl-icon ${ic.cls}"><i data-lucide="${ic.icon}"></i></span><div class="ti-arttbl-hltext"><div class="ti-arttbl-titlerow"><span class="ti-row-sent-dot ${sc}" title="${slbl}"></span><span class="ti-arttbl-title" title="${t}">${d.title}</span></div><span class="ti-arttbl-meta">${d.sub||''}${d.date?' · '+d.date:''}</span></div></div></td>
+      <td class="ti-arttbl-sv">${d.sv}</td>
+      <td class="ti-arttbl-ave">${d.ave}</td>
+      ${more}
+    </tr>`;
+  }
+  // Sentiment filter + sort state for the Insights article table
+  let insSentFilter='all',insSort='newest',_artMode='open',insSelArt=null,_artSelFn='selectInsArticle',_artVar=null;
+  const _artSorts=[['sv-high','Highest Story Value'],['sv-low','Lowest Story Value'],['newest','Newest Articles'],['oldest','Oldest Article'],['ave-high','Highest AVE'],['ave-low','Lowest AVE']];
+  // Comparable date value: absolute "Mon DD, YYYY" → timestamp; relative "N days ago" → negative offset; else 0 (keeps order)
+  function _artDateVal(d){
+    const s=String(d.date||''),t=Date.parse(s);
+    if(!isNaN(t))return t;
+    const m=s.match(/(\d+)\s*(hour|day|week|month|year)/i);
+    if(m){const mult={hour:3.6e6,day:8.64e7,week:6.048e8,month:2.628e9,year:3.156e10}[m[2].toLowerCase()]||0;return -(+m[1]*mult);}
+    return 0;
+  }
+  function _sortInsArts(){
+    const key={'sv-high':d=>-(+d.sv||0),'sv-low':d=>(+d.sv||0),'ave-high':d=>-parseAve(d.ave),'ave-low':d=>parseAve(d.ave),
+      'reach-high':d=>-parseAve(d.reach),'reach-low':d=>parseAve(d.reach),'eng-high':d=>-(parseFloat(d.engScore)||0),'eng-low':d=>(parseFloat(d.engScore)||0),
+      'newest':d=>-_artDateVal(d),'oldest':d=>_artDateVal(d)}[insSort];
+    if(!key)return;
+    insArts=insArts.map((d,i)=>[d,i]).sort((a,b)=>{const ka=key(a[0]),kb=key(b[0]);return ka!==kb?ka-kb:a[1]-b[1];}).map(x=>x[0]);
+  }
+  // Social posts carry sentiment on .sentiment; articles on .brand
+  function _insSent(d){return _artVar==='social'?d.sentiment:d.brand;}
+  function _insFilteredPairs(){return insArts.map((d,i)=>[d,i]).filter(p=>insSentFilter==='all'||_insSent(p[0])===insSentFilter);}
+  function _artTblRowsHtml(per){
+    const pairs=_insFilteredPairs();
+    if(!pairs.length)return `<tr class="ti-arttbl-empty"><td colspan="4">No ${_artVar==='social'?'posts':'articles'} match this sentiment.</td></tr>`;
+    return pairs.map(([d,origI],pos)=>artTr(d,origI,pos,per)).join('');
+  }
+  // ── Per-column header filter/sort menus ──
+  const _SENT_VALS=['all','positive','neutral','negative'];
+  function _artOpt(kind,val,label,dotCls){
+    const active=(kind==='sent'?insSentFilter:insSort)===val;
+    const dot=dotCls!==undefined?`<span class="ti-opt-dot ${dotCls}"></span>`:'';
+    return `<div class="at-type-opt${active?' active':''}" data-val="${val}" onclick="tiArtPick(this,'${kind}','${val}')"><span class="ti-opt-l">${dot}${label}</span></div>`;
+  }
+  // col: 'sent' (Headline → sentiment + date sort), 'sv', 'ave'
+  function _artHdrDD(title,col){
+    const on = col==='sent'  ? (insSentFilter!=='all'||insSort==='oldest')
+             : col==='sv'    ? (insSort==='sv-high'||insSort==='sv-low')
+             : col==='reach' ? (insSort==='reach-high'||insSort==='reach-low')
+             : col==='eng'   ? (insSort==='eng-high'||insSort==='eng-low')
+             :                 (insSort==='ave-high'||insSort==='ave-low');
+    let opts;
+    if(col==='sent'){
+      opts=_artOpt('sent','all','All','')+_artOpt('sent','positive','Positive','pos')+_artOpt('sent','neutral','Neutral','neu')+_artOpt('sent','negative','Negative','neg')
+          +`<div class="at-type-sep"></div>`+_artOpt('sort','newest','Newest first')+_artOpt('sort','oldest','Oldest first');
+    }else if(col==='sv'){
+      opts=_artOpt('sort','sv-high','Highest first')+_artOpt('sort','sv-low','Lowest first');
+    }else if(col==='reach'){
+      opts=_artOpt('sort','reach-high','Highest first')+_artOpt('sort','reach-low','Lowest first');
+    }else if(col==='eng'){
+      opts=_artOpt('sort','eng-high','Highest first')+_artOpt('sort','eng-low','Lowest first');
+    }else{
+      opts=_artOpt('sort','ave-high','Highest first')+_artOpt('sort','ave-low','Lowest first');
+    }
+    const align=col==='sent'?'':' align-right';
+    return `<div class="at-type-dd ti-hdr-dd"><span class="th-inner"><span class="ti-hdr-label" title="${title}">${title}</span><i data-lucide="filter" class="th-filter ti-hdr-ico${on?' on':''}" data-col="${col}" onclick="tiHdrMenu(event,this)"></i></span><div class="at-type-menu ti-hdr-menu${align}">${opts}</div></div>`;
+  }
+  window.tiHdrMenu=function(e,ico){
+    e.stopPropagation();
+    const dd=ico.closest('.at-type-dd'),menu=dd&&dd.querySelector('.ti-hdr-menu');if(!menu)return;
+    const willOpen=!menu.classList.contains('open');
+    document.querySelectorAll('.ti-hdr-menu.open').forEach(m=>m.classList.remove('open'));
+    if(willOpen)menu.classList.add('open');
+  };
+  window.tiArtPick=function(el,kind,val){
+    const wrap=el.closest('.ti-arttbl-wrap');if(!wrap)return;
+    if(kind==='sent'){insSentFilter=val;}
+    else if(_artMode==='select'){insSort=val;_sortInsArts();if(insSelArt)insPrevIdx=insArts.indexOf(insSelArt);}
+    else{insSort=val;_sortInsArts();}
+    _rebuildArtTblBody(wrap);
+    _syncArtHdr(wrap);
+    wrap.querySelectorAll('.ti-hdr-menu.open').forEach(m=>m.classList.remove('open'));
+  };
+  function _syncArtHdr(wrap){
+    wrap.querySelectorAll('.ti-hdr-menu .at-type-opt').forEach(o=>{
+      const v=o.dataset.val,isSent=_SENT_VALS.includes(v);
+      o.classList.toggle('active',isSent?insSentFilter===v:insSort===v);
+    });
+    const set=(col,onState)=>{const ic=wrap.querySelector('.ti-hdr-ico[data-col="'+col+'"]');if(ic)ic.classList.toggle('on',onState);};
+    set('sent',insSentFilter!=='all'||insSort==='oldest');
+    set('sv',insSort==='sv-high'||insSort==='sv-low');
+    set('ave',insSort==='ave-high'||insSort==='ave-low');
+  }
+  // Rebuild tbody + pager from the current sort+filter
+  function _rebuildArtTblBody(wrap){
+    const per=+wrap.dataset.per;
+    const tbody=wrap.querySelector('tbody');if(tbody)tbody.innerHTML=_artTblRowsHtml(per);
+    wrap.dataset.page=1;
+    const total=_insFilteredPairs().length,pages=Math.max(1,Math.ceil(total/per)),shown=Math.min(per,total);
+    const pager=wrap.querySelector('.ti-arttbl-pager');
+    if(pager){
+      pager.hidden=pages<=1;
+      const info=pager.querySelector('.ti-arttbl-info');if(info)info.textContent=total?`1–${shown} of ${total}`:'0 of 0';
+      const btns=pager.querySelector('.ti-arttbl-btns');if(btns)btns.innerHTML=tiArtPagerBtns(1,pages);
+    }
+    initIcons();
+  }
+  window.tiArtFilterSent=function(el,val){
+    insSentFilter=val;
+    const wrap=el.closest('.ti-arttbl-wrap');if(!wrap)return;
+    wrap.querySelectorAll('.ti-sf-seg').forEach(b=>b.classList.toggle('on',b.dataset.val===val));
+    _rebuildArtTblBody(wrap);
+  };
+  window.tiArtSort=function(el){
+    insSort=el.value;
+    const wrap=el.closest('.ti-arttbl-wrap');if(!wrap)return;
+    _sortInsArts();
+    _rebuildArtTblBody(wrap);
+  };
+  // Article preview (publishers-style 3-column) opened from an Insights table row.
+  let insArts=[],insPrevIdx=-1,insSidebarWasCollapsed=false,insSrcSub='',insSrcTitle='';
+  window.openInsArticle=function(i){
+    const d=insArts[i];if(!d)return;
+    if(d.platform&&window.WS_DATA&&window.WS_DATA.socialMentions)return openInsSocial(i);   // Shared View: social post → social preview
+    const page=document.getElementById('page-dashboard');
+    if(!page||!document.getElementById('adp-col-mid'))return;
+    insPrevIdx=i;insSelArt=d;
+    // Capture where this list came from (e.g. "Timeline · last 7 days" / "Jun 17, 2026") before closing the panel
+    const s=(window.__curSrc?window.__curSrc():null);insSrcSub=(s&&s.sub&&s.sub())||'';insSrcTitle=(s&&s.detailTitle&&s.detailTitle())||'';
+    if(window.closeInsights)window.closeInsights();          // tuck the Insights slide-over away
+    const sb=document.querySelector('.sidebar');
+    insSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
+    if(sb)sb.classList.add('collapsed');
+    mdSpotCtx=null;mdActCtx=null;mdActive=-1;                // display-only context
+    page.classList.add('ent-detail-open');
+    renderInlineDetail(d);
+    _renderInsPrevList();
+    initIcons();
+  };
+  // Shared View: open the social content-card preview (reuses renderSocialDetail) with a social rail on the left.
+  function openInsSocial(i){
+    const d=insArts[i];if(!d)return;
+    const page=document.getElementById('page-dashboard');if(!page||!document.getElementById('adp-col-mid'))return;
+    const list=window.WS_DATA.socialMentions,realIdx=list.indexOf(d);if(realIdx<0)return;
+    const s=(window.__curSrc?window.__curSrc():null);insSrcSub=(s&&s.sub&&s.sub())||'';insSrcTitle=(s&&s.detailTitle&&s.detailTitle())||'';
+    if(window.closeInsights)window.closeInsights();
+    const sb=document.querySelector('.sidebar');insSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');if(sb)sb.classList.add('collapsed');
+    mdSocialActive=realIdx;mdSpotCtx=null;mdActCtx=null;mdActive=-1;
+    page.classList.add('ent-detail-open');
+    renderSocialDetail(realIdx);                                         // middle + right social card (leaves the left col)
+    const adp=document.getElementById('article-detail-panel');if(adp)adp.classList.remove('social-detail');   // keep the 3-column rail layout
+    _renderInsSocialRail();
+    initIcons();
+  }
+  function _renderInsSocialRail(){
+    const left=document.getElementById('adp-col-left');if(!left)return;
+    const list=window.WS_DATA&&window.WS_DATA.socialMentions;if(!list)return;
+    insPrevIdx=mdSocialActive;insSelArt=list[mdSocialActive]||list[0]||null;
+    left.innerHTML=`<div class="ins-rail-head">
+        <span class="ti-head-badge"><i data-lucide="message-square"></i></span>
+        <div class="ti-head-titles"><div class="ti-head-title">${insSrcTitle||'Social posts'}</div>${insSrcSub?`<div class="ti-head-sub">${insSrcSub}</div>`:''}</div>
+      </div>
+      ${renderArtTable(list,{mode:'select',onSelect:'selectInsSocial',variant:'social',preserve:true})}`;
+  }
+  window.selectInsSocial=function(pos){
+    const list=window.WS_DATA&&window.WS_DATA.socialMentions;if(!list)return;
+    const d=insArts[pos];if(!d)return;
+    const realIdx=list.indexOf(d);if(realIdx<0)return;
+    mdSocialActive=realIdx;insPrevIdx=pos;insSelArt=d;
+    renderSocialDetail(realIdx);
+    const adp=document.getElementById('article-detail-panel');if(adp)adp.classList.remove('social-detail');
+    const wrap=document.querySelector('#adp-col-left .ti-arttbl-wrap');
+    if(wrap)wrap.querySelectorAll('.ti-arttbl-row').forEach(r=>r.classList.toggle('selected',+r.dataset.i===pos));
+    initIcons();
+  };
+  window.selectInsArticle=function(i){
+    const d=insArts[i];if(!d)return;
+    insPrevIdx=i;insSelArt=d;
+    renderInlineDetail(d);
+    // Move the highlight on the existing rail rows (no full rebuild → keeps filter/sort/scroll)
+    const wrap=document.querySelector('#adp-col-left .ti-arttbl-wrap');
+    if(wrap)wrap.querySelectorAll('.ti-arttbl-row').forEach(r=>r.classList.toggle('selected',+r.dataset.i===i));
+    initIcons();
+  };
+  window.closeInsArticle=function(){
+    const page=document.getElementById('page-dashboard');if(page)page.classList.remove('ent-detail-open');
+    const sb=document.querySelector('.sidebar');
+    if(sb&&!insSidebarWasCollapsed)sb.classList.remove('collapsed');
+  };
+  // Open the 3-column preview for an arbitrary article list + heading (Explore-view graphs / publisher cards).
+  window.openInsArticlesFor=function(arts,title,sub){
+    if(!arts||!arts.length)return;
+    const page=document.getElementById('page-dashboard');
+    if(!page||!document.getElementById('adp-col-mid'))return;
+    insArts=arts;insPrevIdx=0;insSelArt=arts[0]||null;insSrcTitle=title||'';insSrcSub=sub||'';
+    const sb=document.querySelector('.sidebar');
+    insSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
+    if(sb)sb.classList.add('collapsed');
+    mdSpotCtx=null;mdActCtx=null;mdActive=-1;
+    page.classList.add('ent-detail-open');
+    renderInlineDetail(arts[0]);
+    _renderInsPrevList();
+    initIcons();
+  };
+  window.openInsPubArticles=function(name,el){window.openInsListPanel(getEntityArticles('pub',name),name,'Top Publisher',el);};
+  // Left column: reuse the Insights article table (compact + select mode) so the rail matches the slide-over list.
+  function _renderInsPrevList(){
+    const left=document.getElementById('adp-col-left');if(!left)return;
+    insSelArt=insArts[insPrevIdx]||insArts[0]||null;
+    left.innerHTML=`<div class="ins-rail-head">
+        <span class="ti-head-badge"><i data-lucide="file-text"></i></span>
+        <div class="ti-head-titles"><div class="ti-head-title">${insSrcTitle||'Related articles'}</div>${insSrcSub?`<div class="ti-head-sub">${insSrcSub}</div>`:''}</div>
+        <button class="btn-export ti-head-export" onclick="showTrackerToast('Articles exported')">Export</button>
+      </div>
+      ${renderArtTable(insArts,{mode:'select',preserve:true})}`;
+  }
+  // mentions.html detail view: render the current mentions feed as the ti-arttbl rail (reuses the Insights table).
+  // Each row carries its real mentionData index (_mi) so sort/filter in the rail never desyncs selection.
+  window.renderMentDetailRail=function(){
+    const host=document.getElementById('ment-detail-rail');if(!host)return;
+    const list=mentTableData().map((d,i)=>Object.assign({},d,{_mi:i}));
+    insSelArt=list.find(x=>x._mi===mdActive)||list[0]||null;
+    host.innerHTML=renderArtTable(list,{mode:'select',onSelect:'openMentionRail'});
+    initIcons();
+  };
+  window.openMentionRail=function(pos){
+    const d=insArts[pos];if(!d)return;
+    insPrevIdx=pos;insSelArt=d;mdActive=d._mi;
+    renderInlineDetail(mentionData[d._mi]);          // update the middle + right panels
+    const wrap=document.querySelector('#ment-detail-rail .ti-arttbl-wrap');
+    if(wrap)wrap.querySelectorAll('.ti-arttbl-row').forEach(r=>r.classList.toggle('selected',+r.dataset.i===pos));
+    initIcons();
+  };
+  // Shared View (social): render the social posts as the ti-arttbl rail (Post · Source · Reach · Eng Score)
+  window.renderSocialDetailRail=function(){
+    const host=document.getElementById('ment-detail-rail');if(!host)return;
+    const src=(window.WS_DATA&&window.WS_DATA.socialMentions)||[];
+    const list=src.map((d,i)=>Object.assign({},d,{_mi:i}));
+    insSelArt=list.find(x=>x._mi===mdSocialActive)||list[0]||null;
+    host.innerHTML=renderArtTable(list,{mode:'select',onSelect:'openSocialRail',variant:'social'});
+    initIcons();
+  };
+  window.openSocialRail=function(pos){
+    const d=insArts[pos];if(!d)return;
+    insPrevIdx=pos;insSelArt=d;mdSocialActive=d._mi;
+    renderSocialDetail(d._mi);                        // update the middle + right panels (social post)
+    const wrap=document.querySelector('#ment-detail-rail .ti-arttbl-wrap');
+    if(wrap)wrap.querySelectorAll('.ti-arttbl-row').forEach(r=>r.classList.toggle('selected',+r.dataset.i===pos));
+    initIcons();
+  };
+  // ── Shared View → Influencers: open the social post preview (reuses renderSocialDetail) with a publisher-style header rail ──
+  window.openInflSocial=function(realIdx){
+    const list=window.WS_DATA&&window.WS_DATA.socialMentions,s=list&&list[realIdx];
+    const page=document.getElementById('page-authors');
+    if(!s||!page||!document.getElementById('adp-col-mid'))return;
+    const sb=document.querySelector('.sidebar');entSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');if(sb)sb.classList.add('collapsed');
+    mdSocialActive=realIdx;mdSpotCtx=null;mdActCtx=null;mdActive=-1;
+    page.classList.add('ent-detail-open');
+    renderSocialDetail(realIdx);                                         // middle + right social card
+    const adp=document.getElementById('article-detail-panel');if(adp)adp.classList.remove('social-detail');   // keep the 3-column rail layout
+    _renderInflSocialRail();
+    initIcons();
+  };
+  function _renderInflSocialRail(){
+    const left=document.getElementById('adp-col-left');if(!left)return;
+    const list=window.WS_DATA&&window.WS_DATA.socialMentions;if(!list)return;
+    insPrevIdx=mdSocialActive;insSelArt=list[mdSocialActive]||list[0]||null;
+    const name=authorSel||'';
+    const arts=getEntityArticles('author',name);
+    const avgSv=arts.length?(arts.reduce((s,d)=>s+(d.sv||0),0)/arts.length):0;
+    const score=(avgSv*2).toFixed(2);
+    const iStats=(window.WS_DATA.influencerStats&&window.WS_DATA.influencerStats[name])||{};
+    const subs=fmtCount(iStats.subscribers||0);
+    const sPost=list[mdSocialActive]||list[0]||{};   // header icon tracks the selected post's platform
+    const hp=SOCIAL_PLATFORMS[sPost.platform]||{icon:'fa-globe',color:'#6b7280',label:sPost.platform||'—'};
+    left.innerHTML=`<div class="ent-prev-head">
+        <div class="ent-prev-head-l"><div class="spot-panel-title" data-btip="${_makeTip({label:name})}">${name}</div><span class="ent-prev-head-plat" id="infl-head-plat" title="${hp.label}">${socIcon(hp)}</span></div>
+        <div class="ent-detail-stats">
+          <div class="ent-stat"><div class="ent-stat-val">${score}</div><div class="ent-stat-lbl">Influencer Score</div></div>
+          <div class="ent-stat"><div class="ent-stat-val">${subs}</div><div class="ent-stat-lbl">Subscribers</div></div>
+          <div class="ent-stat"><div class="ent-stat-val">${arts.length}</div><div class="ent-stat-lbl">Total Post</div></div>
+        </div>
+      </div>
+      ${renderArtTable(list,{mode:'select',onSelect:'selectInflSocial',variant:'social',preserve:true})}`;
+  }
+  window.selectInflSocial=function(pos){
+    const list=window.WS_DATA&&window.WS_DATA.socialMentions;if(!list)return;
+    const d=insArts[pos];if(!d)return;const realIdx=list.indexOf(d);if(realIdx<0)return;
+    mdSocialActive=realIdx;insPrevIdx=pos;insSelArt=d;
+    renderSocialDetail(realIdx);
+    const adp=document.getElementById('article-detail-panel');if(adp)adp.classList.remove('social-detail');
+    const hp=document.getElementById('infl-head-plat');
+    if(hp){const p=SOCIAL_PLATFORMS[d.platform]||{icon:'fa-globe',color:'#6b7280',label:d.platform||'—'};hp.innerHTML=socIcon(p);hp.title=p.label;}
+    const wrap=document.querySelector('#adp-col-left .ti-arttbl-wrap');
+    if(wrap)wrap.querySelectorAll('.ti-arttbl-row').forEach(r=>r.classList.toggle('selected',+r.dataset.i===pos));
+    initIcons();
+  };
+  function renderArtTable(arts,opts){
+    opts=opts||{};
+    insArts=arts;
+    _artMode=opts.mode==='select'?'select':'open';
+    _artSelFn=opts.onSelect||'selectInsArticle';
+    _artVar=opts.variant||null;
+    if(!opts.preserve){insSentFilter='all';insSort='newest';_sortInsArts();if(_artMode==='select'&&insSelArt)insPrevIdx=insArts.indexOf(insSelArt);}
+    const compact=(opts.compact?' ti-arttbl-compact':'')+(_artVar==='social'?' ti-arttbl-social':'');
+    const per=15,total=insArts.length,pages=Math.max(1,Math.ceil(total/per)),shown=Math.min(per,total);
+    const thead=_artVar==='social'
+      ? `<th>${_artHdrDD('Post','sent')}</th><th class="ti-c-sv">${_artHdrDD('Est. Reach','reach')}</th><th class="ti-c-ave">${_artHdrDD('Eng Score','eng')}</th><th class="ti-c-act" aria-label="actions"></th>`
+      : `<th>${_artHdrDD('Headline','sent')}</th><th class="ti-c-sv">${_artHdrDD('Story Value','sv')}</th><th class="ti-c-ave">${_artHdrDD('AVE','ave')}</th><th class="ti-c-act" aria-label="actions"></th>`;
+    return `<div class="ti-arttbl-wrap${compact}" data-per="${per}" data-page="1">
+      <table class="ti-arttbl"><thead><tr>${thead}</tr></thead><tbody>${_artTblRowsHtml(per)}</tbody></table>
+      <div class="ti-arttbl-pager"${pages>1?'':' hidden'}><div class="ti-arttbl-info">${total?`1–${shown} of ${total}`:'0 of 0'}</div><div class="ti-arttbl-btns">${tiArtPagerBtns(1,pages)}</div></div>
+    </div>`;
+  }
+  // Dashboard Insights slide-over: Shared View → the social posts in the social variant; else the passed news articles.
+  function renderInsTable(arts){
+    if(window.WS_DATA&&window.WS_DATA.socialMentions)return renderArtTable(window.WS_DATA.socialMentions.slice(),{variant:'social'});   // slice: renderArtTable sorts in place
+    return renderArtTable(arts);
+  }
+  window.tiArtTblPage=function(el,page){
+    const wrap=el.closest('.ti-arttbl-wrap');if(!wrap)return;
+    const per=+wrap.dataset.per,rows=[...wrap.querySelectorAll('tbody tr')],total=rows.length,pages=Math.max(1,Math.ceil(total/per));
+    page=Math.max(1,Math.min(pages,page));wrap.dataset.page=page;
+    rows.forEach((r,i)=>{r.hidden=!(i>=(page-1)*per&&i<page*per);});
+    const start=(page-1)*per,end=Math.min(total,page*per);
+    const info=wrap.querySelector('.ti-arttbl-info');if(info)info.textContent=`${start+1}–${end} of ${total}`;
+    const btns=wrap.querySelector('.ti-arttbl-btns');if(btns)btns.innerHTML=tiArtPagerBtns(page,pages);
+    initIcons();
+  };
+
 function initDashboard(){
   if(!window.Recharts||!window.Recharts.ResponsiveContainer){
     document.querySelectorAll('.db-chart-wrap').forEach(el=>{
@@ -4230,8 +4713,6 @@ function initDashboard(){
       )));
   }
   // ── Timeline Insights panel ──
-  const TI_ICN={online:{cls:'type-online',icon:'newspaper'},broadsheet:{cls:'type-broadsheet',icon:'file-text'},provincial:{cls:'type-provincial',icon:'newspaper'},tabloid:{cls:'type-tabloid',icon:'newspaper'},blog:{cls:'type-blog',icon:'rss'},magazine:{cls:'type-magazine',icon:'book-open'},tv:{cls:'type-tv',icon:'tv'},radio:{cls:'type-radio',icon:'radio'}};
-  const tiIcn=t=>TI_ICN[t||'online']||TI_ICN.online;
   const toneColor=t=>t==='positive'?'#16a34a':t==='negative'?'#e94f37':'#9ca3af';
   const tlData=()=>TL_FULL.slice(-tlRange);
   const rangeLabel=()=>({3:'last 3 days',7:'last 7 days',15:'last 15 days',30:'last 30 days'}[tlRange]||('last '+tlRange+' days'));
@@ -4257,109 +4738,6 @@ function initDashboard(){
       <span class="ti-sent-dot" style="background:${toneColor(d.tone)}" title="${d.tone||'neutral'}"></span>
     </div>`;
   }
-  // Insights article list as a paginated table (Headline · Sentiment · ⋯) — screenshot-2 style.
-  function tiArtPagerBtns(cur,pages){
-    let b=`<button class="ti-pgb" onclick="tiArtTblPage(this,${cur-1})"${cur<=1?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
-    for(let p=1;p<=pages;p++)b+=`<button class="ti-pgb num${p===cur?' on':''}" onclick="tiArtTblPage(this,${p})">${p}</button>`;
-    b+=`<button class="ti-pgb" onclick="tiArtTblPage(this,${cur+1})"${cur>=pages?' disabled':''}><i data-lucide="chevron-right"></i></button>`;
-    return b;
-  }
-  function artTr(d,i,per){
-    const ic=tiIcn(d.type);
-    const tone=d.tone==='positive'?'positive':d.tone==='negative'?'negative':'neutral';
-    const t=(d.title||'').replace(/"/g,'&quot;');
-    return `<tr class="ti-arttbl-row" data-i="${i}"${i>=per?' hidden':''} onclick="openInsArticle(${i})">
-      <td class="ti-arttbl-hl"><div class="ti-arttbl-hlwrap"><span class="hl-icon ${ic.cls}"><i data-lucide="${ic.icon}"></i></span><div class="ti-arttbl-hltext"><span class="ti-arttbl-title" title="${t}">${d.title}</span><span class="ti-arttbl-meta">${d.sub||''}${d.date?' · '+d.date:''}</span></div></div></td>
-      <td class="ti-arttbl-sv">${d.sv}</td>
-      <td class="ti-arttbl-ave">${d.ave}</td>
-      <td class="ti-arttbl-act"><button class="ti-arttbl-more" title="More" onclick="event.stopPropagation()"><i data-lucide="more-horizontal"></i></button></td>
-    </tr>`;
-  }
-  // Article preview (publishers-style 3-column) opened from an Insights table row.
-  let insArts=[],insPrevIdx=-1,insSidebarWasCollapsed=false,insSrcSub='',insSrcTitle='';
-  window.openInsArticle=function(i){
-    const d=insArts[i];if(!d)return;
-    const page=document.getElementById('page-dashboard');
-    if(!page||!document.getElementById('adp-col-mid'))return;
-    insPrevIdx=i;
-    // Capture where this list came from (e.g. "Timeline · last 7 days" / "Jun 17, 2026") before closing the panel
-    const s=curSrc();insSrcSub=(s&&s.sub&&s.sub())||'';insSrcTitle=(s&&s.detailTitle&&s.detailTitle())||'';
-    if(window.closeInsights)window.closeInsights();          // tuck the Insights slide-over away
-    const sb=document.querySelector('.sidebar');
-    insSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
-    if(sb)sb.classList.add('collapsed');
-    mdSpotCtx=null;mdActCtx=null;mdActive=-1;                // display-only context
-    page.classList.add('ent-detail-open');
-    renderInlineDetail(d);
-    _renderInsPrevList();
-    initIcons();
-  };
-  window.selectInsArticle=function(i){
-    const d=insArts[i];if(!d)return;
-    insPrevIdx=i;
-    renderInlineDetail(d);
-    _renderInsPrevList();
-    initIcons();
-  };
-  window.closeInsArticle=function(){
-    const page=document.getElementById('page-dashboard');if(page)page.classList.remove('ent-detail-open');
-    const sb=document.querySelector('.sidebar');
-    if(sb&&!insSidebarWasCollapsed)sb.classList.remove('collapsed');
-  };
-  // Open the 3-column preview for an arbitrary article list + heading (Explore-view graphs / publisher cards).
-  window.openInsArticlesFor=function(arts,title,sub){
-    if(!arts||!arts.length)return;
-    const page=document.getElementById('page-dashboard');
-    if(!page||!document.getElementById('adp-col-mid'))return;
-    insArts=arts;insPrevIdx=0;insSrcTitle=title||'';insSrcSub=sub||'';
-    const sb=document.querySelector('.sidebar');
-    insSidebarWasCollapsed=sb&&sb.classList.contains('collapsed');
-    if(sb)sb.classList.add('collapsed');
-    mdSpotCtx=null;mdActCtx=null;mdActive=-1;
-    page.classList.add('ent-detail-open');
-    renderInlineDetail(arts[0]);
-    _renderInsPrevList();
-    initIcons();
-  };
-  window.openInsPubArticles=function(name,el){window.openInsListPanel(getEntityArticles('pub',name),name,'Top Publisher',el);};
-  // Left column: the current Insights article list as a compact table (Headline · Sentiment · ⋯), mirrors the publishers preview.
-  function _renderInsPrevList(){
-    const left=document.getElementById('adp-col-left');if(!left)return;
-    const rows=insArts.map((a,i)=>`<div class="spot-cov-li ent-prev-li${i===insPrevIdx?' active':''}" onclick="selectInsArticle(${i})">
-        <span class="md-li-ico type-${articleType(a)}"><i data-lucide="${typeIcon(a)}"></i></span>
-        <div class="spot-cov-body"><div class="spot-cov-hl">${a.title}</div></div>
-        <span class="ent-prev-trail"><span class="ent-prev-sent">${sentimentCellHtml(a.brand)}</span><span class="row-dots" title="More" onclick="event.stopPropagation()">⋯</span></span>
-      </div>`).join('');
-    left.innerHTML=`<div class="spot-panel ctx-act">
-      <div class="ent-prev-head">
-        <div class="ent-prev-head-l ins-prev-head-l"><div class="spot-panel-title">${insSrcTitle||'Related articles'}</div>${insSrcSub?`<div class="ins-prev-src">${insSrcSub}</div>`:''}</div>
-        <div class="ent-detail-stats"><div class="ent-stat"><div class="ent-stat-val">${insArts.length}</div><div class="ent-stat-lbl">Articles</div></div></div>
-      </div>
-      <div class="spot-cov-tbl">
-        <div class="spot-cov-thd"><span>Headline</span><span class="ent-prev-trail"><span class="ent-prev-sent">Sentiment</span><span class="row-dots" aria-hidden="true" style="visibility:hidden">⋯</span></span></div>
-        <div class="spot-cov-list">${rows}</div>
-      </div>
-    </div>`;
-  }
-  function renderArtTable(arts){
-    insArts=arts;
-    const per=15,total=arts.length,pages=Math.max(1,Math.ceil(total/per)),shown=Math.min(per,total);
-    const rows=arts.map((d,i)=>artTr(d,i,per)).join('');
-    return `<div class="ti-arttbl-wrap" data-per="${per}" data-page="1">
-      <table class="ti-arttbl"><thead><tr><th>Headline</th><th class="ti-c-sv">Story Value</th><th class="ti-c-ave">AVE</th><th class="ti-c-act" aria-label="actions"></th></tr></thead><tbody>${rows}</tbody></table>
-      ${pages>1?`<div class="ti-arttbl-pager"><div class="ti-arttbl-info">1–${shown} of ${total}</div><div class="ti-arttbl-btns">${tiArtPagerBtns(1,pages)}</div></div>`:''}
-    </div>`;
-  }
-  window.tiArtTblPage=function(el,page){
-    const wrap=el.closest('.ti-arttbl-wrap');if(!wrap)return;
-    const per=+wrap.dataset.per,rows=[...wrap.querySelectorAll('tbody tr')],total=rows.length,pages=Math.max(1,Math.ceil(total/per));
-    page=Math.max(1,Math.min(pages,page));wrap.dataset.page=page;
-    rows.forEach((r,i)=>{r.hidden=!(i>=(page-1)*per&&i<page*per);});
-    const start=(page-1)*per,end=Math.min(total,page*per);
-    const info=wrap.querySelector('.ti-arttbl-info');if(info)info.textContent=`${start+1}–${end} of ${total}`;
-    const btns=wrap.querySelector('.ti-arttbl-btns');if(btns)btns.innerHTML=tiArtPagerBtns(page,pages);
-    initIcons();
-  };
   function tiAnalysis(){
     const data=tlData(),n=data.length,results=data.map(d=>d.results);
     const total=results.reduce((a,b)=>a+b,0),avg=Math.round(total/n);
@@ -4436,10 +4814,7 @@ function initDashboard(){
     const total=data.reduce((s,d)=>s+d.results,0),share=total?Math.round(day.results/total*100):0;
     const rank=[...data].sort((a,b)=>b.results-a.results).findIndex(d=>d.fullDate===tiKey)+1;
     const arts=dayArticles(day),dCls=delta>=0?'ti-up':'ti-down',dSign=delta>=0?'+':'';
-    return `
-      <div class="ti-detail-flush">
-        ${renderArtTable(arts)}
-      </div>`;
+    return renderInsTable(arts);
   }
   // Source-aware panel controller (Timeline + Media Exposure plug in here)
   function tiHeadHTML(label,sub,detailTitle){
@@ -4459,7 +4834,7 @@ function initDashboard(){
   SRC.timeline={card:'db-timeline-card',sub:()=>'Timeline · '+rangeLabel(),detailTitle:()=>tiKey,overview:()=>tiOverviewHTML(),detail:()=>tiDetailHTML(),clear:()=>{tlSelectedDate=null;buildTimeline(tlRange);}};
   // Ephemeral Insights source: an arbitrary article list. Explore-view graphs/cards slide the panel in with this.
   let exListArts=[],exListTitle='',exListSub='';
-  SRC.exlist={card:null,sub:()=>exListSub,detailTitle:()=>exListTitle,overview:()=>renderArtTable(exListArts),detail:()=>renderArtTable(exListArts),clear:()=>{}};
+  SRC.exlist={card:null,sub:()=>exListSub,detailTitle:()=>exListTitle,overview:()=>renderInsTable(exListArts),detail:()=>renderInsTable(exListArts),clear:()=>{}};
   window.openInsListPanel=function(arts,title,sub,focusEl){
     if(!arts||!arts.length)return;
     exListArts=arts;exListTitle=title||'';exListSub=sub||'';
@@ -4483,7 +4858,7 @@ function initDashboard(){
   }
   const _insByTone=t=>{const m={Positive:'positive',Neutral:'neutral',Negative:'negative'}[t]||t;const list=mentionData.filter(d=>(d.tone||d.brand)===m);return list.length?list:_insSample('tone-'+t,4);};
   window.openInsEntity=name=>openInsCard(_insSample('ent-'+name,6),name,'Entities Map','db-entities-card');
-  const curSrc=()=>SRC[tiSource]||SRC.timeline;
+  const curSrc=()=>SRC[tiSource]||SRC.timeline; window.__curSrc=curSrc;
   function renderTIHead(){
     const head=document.getElementById('ti-head');if(!head)return;
     const s=curSrc();
@@ -4493,7 +4868,7 @@ function initDashboard(){
   function tiRender(){
     renderTIHead();
     const body=document.getElementById('ti-body');
-    if(body){body.innerHTML=tiBodyHTML();body.classList.toggle('ti-body-flush',tiSource==='exlist'||(tiMode==='detail'&&(tiSource==='exposure'||tiSource==='emphasis')));}
+    if(body){body.innerHTML=tiBodyHTML();body.classList.toggle('ti-body-flush',tiSource==='exlist'||(tiMode==='detail'&&(tiSource==='exposure'||tiSource==='emphasis'||tiSource==='timeline')));}
     initIcons();
   }
   const tiFocusCard=()=>document.getElementById(curSrc().card);
@@ -4595,10 +4970,10 @@ function initDashboard(){
         RC(YAxis,{type:'category',dataKey:'name',hide:true}),
         RC(Tooltip,{content:ExpTooltip,cursor:false}),
         ...expSeries.map((s,i)=>RC(Bar,{key:s.key,dataKey:s.key,stackId:'a',fill:s.color,maxBarSize:50,
-          isAnimationActive:false,cursor:expIsSocial?'default':'pointer',
+          isAnimationActive:false,cursor:'pointer',
           fillOpacity:(dimKey&&dimKey!==s.key)?0.3:1,
           onMouseEnter:()=>setHov(s.key),
-          onClick:expIsSocial?undefined:()=>{const p=document.getElementById('page-dashboard');if(p&&p.classList.contains('explore-open')){const c=document.querySelector('.db-explore-wrap.on .db-explore-exp-chart');window.openInsListPanel(expChannelArticles(s.key),s.label,'Media Exposure',c&&c.closest('.db-card'));}else window.openExposureChannel(s.key);},
+          onClick:expIsSocial?()=>openInsCard(window.WS_DATA.socialMentions,s.label,'Platform Exposure · post share','db-exposure-card'):()=>{const p=document.getElementById('page-dashboard');if(p&&p.classList.contains('explore-open')){const c=document.querySelector('.db-explore-wrap.on .db-explore-exp-chart');window.openInsListPanel(expChannelArticles(s.key),s.label,'Media Exposure',c&&c.closest('.db-card'));}else window.openExposureChannel(s.key);},
           radius:i===0?[5,0,0,5]:i===expSeries.length-1?[0,5,5,0]:0},
           RC(LabelList,{dataKey:s.key,position:'center',formatter:v=>v>=10?`${s.label.toUpperCase()}: ${v}%`:'',style:{fontSize:11,fontWeight:600,fill:s.labelColor}})
         ))
@@ -4657,7 +5032,7 @@ function initDashboard(){
     const r=rows[idx],above=idx>0?rows[idx-1]:null;
     const gap=above?+(above.pct-r.pct).toFixed(2):0;
     const arts=expChannelArticles(tiKey);
-    return renderArtTable(arts);
+    return renderInsTable(arts);
   }
   SRC.exposure={card:'db-exposure-card',sub:()=>expIsSocial?'Platform Exposure · post share':'Media Exposure · article share',detailTitle:()=>expChannelLabel(tiKey),overview:()=>expOverviewHTML(),detail:()=>expDetailHTML(),clear:()=>{expSelected=null;renderExposure();}};
 
@@ -4799,7 +5174,7 @@ function initDashboard(){
     if(idx<0)return empOverviewHTML();
     const r=rows[idx],other=rows[1-idx],diff=+(r.pct-other.pct).toFixed(1);
     const arts=empCatArticles(tiKey);
-    return renderArtTable(arts);
+    return renderInsTable(arts);
   }
   SRC.emphasis={card:'db-emphasis-card',sub:()=>'Topic Emphasis · subject prominence',detailTitle:()=>empCatLabel(tiKey),overview:()=>empOverviewHTML(),detail:()=>empDetailHTML(),clear:()=>{empSelected=null;renderEmphasis();}};
   window.openEmphasisInsights=()=>tiOpenSource('emphasis');
@@ -4984,6 +5359,92 @@ function initDashboard(){
       RC(Tooltip,{content:TpTip,cursor:{stroke:'#e4e6ea'}}),
       RC(Scatter,{data:topPubData,shape:TpDot,cursor:'pointer',onClick:(d)=>{const n=d&&(d.name||(d.payload&&d.payload.name));if(n)openInsCard(getEntityArticles('pub',n),n,'Top Publishers','db-toppub-card');}})
     )));
+
+  // ── Media Source Distribution (Shared workspace): Post Count × Story Value per platform ──
+  const mediaSourceData=[
+    {name:'Facebook', color:'#1877f2', postCount:67, storyValue:0.42},
+    {name:'Twitter',  color:'#16a34a', postCount:14, storyValue:0.11},
+    {name:'Instagram',color:'#1e293b', postCount:12, storyValue:0.18},
+    {name:'YouTube',  color:'#ef4444', postCount:9,  storyValue:0.36},
+    {name:'Reddit',   color:'#f97316', postCount:6,  storyValue:0.09},
+    {name:'TikTok',   color:'#8b5cf6', postCount:5,  storyValue:0.29}
+  ];
+  const msData=mediaSourceData.map(p=>({x:p.postCount,y:p.storyValue,name:p.name,color:p.color}));
+  const MsdDot=(o)=>o.cx==null?null:RC('circle',{cx:o.cx,cy:o.cy,r:7,fill:o.payload.color,stroke:'#fff',strokeWidth:1.5});
+  const MsdLegend=()=>RC('div',{style:{display:'flex',justifyContent:'center',gap:16,flexWrap:'wrap',paddingTop:8}},
+    mediaSourceData.map(p=>RC('span',{key:p.name,style:{display:'inline-flex',alignItems:'center',gap:6,fontSize:11.5,color:'#6b7280'}},
+      RC('span',{style:{width:9,height:9,borderRadius:'50%',background:p.color,display:'inline-block'}}),p.name)));
+  function MsdTip(o){
+    if(!o||!o.active||!o.payload||!o.payload.length)return null;
+    const d=o.payload[0].payload;
+    const row=(l,v)=>RC('div',{key:l,style:{fontSize:11.5,margin:'2px 0',color:'rgba(255,255,255,0.62)'}},l+' ',RC('span',{style:{color:'#fff',fontWeight:600}},v));
+    return RC('div',{style:{background:'#181d26',borderRadius:8,padding:'11px 13px',boxShadow:'0 6px 20px rgba(0,0,0,0.28)'}},
+      RC('div',{style:{fontWeight:600,color:'#fff',marginBottom:6,fontSize:12.5}},d.name),
+      row('Post Count:',d.x),row('Story Value:',d.y));
+  }
+  function MediaSourceDist(){
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(ScatterChart,{data:msData,margin:{top:16,right:28,bottom:26,left:16}},
+        RC(CartesianGrid,{stroke:'#eef0f2'}),
+        RC(XAxis,{type:'number',dataKey:'x',name:'Post Count',domain:[0,'dataMax'],tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Post Count',position:'insideBottom',offset:-14,fontSize:11,fill:'#6b7280'}}),
+        RC(YAxis,{type:'number',dataKey:'y',name:'Story Value',tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Story Value',angle:-90,position:'insideLeft',fontSize:11,fill:'#6b7280'}}),
+        RC(Tooltip,{content:MsdTip,cursor:{strokeDasharray:'3 3',stroke:'#e4e6ea'}}),
+        RC(Legend,{content:MsdLegend,verticalAlign:'bottom'}),
+        RC(Scatter,{data:msData,shape:MsdDot,cursor:'pointer',onClick:(d)=>{const n=d&&(d.name||(d.payload&&d.payload.name));openInsCard(window.WS_DATA.socialMentions,n||'Media Source Distribution','Media Source Distribution','db-mediasource-card');}}),
+        RC(Brush,{dataKey:'x',height:22,stroke:'#d4d4d8',travellerWidth:8})
+      ));
+  }
+  dbMount('db-mediasource',RC(MediaSourceDist));
+
+  // ── Top Media Sources (Shared workspace): social platforms swimlane, one dot per post over a week ──
+  const TMS_SRC=[
+    {name:'Facebook', color:'#1877f2', count:67},
+    {name:'Twitter',  color:'#f97316', count:14},
+    {name:'YouTube',  color:'#ef4444', count:14},
+    {name:'Reddit',   color:'#ff4500', count:8},
+    {name:'Instagram',color:'#16a34a', count:1}
+  ];
+  const TMS_DOWS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const TMS_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const TMS_INFL=['@DITOphofficial','@wazzupph','@techreviewph','@GadgetPilipinas','@juanationph','@Memory.ph'];
+  const tmsStart=new Date(2026,6,1).getTime(),tmsEnd=new Date(2026,6,8).getTime();   // Jul 1–8, 2026
+  const tmsData=[];
+  TMS_SRC.forEach((pl,pi)=>{
+    for(let i=0;i<pl.count;i++){
+      const h=((pi+1)*2654435761+i*40503)>>>0,day=1+(h%7),hr=(h>>>5)%24,mi=(h>>>10)%60;
+      tmsData.push({name:pl.name,color:pl.color,x:new Date(2026,6,day,hr,mi).getTime(),jit:((h>>>15)%13)-6,infl:TMS_INFL[(h>>>3)%TMS_INFL.length]});
+    }
+  });
+  const tmsTicks=[];for(let dd=1;dd<=8;dd++)tmsTicks.push(new Date(2026,6,dd).getTime());
+  const TmsYTick=(t)=>{
+    const p=TMS_SRC.find(x=>x.name===t.payload.value)||{};
+    return RC('text',{x:t.x,y:t.y,dy:4,textAnchor:'end',fontSize:12,fontWeight:500},
+      RC('tspan',{fill:p.color||'#6b7280'},t.payload.value+' '),
+      RC('tspan',{fill:'#9ca3af'},'('+(p.count||0)+')'));
+  };
+  const TmsDot=(o)=>o.cx==null?null:RC('circle',{cx:o.cx,cy:o.cy+(o.payload.jit||0),r:5,fill:o.payload.color,fillOpacity:0.7});
+  function TmsTip(o){
+    if(!o||!o.active||!o.payload||!o.payload.length)return null;
+    const d=o.payload[0].payload,dt=new Date(d.x);
+    const row=(l,v)=>RC('div',{key:l,style:{fontSize:11.5,margin:'2px 0',color:'rgba(255,255,255,0.62)'}},l+' ',RC('span',{style:{color:'#fff',fontWeight:600}},v));
+    return RC('div',{style:{background:'#181d26',borderRadius:8,padding:'11px 13px',boxShadow:'0 6px 20px rgba(0,0,0,0.28)'}},
+      RC('div',{style:{fontWeight:600,color:'#fff',marginBottom:6,fontSize:12.5}},d.name),
+      row('Influencer:',d.infl),row('Posted:',TMS_MONTHS[dt.getMonth()].slice(0,3)+' '+dt.getDate()+', '+dt.getFullYear()));
+  }
+  const tmsFoot=document.getElementById('db-tms-foot');
+  if(tmsFoot){const f=ts=>{const d=new Date(ts);return d.getDate()+' '+TMS_MONTHS[d.getMonth()]+' '+d.getFullYear();};
+    tmsFoot.innerHTML='<span>'+f(tmsStart)+'</span><span>'+f(tmsEnd)+'</span>';}
+  function TopMediaSources(){
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(ScatterChart,{margin:{top:8,right:24,bottom:8,left:0}},
+        RC(CartesianGrid,{vertical:false,stroke:'#eef0f2'}),
+        RC(XAxis,{type:'number',dataKey:'x',domain:[tmsStart,tmsEnd],ticks:tmsTicks,orientation:'top',tickFormatter:ts=>{const d=new Date(ts);return TMS_DOWS[d.getDay()]+' '+String(d.getDate()).padStart(2,'0');},tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
+        RC(YAxis,{type:'category',dataKey:'name',tick:TmsYTick,axisLine:false,tickLine:false,width:96,reversed:true,allowDuplicatedCategory:false}),
+        RC(Tooltip,{content:TmsTip,cursor:false}),
+        RC(Scatter,{data:tmsData,shape:TmsDot,cursor:'pointer',onClick:(d)=>{const n=d&&(d.name||(d.payload&&d.payload.name));openInsCard(window.WS_DATA.socialMentions,n||'Top Media Sources','Top Media Sources · post distribution','db-mediasources-card');}})
+      ));
+  }
+  dbMount('db-mediasources',RC(TopMediaSources));
 
   // ── Timeline "Explore Data" → full-page "Total Articles Count" drill-down ──
   const EXPLORE_MEDIUM_COLOR={'Online News':'#dc4a8f','TV':'#16a34a','Broadsheet':'#2563eb'};
@@ -5448,6 +5909,82 @@ function initDashboard(){
     document.querySelectorAll('#db-author-tabs .db-tab2').forEach(el=>el.classList.toggle('on',el.dataset.t===t));
   };
 
+  // ── Influencer Story Value Distribution (Shared workspace): tabbed bubble + bar, per social influencer ──
+  const influencerData=[
+    {name:'jmccautosupply', posts:9, sv:3.2,  score:0.02, color:'#2563eb'},
+    {name:'DITOphofficial', posts:1, sv:10.0, score:10.0, color:'#0f172a'},
+    {name:'dylanburton02',  posts:3, sv:2.6,  score:0.80, color:'#7c3aed'},
+    {name:'pldt',           posts:5, sv:14.6, score:6.20, color:'#e94f37'},
+    {name:'bilyonaryo_ph',  posts:4, sv:3.0,  score:1.20, color:'#16a34a'},
+    {name:'BilyonaryoPh',   posts:3, sv:18.2, score:8.40, color:'#0891b2'},
+    {name:'ConvergeICT',    posts:2, sv:2.4,  score:0.60, color:'#d97706'},
+    {name:'negosyantenews', posts:8, sv:14.5, score:5.80, color:'#6b7280'},
+    {name:'SHAYLIBAND5',    posts:6, sv:7.3,  score:3.10, color:'#db2777'},
+    {name:'contextdotph',   posts:2, sv:0.5,  score:0.10, color:'#64748b'},
+    {name:'ANCalerts',      posts:1, sv:4.0,  score:1.00, color:'#f59e0b'}
+  ];
+  const inflAsc=[...influencerData].sort((a,b)=>a.posts-b.posts);
+  const inflDesc=[...influencerData].sort((a,b)=>b.posts-a.posts);
+  const inflMaxX=Math.max(...influencerData.map(a=>a.posts))+1;
+  const InflDot=(p)=>p.cx==null?null:RC('circle',{cx:p.cx,cy:p.cy,r:6+p.payload.score*1.4,fill:p.payload.color,opacity:0.72});
+  function InflTip(o){
+    if(!o||!o.active||!o.payload||!o.payload.length)return null;
+    const d=o.payload[0].payload;
+    const row=(l,v)=>RC('div',{key:l,style:{display:'flex',justifyContent:'space-between',gap:20,fontSize:12,margin:'2px 0'}},
+      RC('span',{style:{color:'rgba(255,255,255,0.62)'}},l),RC('span',{style:{color:'#fff',fontWeight:600}},v));
+    return tipBox(
+      RC('div',{style:{fontWeight:600,color:'#fff',marginBottom:6,fontSize:12.5}},d.name),
+      row('Post Count',d.posts),row('Total Story Value',d.sv.toFixed(2)),row('Influencer Score',d.score.toFixed(2)));
+  }
+  function InfluencerBubble(){
+    const n=inflAsc.length;
+    const [rng,setRng]=React.useState([0,n-1]);
+    const shown=inflAsc.slice(rng[0],rng[1]+1);
+    return RC('div',{style:{display:'flex',flexDirection:'column',height:'100%'}},
+      RC('div',{style:{flex:1,minHeight:0}},
+        RC(ResponsiveContainer,{width:'99%',height:'100%'},
+          RC(ScatterChart,{margin:{top:16,right:20,bottom:24,left:8}},
+            RC(CartesianGrid,{stroke:'#f0f1f3'}),
+            RC(XAxis,{type:'number',dataKey:'posts',name:'Post Count',domain:[0,inflMaxX],tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Post Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
+            RC(YAxis,{type:'number',dataKey:'sv',name:'Story Value',domain:[0,20],tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:40,label:{value:'Story Value',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
+            RC(Tooltip,{content:InflTip,cursor:{strokeDasharray:'3 3',stroke:'rgba(0,0,0,0.12)'}}),
+            RC(Scatter,{data:shown,shape:InflDot,cursor:'pointer',onClick:(d)=>{const n=d&&(d.name||(d.payload&&d.payload.name));openInsCard(window.WS_DATA.socialMentions,n||'Influencer Story Value','Influencer Story Value Distribution','db-influencer-card');}})
+          ))),
+      RC('div',{className:'db-pub-legend'},influencerData.map(a=>RC('span',{key:a.name,className:'db-pub-leg-item'},RC('span',{className:'dot',style:{background:a.color}}),a.name))),
+      RC('div',{style:{height:30,flexShrink:0}},
+        RC(ResponsiveContainer,{width:'99%',height:'100%'},
+          RC(ComposedChart,{data:inflAsc,margin:{top:2,right:20,bottom:2,left:8}},
+            RC(XAxis,{dataKey:'posts',hide:true}),RC(YAxis,{hide:true}),
+            RC(Area,{dataKey:'sv',stroke:'transparent',fill:'transparent',isAnimationActive:false}),
+            RC(Brush,{dataKey:'name',height:24,stroke:'#b9a4f7',fill:'#f3eefc',travellerWidth:8,tickFormatter:()=>'',startIndex:rng[0],endIndex:rng[1],onChange:e=>{if(e&&e.startIndex!=null)setRng([e.startIndex,e.endIndex]);}})
+          )))
+    );
+  }
+  function InflBarTip(o){
+    if(!o||!o.active||!o.payload||!o.payload.length)return null;
+    return tipBox(
+      RC('div',{style:{fontWeight:600,color:'#fff',marginBottom:5,fontSize:12.5}},o.label),
+      tlRow('#b9a4f7','Post Count',o.payload[0].value));
+  }
+  dbMount('db-influencer-bubble',RC(InfluencerBubble));
+  dbMount('db-influencer-bar',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+    RC(BarChart,{data:inflDesc,layout:'vertical',margin:{top:16,right:24,bottom:24,left:8}},
+      RC(CartesianGrid,{horizontal:false,stroke:'#f0f1f3'}),
+      RC(XAxis,{type:'number',dataKey:'posts',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'Post Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
+      RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:140}),
+      RC(Tooltip,{content:InflBarTip,cursor:{fill:'rgba(24,29,38,0.04)'}}),
+      RC(Bar,{dataKey:'posts',maxBarSize:26,radius:[0,4,4,0]},
+        ...inflDesc.map((a,i)=>RC(Cell,{key:i,fill:a.color})),
+        RC(LabelList,{dataKey:'posts',position:'right',style:{fontSize:11,fontWeight:600,fill:'#6b7280'}})
+      )
+    )));
+  window.setInfluencerTab=function(t){
+    const bub=document.getElementById('db-influencer-bubble'),bar=document.getElementById('db-influencer-bar');
+    if(bub)bub.style.display=t==='bubble'?'':'none';
+    if(bar)bar.style.display=t==='bar'?'':'none';
+    document.querySelectorAll('#db-influencer-tabs .db-tab2').forEach(el=>el.classList.toggle('on',el.dataset.t===t));
+  };
+
   // ── Entities Map (flexbox treemap, 2 columns; dark data-btip tooltips) ──
   const entityData=[
     {name:'ORG',value:48.18,color:'#8d7ba8',desc:'Organization Entities: An organized body of people with a particular purpose, especially a business, society, association, etc.'},
@@ -5644,13 +6181,14 @@ function buildPublishers(){
   const map={};
   mentionData.forEach(d=>{
     const name=d.sub;if(!name)return;
-    if(!map[name])map[name]={name,count:0,sv:0};
-    map[name].count++;map[name].sv+=(d.sv||0);
+    if(!map[name])map[name]={name,count:0,sv:0,ave:0};
+    map[name].count++;map[name].sv+=(d.sv||0);map[name].ave+=parseAve(d.ave);
   });
   const list=Object.values(map).map(p=>({
     name:p.name,
     count:p.count,
     totalSV:+p.sv.toFixed(2),
+    totalAve:p.ave,
     score:+((p.sv/p.count)*2).toFixed(2)   // synthesized Pub Score = avg Story Value ×2
   }));
   if(pubSort==='count')list.sort((a,b)=>b.count-a.count);
@@ -5685,7 +6223,13 @@ const PUB_URLS={
 function pubUrl(name){return PUB_URLS[name]||('https://www.google.com/search?q='+encodeURIComponent(name+' philippines'));}
 let pubTab={},authorTab={};                   // 'articles' | 'perf' | 'ent', keyed by name
 let entPerfRange={};                          // 3 | 7 | 15 | 30, keyed by `${kind}:${name}`
-function selPub(name){if(pubSel!==name){pubDetPage[name]=0;pubTab[name]=pubTab[name]||'articles';}pubSel=name;renderPublishers();}
+function selPub(name){if(pubSel!==name){pubDetPage[name]=0;pubTab[name]=pubTab[name]||'articles';}pubSel=name;selectEntityRow('pub',name);}
+// Lightweight selection: move the highlight on existing rows + re-render only the detail panel (no list rebuild → no re-fade)
+function selectEntityRow(kind,name){
+  const scroll=document.getElementById(kind==='pub'?'pub-list-scroll':'author-list-scroll');
+  if(scroll)scroll.querySelectorAll('.ent-row').forEach(r=>r.classList.toggle('selected',r.dataset.name===name));
+  renderEntityDetail(kind,name,true);
+}
 function selEntityTab(kind,name,tab){
   const map=kind==='pub'?pubTab:authorTab;
   map[name]=tab;
@@ -5783,9 +6327,10 @@ function getEntityArticles(kind,name){
   if(!name)return[];
   const real=mentionData.filter(d=>kind==='pub'?d.sub===name:d.author===name).map(d=>({...d}));
   const min=24;
-  if(real.length>=min)return _sortEntArticles(real);
-  const synth=_synthArticles((kind==='pub'?'p:':'a:')+name,real.length,min-real.length);
-  return _sortEntArticles(real.concat(synth));
+  const list=real.length>=min?real:real.concat(_synthArticles((kind==='pub'?'p:':'a:')+name,real.length,min-real.length));
+  // Enforce the entity's identity so synth-filled articles show the right publication/author (naturally-varied fields stay varied)
+  list.forEach(d=>{if(kind==='pub'){d.sub=name;d.outlet=name;}else{d.author=name;}});
+  return _sortEntArticles(list);
 }
 function _sortEntArticles(list){
   return list.slice().sort((a,b)=>{
@@ -5804,13 +6349,14 @@ function renderPublishers(){
   if(pubSel===null||!all.find(p=>p.name===pubSel))pubSel=all[0]?all[0].name:null;
   scroll.innerHTML=page.map((p,i)=>{
     const c=pubColor(p.name),sel=p.name===pubSel?' selected':'';
-    return`<div class="ent-row${sel}" onclick="selPub(${attrJson(p.name)})">
+    return`<div class="ent-row${sel}" data-name="${p.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" onclick="selPub(${attrJson(p.name)})">
       <span class="ent-row-avatar" style="background:${c.bg};color:${c.fg}">${p.name.charAt(0)}</span>
       <div class="ent-row-body">
         <div class="ent-row-name" title="${p.name}">${p.name}</div>
         <div class="ent-row-meta">${p.count} article${p.count!==1?'s':''}</div>
       </div>
-      <span class="ent-row-score">${p.score.toFixed(2)}</span>
+      <span class="ent-row-val">${p.score.toFixed(2)}</span>
+      <span class="ent-row-val ent-row-ave">${fmtAve(p.totalAve)}</span>
     </div>`;
   }).join('');
   const countEl=document.getElementById('pub-list-count');if(countEl)countEl.textContent=total;
@@ -5827,17 +6373,18 @@ function renderPublishers(){
       btns.innerHTML=h;
     }
   }
-  renderEntityDetail('pub',pubSel);
+  renderEntityDetail('pub',pubSel,true);
   initIcons();
 }
 // Detail renderer — used by both publishers and authors
-function renderEntityDetail(kind,name){
+function renderEntityDetail(kind,name,animate){
   const panelId=kind==='pub'?'pub-detail-panel':'author-detail-panel';
   const panel=document.getElementById(panelId);if(!panel)return;
   if(!name){panel.innerHTML=`<div class="ent-empty"><i data-lucide="${kind==='pub'?'building-2':'user'}" style="width:24px;height:24px;color:#ddd"></i><div>Select ${kind==='pub'?'a publisher':'an author'} to view its articles</div></div>`;initIcons();return;}
   const articles=getEntityArticles(kind,name);
   const totalAve=articles.reduce((s,d)=>{const m=String(d.ave||'').match(/[\d.]+/);return s+(m?parseFloat(m[0]):0);},0);
   const avgSv=articles.length?(articles.reduce((s,d)=>s+(d.sv||0),0)/articles.length):0;
+  const totalSV=articles.reduce((s,d)=>s+(d.sv||0),0);
   const score=(avgSv*2).toFixed(2);
   const colorFn=kind==='pub'?pubColor:authColor;
   const c=colorFn(name);
@@ -5846,11 +6393,9 @@ function renderEntityDetail(kind,name){
   const aveDisp=aveNum;
   const tabMap=kind==='pub'?pubTab:authorTab;
   const activeTab=tabMap[name]||'articles';
-  const tabBar=`<div class="mm-tabs ent-tabs">
-    ${[['articles','Articles'],['perf','Performance Charts'],['ent','Entities']].map(([id,lbl])=>
+  const tabItems=[['articles','Articles'],['perf','Performance Charts'],['ent','Entities']].map(([id,lbl])=>
       `<div class="mm-tab${activeTab===id?' act':''}" onclick="selEntityTab('${kind}',${attrJson(name)},'${id}')">${lbl}</div>`
-    ).join('')}
-  </div>`;
+    ).join('');
   let paneHtml='';
   if(activeTab==='articles')      paneHtml=_paneArticles(kind,name,articles);
   else if(activeTab==='perf')     paneHtml=_panePerf(kind,name);
@@ -5858,20 +6403,40 @@ function renderEntityDetail(kind,name){
   const titleHtml=kind==='pub'
     ? `<a class="ent-detail-title ent-detail-title-link" href="${pubUrl(name)}" target="_blank" rel="noopener noreferrer" title="Visit publisher website">${name}<i data-lucide="external-link" class="ent-title-ext"></i></a>`
     : `<div class="ent-detail-title">${name}</div>`;
-  panel.innerHTML=`<div class="ent-detail-head">
-      <span class="ent-detail-avatar" style="background:${c.bg};color:${c.fg}">${name.charAt(0)}</span>
+  const _socOne=!!(window.WS_DATA&&window.WS_DATA.socialMentions&&kind==='author');
+  const iStats=(_socOne&&window.WS_DATA.influencerStats&&window.WS_DATA.influencerStats[name])||{};
+  const subsDisp=fmtCount(iStats.subscribers||0),engDisp=iStats.engagement!=null?iStats.engagement:0,svDisp=totalSV.toFixed(2);
+  const statsHtml=_socOne
+    ? `<div class="ent-stat" data-btip="${_makeTip({label:'Influencer Score: '+score})}"><div class="ent-stat-val">${score}</div><div class="ent-stat-lbl">Influencer Score</div></div>
+        <div class="ent-stat" data-btip="${_makeTip({label:'Subscribers: '+subsDisp})}"><div class="ent-stat-val">${subsDisp}</div><div class="ent-stat-lbl">Subscribers</div></div>
+        <div class="ent-stat" data-btip="${_makeTip({label:'Total Post: '+articles.length})}"><div class="ent-stat-val">${articles.length}</div><div class="ent-stat-lbl">Total Post</div></div>
+        <div class="ent-stat" data-btip="${_makeTip({label:'Engagement Score: '+engDisp})}"><div class="ent-stat-val">${engDisp}</div><div class="ent-stat-lbl">Engagement Score</div></div>
+        <div class="ent-stat" data-btip="${_makeTip({label:'Total Story Value: '+svDisp})}"><div class="ent-stat-val">${svDisp}</div><div class="ent-stat-lbl">Total Story Value</div></div>`
+    : `<div class="ent-stat" data-btip="${_makeTip({label:scoreLabel+': '+score})}"><div class="ent-stat-val">${score}</div><div class="ent-stat-lbl">${scoreLabel}</div></div>
+        <div class="ent-stat" data-btip="${_makeTip({label:'Articles: '+articles.length})}"><div class="ent-stat-val">${articles.length}</div><div class="ent-stat-lbl">Articles</div></div>
+        <div class="ent-stat" data-btip="${_makeTip({label:'Total AVE: '+aveNum})}"><div class="ent-stat-val">${aveDisp}</div><div class="ent-stat-lbl">Total AVE</div></div>`;
+  const headInner=`<span class="ent-detail-avatar" style="background:${c.bg};color:${c.fg}">${name.charAt(0)}</span>
       <div class="ent-detail-body-info">
         ${titleHtml}
-        ${renderSocialIcons()}
+        ${_socOne?renderOneSocialIcon(name):renderSocialIcons()}
       </div>
-      <div class="ent-detail-stats">
-        <div class="ent-stat" data-btip="${_makeTip({label:scoreLabel+': '+score})}"><div class="ent-stat-val">${score}</div><div class="ent-stat-lbl">${scoreLabel}</div></div>
-        <div class="ent-stat" data-btip="${_makeTip({label:'Articles: '+articles.length})}"><div class="ent-stat-val">${articles.length}</div><div class="ent-stat-lbl">Articles</div></div>
-        <div class="ent-stat" data-btip="${_makeTip({label:'Total AVE: '+aveNum})}"><div class="ent-stat-val">${aveDisp}</div><div class="ent-stat-lbl">Total AVE</div></div>
-      </div>
-    </div>
-    ${tabBar}
-    <div class="ent-detail-scroll"><div class="ent-scroll-sentinel"></div>${paneHtml}</div>`;
+      <div class="ent-detail-stats${_socOne?' ent-detail-stats--5':''}">
+        ${statsHtml}
+      </div>`;
+  const scrollInner=`<div class="ent-scroll-sentinel"></div><div class="ent-pane-anim${animate?' pane-in':''}">${paneHtml}</div>`;
+  const head=panel.querySelector('.ent-detail-head');
+  if(head){
+    // Shell already built → update header/tabs in place and swap ONLY the data pane (animated), so the column doesn't reload
+    head.classList.remove('scrolled');
+    head.innerHTML=headInner;
+    const tabsEl=panel.querySelector('.ent-tabs');if(tabsEl)tabsEl.innerHTML=tabItems;
+    const scroller=panel.querySelector('.ent-detail-scroll');
+    if(scroller){scroller.innerHTML=scrollInner;scroller.scrollTop=0;}
+  }else{
+    panel.innerHTML=`<div class="ent-detail-head">${headInner}</div>
+    <div class="mm-tabs ent-tabs">${tabItems}</div>
+    <div class="ent-detail-scroll">${scrollInner}</div>`;
+  }
   initIcons();
   _wireEntityShrinkObserver(panel);
   if(activeTab==='perf') mountEntityChart(kind,name);
@@ -5891,15 +6456,67 @@ function _wireEntityShrinkObserver(panel){
   _entShrinkObs.set(panel,obs);
 }
 
+// Shared View influencers: re-skin a news article into the social table columns.
+const _INFL_PLAT_LABEL={'fa-facebook-f':'Facebook','fa-x-twitter':'X (Twitter)','fa-instagram':'Instagram','fa-youtube':'YouTube','fa-reddit-alien':'Reddit','fa-tiktok':'TikTok'};
+function _inflHash(s){let h=0;s=String(s||'');for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h>>>0;}
+function _inflPostReach(name,d){const seed=_inflHash(name+'|'+(d.title||''));return fmtCount(300+seed%280000);}   // stable per post
+function _inflPostEng(name,d){const seed=_inflHash((d.title||'')+'|'+name);return 1+(seed>>4)%98;}
+function _inflSrcCell(name){const [c,col]=_oneSocFor(name);const label=_INFL_PLAT_LABEL[c]||'Social';const ico=c==='fa-x-twitter'?X_SVG:`<i class="fa-brands ${c}" style="color:${col}"></i>`;return `<span class="soc-src" title="${label}">${ico}</span>`;}
 // ── Pane: Articles (default) ──
 function _paneArticles(kind,name,articles){
   const pageMap=kind==='pub'?pubDetPage:authorDetPage;
-  const total=articles.length;
+  const _social=!!(window.WS_DATA&&window.WS_DATA.socialMentions&&kind==='author');
+  const rows=_social?window.WS_DATA.socialMentions:articles;   // Shared influencers → the real social posts feed
+  const total=rows.length;
   const pages=Math.max(1,Math.ceil(total/ENT_PER_PAGE));
   let page=Math.max(0,Math.min(pageMap[name]||0,pages-1));
   pageMap[name]=page;
   const start=page*ENT_PER_PAGE,end=Math.min(start+ENT_PER_PAGE,total);
-  const pageRows=articles.slice(start,end);
+  const pageRows=rows.slice(start,end);
+  const _cols=_social?9:8;
+  const theadHtml=_social
+    ? `<th style="width:46px"><span class="tcb"></span></th>
+            <th style="width:140px"><span class="th-inner">Estimated Reach <i data-lucide="info" class="info-i"></i></span></th>
+            <th style="width:110px">Eng Score</th>
+            <th>Post</th>
+            <th style="width:90px">Source</th>
+            <th style="width:130px">Sentiment</th>
+            <th style="width:180px">Influencer</th>
+            <th style="width:170px">As of</th>
+            <th style="width:40px"></th>`
+    : `<th style="width:46px"><span class="tcb"></span></th>
+            <th style="width:130px"><span class="th-inner">Story Value <i data-lucide="info" class="info-i"></i></span></th>
+            <th style="width:130px">AVE</th>
+            <th>Headline</th>
+            <th style="width:220px"><span class="th-inner">Media Outlet <i data-lucide="filter" class="th-filter icon-sm"></i></span></th>
+            <th style="width:130px">Sentiment</th>
+            <th style="width:170px">Date Published</th>
+            <th style="width:40px"></th>`;
+  const rowsHtml=pageRows.length===0
+    ? `<tr><td colspan="${_cols}" style="text-align:center;padding:24px;color:var(--muted);font-size:12.5px">No ${_social?'posts':'articles'} found</td></tr>`
+    : pageRows.map((d,i)=>_social
+      ? `<tr class="ent-art-row" onclick="openInflSocial(${start+i})">
+              <td><span class="tcb"></span></td>
+              <td><span class="sv-val">${d.reach}</span></td>
+              <td><span class="eng-score">${d.engScore}</span></td>
+              <td><div class="hl-cell"><span class="hl-text soc-post ent-hl-clamp" data-btip="${_makeTip({detail:d.post||''})}">${d.post||''}</span></div></td>
+              <td><span class="soc-src" title="${(SOCIAL_PLATFORMS[d.platform]||{}).label||d.platform||'—'}">${socIcon(SOCIAL_PLATFORMS[d.platform]||{icon:'fa-globe',color:'#6b7280',label:d.platform||'—'})}</span></td>
+              <td class="tbl-sent-cell">${sentimentCellHtml(d.sentiment)}</td>
+              <td><span class="soc-influencer">${d.influencer||''}</span></td>
+              <td><div class="date-main">${d.date||'—'}</div><div class="date-ago">${d.ago||''}</div></td>
+              <td><span class="row-dots">⋯</span></td>
+            </tr>`
+      : `<tr class="ent-art-row" onclick="openEntArticle('${kind}',${attrJson(name)},${start+i})">
+              <td><span class="tcb"></span></td>
+              <td><span class="sv-val">${(d.sv||0).toFixed(2)}</span></td>
+              <td><span class="ave-val">${d.ave||'—'}</span></td>
+              <td><div class="hl-cell"><span class="hl-icon type-${articleType(d)}" data-btip="${_makeTip({label:typeLabel(d)})}"><i data-lucide="${typeIcon(d)}"></i></span><span class="hl-text ent-hl-clamp">${d.title}</span></div></td>
+              <td><div class="pub-name">${kind==='pub'?name:(d.sub||'—')}</div><div class="pub-cat">${d.section||''}</div></td>
+              <td class="tbl-sent-cell">${sentimentCellHtml(d.brand)}</td>
+              <td><div class="date-main">${d.date||'—'}</div><div class="date-ago">${d.ago||''}</div></td>
+              <td><span class="row-dots">⋯</span></td>
+            </tr>`
+    ).join('');
   let pagerHtml='';
   if(total>ENT_PER_PAGE){
     let btns=`<button class="pgb arrow" onclick="goEntityPage('${kind}',${attrJson(name)},${page-1})"${page<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
@@ -5931,28 +6548,10 @@ function _paneArticles(kind,name,articles){
     </div>
     <div class="tbl-card">
       <div class="tbl-scroll">
-        <table class="tbl ent-tbl">
-          <thead><tr>
-            <th style="width:46px"><span class="tcb"></span></th>
-            <th style="width:130px"><span class="th-inner">Story Value <i data-lucide="info" class="info-i"></i></span></th>
-            <th style="width:130px">AVE</th>
-            <th>Headline</th>
-            <th style="width:220px"><span class="th-inner">Media Outlet <i data-lucide="filter" class="th-filter icon-sm"></i></span></th>
-            <th style="width:130px">Sentiment</th>
-            <th style="width:170px">Date Published</th>
-            <th style="width:40px"></th>
-          </tr></thead>
+        <table class="tbl ent-tbl${_social?' ent-tbl-social':''}">
+          <thead><tr>${theadHtml}</tr></thead>
           <tbody>
-            ${pageRows.length===0?`<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);font-size:12.5px">No articles found</td></tr>`:pageRows.map((d,i)=>`<tr class="ent-art-row" onclick="openEntArticle('${kind}',${attrJson(name)},${start+i})">
-              <td><span class="tcb"></span></td>
-              <td><span class="sv-val">${(d.sv||0).toFixed(2)}</span></td>
-              <td><span class="ave-val">${d.ave||'—'}</span></td>
-              <td><div class="hl-cell"><span class="hl-icon type-${articleType(d)}" data-btip="${_makeTip({label:typeLabel(d)})}"><i data-lucide="${typeIcon(d)}"></i></span><span class="hl-text ent-hl-clamp">${d.title}</span></div></td>
-              <td><div class="pub-name">${kind==='pub'?name:(d.sub||'—')}</div><div class="pub-cat">${d.section||''}</div></td>
-              <td class="tbl-sent-cell">${sentimentCellHtml(d.brand)}</td>
-              <td><div class="date-main">${d.date||'—'}</div><div class="date-ago">${d.ago||''}</div></td>
-              <td><span class="row-dots">⋯</span></td>
-            </tr>`).join('')}
+            ${rowsHtml}
           </tbody>
         </table>
       </div>
@@ -6001,29 +6600,24 @@ function _renderEntPrevList(){
       <div class="ent-stat"><div class="ent-stat-val">${arts.length}</div><div class="ent-stat-lbl">Articles</div></div>
       <div class="ent-stat"><div class="ent-stat-val">${aveNum}</div><div class="ent-stat-lbl">Total AVE</div></div>
     </div>`;
-  const total=arts.length,pages=Math.max(1,Math.ceil(total/ENT_PREV_PER_PAGE));
-  let page=Math.max(0,Math.min(entPrevPage,pages-1));entPrevPage=page;
-  const start=page*ENT_PREV_PER_PAGE,pageArts=arts.slice(start,start+ENT_PREV_PER_PAGE);
-  const rows=pageArts.map((a,i)=>{
-    const gi=start+i;
-    return `<div class="spot-cov-li ent-prev-li${gi===idx?' active':''}" onclick="selectEntArticle(${gi})">
-      <span class="md-li-ico type-${articleType(a)}"><i data-lucide="${typeIcon(a)}"></i></span>
-      <div class="spot-cov-body"><div class="spot-cov-hl">${a.title}</div></div>
-      <span class="ent-prev-trail"><span class="ent-prev-sent">${sentimentCellHtml(a.brand)}</span><span class="row-dots" title="More" onclick="event.stopPropagation()">⋯</span></span>
-    </div>`;
-  }).join('');
-  left.innerHTML=`<div class="spot-panel ctx-act">
-    <div class="ent-prev-head">
+  // Reuse the shared ti-arttbl (select mode) for the article list; keep the rich entity header above it.
+  const list=arts.map((d,i)=>Object.assign({},d,{_ei:i}));
+  insSelArt=list[idx]||list[0]||null;
+  left.innerHTML=`<div class="ent-prev-head">
       <div class="ent-prev-head-l"><div class="spot-panel-title" data-btip="${_makeTip({label:name})}">${name}</div>${renderSocialIcons()}</div>
       ${statsHtml}
     </div>
-    <div class="spot-cov-tbl">
-      <div class="spot-cov-thd"><span>Headline</span><span class="ent-prev-trail"><span class="ent-prev-sent">Sentiment</span><span class="row-dots" aria-hidden="true" style="visibility:hidden">⋯</span></span></div>
-      <div class="spot-cov-list">${rows}</div>
-    </div>
-    ${_covPager(page,total,pages,'goEntPrevPage',ENT_PREV_PER_PAGE)}
-  </div>`;
+    ${renderArtTable(list,{mode:'select',onSelect:'openEntArticleRail'})}`;
 }
+// Light select from the entity preview rail: update middle/right + move the highlight (no rebuild)
+window.openEntArticleRail=function(pos){
+  const d=insArts[pos];if(!d||!entPrev)return;
+  entPrev.idx=d._ei;insPrevIdx=pos;insSelArt=d;
+  renderInlineDetail(getEntityArticles(entPrev.kind,entPrev.name)[d._ei]);
+  const wrap=document.querySelector('#adp-col-left .ti-arttbl-wrap');
+  if(wrap)wrap.querySelectorAll('.ti-arttbl-row').forEach(r=>r.classList.toggle('selected',+r.dataset.i===pos));
+  initIcons();
+};
 function closeEntArticle(){
   document.querySelectorAll('.ent-detail-open').forEach(p=>p.classList.remove('ent-detail-open'));
   const sb=document.querySelector('.sidebar');   // restore the nav unless it was already collapsed
@@ -6117,13 +6711,14 @@ function buildAuthors(){
   const map={};
   mentionData.forEach(d=>{
     const name=d.author;if(!name)return;
-    if(!map[name])map[name]={name,count:0,sv:0};
-    map[name].count++;map[name].sv+=(d.sv||0);
+    if(!map[name])map[name]={name,count:0,sv:0,ave:0};
+    map[name].count++;map[name].sv+=(d.sv||0);map[name].ave+=parseAve(d.ave);
   });
   const list=Object.values(map).map(p=>({
     name:p.name,
     count:p.count,
     totalSV:+p.sv.toFixed(2),
+    totalAve:p.ave,
     score:+((p.sv/p.count)*2).toFixed(2)   // synthesized Author Score = avg Story Value ×2
   }));
   if(authSort==='count')list.sort((a,b)=>b.count-a.count);
@@ -6139,7 +6734,7 @@ function gotoAuthorPage(n){
   const sc=document.querySelector('.app-body');if(sc)sc.scrollTop=0;
 }
 let authorSel=null;
-function selAuthor(name){if(authorSel!==name){authorDetPage[name]=0;authorTab[name]=authorTab[name]||'articles';}authorSel=name;renderAuthors();}
+function selAuthor(name){if(authorSel!==name){authorDetPage[name]=0;authorTab[name]=authorTab[name]||'articles';}authorSel=name;selectEntityRow('author',name);}
 function renderAuthors(){
   const scroll=document.getElementById('author-list-scroll');if(!scroll)return;
   const q=authSearch.trim().toLowerCase();
@@ -6149,15 +6744,17 @@ function renderAuthors(){
   const start=authPage*AUTH_PER_PAGE,end=Math.min(start+AUTH_PER_PAGE,total);
   const page=all.slice(start,end);
   if(authorSel===null||!all.find(p=>p.name===authorSel))authorSel=all[0]?all[0].name:null;
+  const _shared=!!(window.WS_DATA&&window.WS_DATA.socialMentions);
   scroll.innerHTML=page.map((p,i)=>{
     const c=authColor(p.name),sel=p.name===authorSel?' selected':'';
-    return`<div class="ent-row${sel}" onclick="selAuthor(${attrJson(p.name)})">
-      <span class="ent-row-avatar" style="background:${c.bg};color:${c.fg}">${p.name.charAt(0)}</span>
+    return`<div class="ent-row${sel}" data-name="${p.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" onclick="selAuthor(${attrJson(p.name)})">
+      <span class="ent-row-avatar" style="background:${c.bg};color:${c.fg}">${p.name.charAt(0)}${_shared?oneSocialBadge(p.name):''}</span>
       <div class="ent-row-body">
         <div class="ent-row-name" title="${p.name}">${p.name}</div>
         <div class="ent-row-meta">${p.count} article${p.count!==1?'s':''}</div>
       </div>
-      <span class="ent-row-score">${p.score.toFixed(2)}</span>
+      <span class="ent-row-val">${p.score.toFixed(2)}</span>
+      <span class="ent-row-val ent-row-ave">${fmtAve(p.totalAve)}</span>
     </div>`;
   }).join('');
   const countEl=document.getElementById('author-list-count');if(countEl)countEl.textContent=total;
@@ -6174,7 +6771,7 @@ function renderAuthors(){
       btns.innerHTML=h;
     }
   }
-  renderEntityDetail('author',authorSel);
+  renderEntityDetail('author',authorSel,true);
   initIcons();
 }
 // ── CATEGORIES PAGE ──

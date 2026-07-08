@@ -104,6 +104,7 @@
           <div class="fc-icon-btn"><i data-lucide="bookmark" class="icon-lg"></i></div>
           <div class="fc-icon-btn"><i data-lucide="filter" class="icon-lg"></i></div>
           <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+            <button class="ent-preview-back" onclick="closeEntArticle()"><i data-lucide="arrow-left" class="icon-lg"></i> Back to influencers</button>
             <select class="pub-sort" onchange="setAuthorSort(this.value)" aria-label="Sort influencers">
               <option value="score">Highest Influencer Score</option>
               <option value="count">Most Articles</option>
@@ -121,8 +122,10 @@
       </div>
       <div class="ent-body">
         <div class="ent-list-panel">
-          <div class="ent-list-header">
-            <span class="ent-list-header-label">Influencers <span class="ent-list-count" id="author-list-count"></span></span>
+          <div class="ent-list-cols">
+            <span class="ent-list-cols-label">Influencer</span>
+            <span class="ent-list-cols-val">Score</span>
+            <span class="ent-list-cols-val">Total AVE</span>
           </div>
           <div class="ent-list-scroll" id="author-list-scroll"></div>
           <div class="ent-list-pager">
@@ -131,6 +134,15 @@
           </div>
         </div>
         <div class="ent-detail-panel" id="author-detail-panel"></div>
+      </div>
+
+      <!-- Post preview (social 3-column: post list · analytics · post content card) -->
+      <div class="ent-preview-wrap">
+        <div class="art-detail-layout" id="article-detail-panel">
+          <div class="art-col-left" id="adp-col-left"></div>
+          <div class="art-col-mid" id="adp-col-mid"></div>
+          <div class="art-col-right" id="adp-col-right"></div>
+        </div>
       </div>
     </div>
   </div><!-- /main -->
