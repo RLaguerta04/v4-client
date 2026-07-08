@@ -278,12 +278,12 @@ function renderSocialArticleList(articles,listId,state){
     </tr>`;
   }).join('');
   const table=filtered.length===0?'':`<table class="tbl match-tbl"><thead><tr>
-    <th>Post</th>
-    <th style="width:54px">Source</th>
-    <th style="width:120px">Sentiment</th>
-    <th style="width:140px">Influencer</th>
-    <th style="width:130px">Match</th>
-    <th style="width:110px">As of</th>
+    <th style="width:40%">Post</th>
+    <th style="width:8%">Source</th>
+    <th style="width:12%">Sentiment</th>
+    <th style="width:16%">Influencer</th>
+    <th style="width:13%">Match</th>
+    <th style="width:11%">As of</th>
   </tr></thead><tbody>${rows}</tbody></table>`;
   return `<div class="article-list">
     ${controls}
