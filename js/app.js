@@ -101,11 +101,12 @@ function renderTrendRows(){
         <div class="tr-detail-inner">
           <div class="chips" style="margin-bottom:16px">${s.chips.map(ch=>`<span class="chip ${ch.cls}">${ch.t}</span>`).join('')}</div>
           <div class="detail-actions">
-            <button class="btn-nl" onclick="event.stopPropagation();showNewsletter(trendStories.find(x=>x.id===${s.id}))"><i data-lucide="mail"></i> Send as newsletter</button>
-            <button class="btn-primary" onclick="event.stopPropagation();showAIReport(trendStories.find(x=>x.id===${s.id}))"><i data-lucide="file-text"></i> Generate AI report</button>
+            <button class="btn-nl" onclick="event.stopPropagation();showNewsletter(trendStories.find(x=>x.id===${s.id}))"><i data-lucide="mail" class="icon-lg"></i> Send as newsletter</button>
+            <button class="btn-primary" onclick="event.stopPropagation();showAIReport(trendStories.find(x=>x.id===${s.id}))"><i data-lucide="file-text" class="icon-lg"></i> Generate AI report</button>
             <button class="${s.tracked?'btn-track tracked':'btn-track'}" id="td-track-${s.id}" onclick="event.stopPropagation();trackTrend(${s.id})">
-              <i data-lucide="${s.tracked?'check':'megaphone'}"></i> ${s.tracked?'Tracked':'Track this story'}
+              <i data-lucide="${s.tracked?'check':'megaphone'}" class="icon-lg"></i> ${s.tracked?'Tracked':'Track this story'}
             </button>
+            <button class="btn-primary" onclick="event.stopPropagation();exportStory(${s.id})"><i data-lucide="download" class="icon-lg"></i> Export</button>
           </div>
           <div class="why-strip">
             <span class="why-strip-lbl"><i data-lucide="zap"></i> Why this was picked</span>
@@ -851,7 +852,8 @@ function openExport(){
 const COMPARE_CATS=[
   {group:'Company News - DITO Telecommunity',topics:['Brand Identity','Awards & Recognition','CSR & Public Affairs','Product & Plans','Connectivity & Network','Products & Plans','Corporate & Investors','Tech & Innovation','Regulatory & Policy']},
   {group:'Competitor News - Globe Telecom',topics:['Brand and Identity','Awards and Recognition','CSR and Public Affairs','Connectivity and Network','Products and Plans','Corporate and Investors','Tech and Innovation','Regulatory and Policy']},
-  {group:'Competitor News - PLDT / Smart Communications',topics:['(Brand & Identity)','(Awards & Recognition)','(CSR & Public Affairs)','(Connectivity & Network)','(Products & Plans)','(Corporate & Investors)','(Tech & Innovation)','(Regulatory & Policy)','(Connectivity & Speed)','(Mobile & Plans)','(Industry & Market)','(Awards & Benchmarks)','(CSR & Social Impact)']}
+  {group:'Competitor News - PLDT / Smart Communications',topics:['(Brand & Identity)','(Awards & Recognition)','(CSR & Public Affairs)','(Connectivity & Network)','(Products & Plans)','(Corporate & Investors)','(Tech & Innovation)','(Regulatory & Policy)','(Connectivity & Speed)','(Mobile & Plans)','(Industry & Market)','(Awards & Benchmarks)','(CSR & Social Impact)']},
+  {group:'Competitor News - Converge ICT',topics:['Brand & Identity','Awards & Recognition','CSR & Public Affairs','Connectivity & Network','Products & Plans','Corporate & Investors','Tech & Innovation','Regulatory & Policy']}
 ];
 function renderCompareModal(){
   const body=document.getElementById('cmp-body');if(!body)return;
@@ -2635,6 +2637,8 @@ const ATicn={'TV':{cls:'type-tv',icon:'tv'},'Online':{cls:'type-online',icon:'ne
 const _barTips=new Map();
 let _barTipId=0;
 function _makeTip(data){const id='bt'+(++_barTipId);_barTips.set(id,data);return id;}
+// Static tip entries (for markup that can't call _makeTip at build time)
+_barTips.set('btip-regen',{label:'Regenerate brief'});
 if(document.getElementById('page-mentions')){
   renderTrendRows();
   applyAveColor();
@@ -2810,6 +2814,7 @@ function renderTracker(){
         <div class="ac-checkbox${isChecked?' checked':''}" onclick="event.stopPropagation();toggleAtCard(${a.id})">${isChecked?'<i data-lucide="check" style="width:10px;height:10px"></i>':''}</div>
         <div class="ac-icon ${tc.icls}" data-btip="${_makeTip({label:a.type})}"><i data-lucide="${tc.icon}"></i></div>
         <div class="card-acts" onclick="event.stopPropagation()">
+          <div class="card-act-btn exp" onclick="downloadActivityCsv(${a.id})" title="Export CSV"><i data-lucide="download" style="width:10px;height:10px"></i></div>
           <div class="card-act-btn edit" onclick="showEdit(${a.id})" title="Edit"><i data-lucide="pencil" style="width:10px;height:10px"></i></div>
           <div class="card-act-btn del" onclick="confirmDelete(${a.id})" title="Delete"><i data-lucide="trash-2" style="width:10px;height:10px"></i></div>
         </div>
@@ -2913,7 +2918,7 @@ function renderDetailInner(a){
         <button class="dh-kebab" id="dh-kebab-${a.id}" onclick="toggleDhMenu(event,${a.id})" title="More actions" aria-label="More actions"><i data-lucide="more-horizontal"></i></button>
         <div class="dh-menu" id="dh-menu-${a.id}">
           ${!freshTrack[a.id]?`<div class="dh-menu-item" onclick="dhAction(event,${a.id},'edit')"><i data-lucide="pencil"></i> Edit activity</div>
-          <div class="dh-menu-item" onclick="dhAction(event,${a.id},'csv')"><i data-lucide="download"></i> Download CSV</div>
+          <div class="dh-menu-item" onclick="dhAction(event,${a.id},'csv')"><i data-lucide="download"></i> Export</div>
           <div class="dh-menu-sep"></div>`:''}
           <div class="dh-menu-item danger" onclick="dhAction(event,${a.id},'delete')"><i data-lucide="trash-2"></i> Delete activity</div>
         </div>
@@ -3276,6 +3281,29 @@ function downloadActivityCsv(id){
   const url=URL.createObjectURL(blob);
   const link=document.createElement('a');
   link.href=url;link.download=(a.title||'activity').replace(/[^a-z0-9-_ ]/gi,'').slice(0,60)+' - matches.csv';
+  document.body.appendChild(link);link.click();document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+// Export a single brief story's coverage as CSV. Used by the Spotlight and Trending now
+// action rows; matches the sibling buttons (newsletter / AI report / track) which also
+// act on one story. Workspace-aware via trendStories (MediaWatch default or WS override).
+function exportStory(id){
+  const stories=(typeof trendStories!=='undefined'&&trendStories)||[];
+  const s=stories.find(x=>x.id===id);if(!s)return;
+  const esc=v=>{const t=String(v==null?'':v);return /[",\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;};
+  const lines=[["MEDIA METER — STORY COVERAGE"]];
+  lines.push(['Story',s.hl||'']);
+  lines.push(['Tier',s.tier||'']);
+  lines.push(['Sentiment',(s.chips&&s.chips[0]&&s.chips[0].t)||'']);
+  lines.push(['Total AVE',s.ave||'']);
+  lines.push(['Articles',(s.articles||[]).length]);
+  lines.push([],['Headline','Media','Source','Date','AVE','Similarity']);
+  (s.articles||[]).forEach(a=>lines.push([a.hl||'',a.media||'',a.source||'',a.date||'',a.ave||'',a.score!=null?a.score+'%':'']));
+  const csv=lines.map(r=>r.map(esc).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;link.download=(s.hl||'story').replace(/[^a-z0-9-_ ]/gi,'').slice(0,60)+' - coverage.csv';
   document.body.appendChild(link);link.click();document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
@@ -4153,8 +4181,8 @@ function refreshKPIs(){
     },i*120);
   });
 }
-// ── Brief scan intro animation ──
-(function(){
+// ── Brief scan intro animation (replayable via the regenerate button) ──
+function runBriefScan(){
   const phases=[
     {pct:15, label:'Scanning coverage...',  sub:'Fetching latest mentions',       count:12},
     {pct:38, label:'Analysing sources...',  sub:'Cross-referencing publications', count:28},
@@ -4171,6 +4199,16 @@ function refreshKPIs(){
     {src:'Rappler',                   status:'scanning', tier:'',   time:''},
   ];
   let phaseIdx=0,srcIdx=0;
+  // reset overlay + reveal state so the scan can replay on regenerate
+  const _bso=document.getElementById('bso');
+  if(_bso){_bso.style.display='flex';_bso.classList.remove('hide');}
+  const _feed=document.getElementById('bso-feed');if(_feed)_feed.innerHTML='';
+  const _bar=document.getElementById('bso-bar');if(_bar)_bar.style.width='0%';
+  const _ctr=document.getElementById('bso-counter');if(_ctr)_ctr.textContent='0';
+  ['.b-title-row','.b-spark-row'].forEach(s=>{const el=document.querySelector(s);if(el)el.classList.remove('revealed');});
+  ['.b-ai-tag','.b-trending-flag'].forEach(s=>{const el=document.querySelector(s);if(el)el.classList.remove('chip-in');});
+  // Zero out stat values so no final number is ever visible before count-up runs
+  document.querySelectorAll('.brief-stats .ss-num').forEach(el=>{el.textContent='0';});
   function addSourceRow(){
     const feed=document.getElementById('bso-feed');
     if(!feed||srcIdx>=sources.length)return;
@@ -4218,12 +4256,19 @@ function refreshKPIs(){
       },600);
     }
   }
-  window.addEventListener('DOMContentLoaded',()=>{
-    // Zero out stat values so no final number is ever visible before count-up runs
-    document.querySelectorAll('.brief-stats .ss-num').forEach(el=>{el.textContent='0';});
-    setTimeout(runPhase,300);
-  });
-})();
+  setTimeout(runPhase,300);
+}
+window.addEventListener('DOMContentLoaded',runBriefScan);
+// Regenerate button: replay the scan + refresh KPIs, and bump the freshness label
+function regenerateBrief(e){
+  if(e&&e.stopPropagation)e.stopPropagation();
+  const btn=e&&e.currentTarget;
+  if(btn){btn.classList.remove('spin');void btn.offsetWidth;btn.classList.add('spin');setTimeout(()=>btn.classList.remove('spin'),1000);}
+  const u=document.querySelector('.b-updated');
+  if(u)u.innerHTML='<i data-lucide="clock" class="icon-sm"></i> Updated just now';
+  runBriefScan();
+  if(window.initIcons)initIcons();
+}
 // ── ⌘K / Ctrl+K → focus filter search ──
 document.addEventListener('keydown',function(e){
   if((e.metaKey||e.ctrlKey)&&e.key==='k'){
@@ -4843,7 +4888,8 @@ function initDashboard(){
     // Focus the clicked element + dim the rest of the explore view (after tiShow, so tiSpotlight's clear doesn't wipe it)
     if(focusEl){
       focusEl.classList.add('is-focused');
-      const inner=focusEl.closest('.db-explore-inner,.db-content-inner');
+      // .cmp-metric-view first so per-metric compare views spotlight the clicked card, not the whole view wrapper
+      const inner=focusEl.closest('.cmp-metric-view,.db-explore-inner,.db-content-inner');
       let host=focusEl;while(host&&host.parentElement!==inner)host=host.parentElement;
       if(host)host.classList.add('has-focus');
       setTimeout(()=>focusEl.scrollIntoView({behavior:'smooth',block:'center'}),60);   // center the focused card
@@ -5315,6 +5361,31 @@ function initDashboard(){
     );
   }
   dbMount('db-pubscore',RC(PubScoreCard));
+  // Bar Chart tab (mirrors the Author card): Article Count per publisher, descending
+  const pubScoreDesc=[...pubScoreData].sort((a,b)=>b.articles-a.articles);
+  function PubBarTip(o){
+    if(!o||!o.active||!o.payload||!o.payload.length)return null;
+    return tipBox(
+      RC('div',{style:{fontWeight:600,color:'#fff',marginBottom:5,fontSize:12.5}},o.label),
+      tlRow('#b9a4f7','Article Count',o.payload[0].value));
+  }
+  dbMount('db-pubscore-bar',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+    RC(BarChart,{data:pubScoreDesc,layout:'vertical',margin:{top:16,right:24,bottom:24,left:8}},
+      RC(CartesianGrid,{horizontal:false,stroke:'#f0f1f3'}),
+      RC(XAxis,{type:'number',dataKey:'articles',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'Article Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
+      RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:140}),
+      RC(Tooltip,{content:PubBarTip,cursor:{fill:'rgba(24,29,38,0.04)'}}),
+      RC(Bar,{dataKey:'articles',maxBarSize:26,radius:[0,4,4,0]},
+        ...pubScoreDesc.map((a,i)=>RC(Cell,{key:i,fill:a.color})),
+        RC(LabelList,{dataKey:'articles',position:'right',style:{fontSize:11,fontWeight:600,fill:'#6b7280'}})
+      )
+    )));
+  window.setPubScoreTab=function(t){
+    const bub=document.getElementById('db-pubscore'),bar=document.getElementById('db-pubscore-bar');
+    if(bub)bub.style.display=t==='bubble'?'':'none';
+    if(bar)bar.style.display=t==='bar'?'':'none';
+    document.querySelectorAll('#db-pubscore-tabs .db-tab2').forEach(el=>el.classList.toggle('on',el.dataset.t===t));
+  };
 
   // ── Top Publishers (timeline swimlane: published date per publisher) ──
   const tpMk=(day)=>new Date(2026,5,day).getTime();   // June 2026
@@ -5638,6 +5709,26 @@ function initDashboard(){
           RC(Area,{dataKey:'count',type:'monotone',stroke:'#b9a4f7',fill:'#ece6fb',fillOpacity:0.6}))
       ));
   }
+  // Per-category Pubscore Distribution for the compare "Top Media Exposure by Medium" view
+  const CMP_PUBSCORE_DIST=[[14,24,0,10,0,0,0,0,0,4,1],[67,108,26,52,4,0,0,0,0,10,13]];
+  function CmpPubscoreDist(props){
+    const ci=(props&&props.ci)||0;
+    const data=(CMP_PUBSCORE_DIST[ci]||CMP_PUBSCORE_DIST[0]).map((c,v)=>({score:v.toFixed(1),count:c}));
+    const [hov,setHov]=React.useState(null);
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data,margin:{top:24,right:14,bottom:18,left:6},onMouseLeave:()=>setHov(null)},
+        RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
+        RC(XAxis,{dataKey:'score',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'PUBLICATION SCORE',position:'insideBottom',offset:-12,fontSize:10,fill:'#9ca3af'}}),
+        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:38,label:{value:'ARTICLE COUNT',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
+        RC(Tooltip,{cursor:false}),
+        RC(Bar,{dataKey:'count',maxBarSize:34,radius:[3,3,0,0],isAnimationActive:false,cursor:'pointer',onMouseEnter:(d,i)=>setHov(i),onClick:(d,i,e)=>{if(!d)return;const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;window.openInsListPanel(_insSample('pubscore-'+d.score,8),'Publication Score '+d.score,'Pubscore Distribution',card);}},
+          ...data.map((d,i)=>RC(Cell,{key:i,fill:(hov===null||hov===i)?'#6d5ae6':'#c9c0f2'})),
+          RC(LabelList,{dataKey:'count',position:'top',style:{fontSize:11,fontWeight:600,fill:'#6b7280'}})
+        ),
+        RC(Brush,{dataKey:'score',height:28,stroke:'#b9a4f7',travellerWidth:8,tickFormatter:()=>''},
+          RC(Area,{dataKey:'count',type:'monotone',stroke:'#b9a4f7',fill:'#ece6fb',fillOpacity:0.6}))
+      ));
+  }
   window.openExposureMediumExplore=function(){
     const wrap=_showExplore('db-expmed-explore');if(!wrap)return;
     dbMount('db-expmed-pubscore',RC(PubscoreDistChart));
@@ -5746,7 +5837,7 @@ function initDashboard(){
   function renderEntMap(hostId,data){
     const grid=document.getElementById(hostId);if(!grid)return;
     const left=data.slice(0,2),right=data.slice(2),sum=a=>a.reduce((s,e)=>s+e.value,0);
-    const cell=e=>`<div class="db-entmap-cell" style="flex:${e.value};background:${e.color};cursor:pointer" onclick="openInsEntity('${e.name}')" data-btip="${_makeTip({label:e.name+' ('+e.value.toFixed(2)+'%)',detail:e.desc})}">${e.name} (${e.value.toFixed(2)}%)</div>`;
+    const cell=e=>`<div class="db-entmap-cell" style="flex:${e.value};background:${e.color};cursor:pointer" onclick="entDrill(this.closest('.db-entmap'),'${e.name}','${e.color}')" data-btip="${_makeTip({label:e.name+' ('+e.value.toFixed(2)+'%)',detail:e.desc})}">${e.name} (${e.value.toFixed(2)}%)</div>`;
     grid.innerHTML=`<div class="db-entmap-col" style="flex:${sum(left)}">${left.map(cell).join('')}</div><div class="db-entmap-col" style="flex:${sum(right)}">${right.map(cell).join('')}</div>`;
     const leg=document.getElementById('db-entities-legend');
     if(leg)leg.innerHTML=data.map(e=>`<span class="db-ent-leg-item"><span class="sq" style="background:${e.color}"></span>${e.name}</span>`).join('');
@@ -5778,17 +5869,22 @@ function initDashboard(){
   }
   function renderCompareOverview(){
     const host=document.getElementById('db-compare-overview');if(!host)return;
-    const rows=CMP_OVERVIEW.map(r=>`<tr>
-      <td class="cmp-ov-lbl">${r[0]}</td>
-      <td class="cmp-ov-cell"><div class="cmp-ov-val">${r[1][0]}</div>${r[3][0]?`<div class="cmp-ov-sub">${r[3][0]}</div>`:''}${r[1][1]?`<span class="cmp-ov-pct">${r[1][1]}</span>`:''}</td>
-      <td class="cmp-ov-cell"><div class="cmp-ov-val">${r[2][0]}</div>${r[3][1]?`<div class="cmp-ov-sub">${r[3][1]}</div>`:''}${r[2][1]?`<span class="cmp-ov-pct">${r[2][1]}</span>`:''}</td>
-    </tr>`).join('');
-    host.innerHTML=`<table class="cmp-ov-tbl"><thead><tr><th>Metric</th>${_cmpCats.map(c=>`<th style="color:${c.color}">${c.name}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+    const rows=CMP_OVERVIEW.map(r=>{
+      const cells=_cmpCats.map((c,ci)=>{
+        const v=r[1+(ci%2)]||['',''],sub=(r[3]||[])[ci%2]||'';
+        return `<td class="cmp-ov-cell"><div class="cmp-ov-top"><span class="cmp-ov-val">${v[0]}</span>${v[1]?`<span class="cmp-ov-pct">${v[1]}</span>`:''}</div>${sub?`<div class="cmp-ov-sub">${sub}</div>`:''}</td>`;
+      }).join('');
+      return `<tr class="cmp-ov-row" onclick="openCompareDetail('${r[0].replace(/'/g,"\\'")}',this)"><td class="cmp-ov-lbl">${r[0]}</td>${cells}</tr>`;
+    }).join('');
+    const metricW=_cmpCats.length>=4?'22%':_cmpCats.length===3?'28%':'38%';   // narrow the Metric column as topics grow
+    host.innerHTML=`<table class="cmp-ov-tbl"><thead><tr><th style="width:${metricW}">Metric</th>${_cmpCats.map(c=>`<th style="color:${c.color}">${c.name}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
   }
   const cmpTimelineData=[{date:'Jun 30',c0:45,c1:52},{date:'Jul 01',c0:52,c1:70},{date:'Jul 02',c0:40,c1:55},{date:'Jul 03',c0:30,c1:48},{date:'Jul 04',c0:8,c1:35},{date:'Jul 05',c0:35,c1:88},{date:'Jul 06',c0:52,c1:60},{date:'Jul 07',c0:20,c1:30}];
   function CompareTimeline(){
+    // one line per compared category (2–4); c2/c3 mirror c0/c1 for the layout demo
+    const data=cmpTimelineData.map(row=>{const o={date:row.date};_cmpCats.forEach((c,i)=>{o['c'+i]=row['c'+(i%2)];});return o;});
     return RC(ResponsiveContainer,{width:'99%',height:'100%'},
-      RC(ComposedChart,{data:cmpTimelineData,margin:{top:16,right:24,bottom:8,left:0}},
+      RC(ComposedChart,{data,margin:{top:16,right:24,bottom:8,left:0},onClick:(s,e)=>{if(!s||!s.activeLabel)return;const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;window.openInsListPanel(_insSample('cmpdate-'+s.activeLabel,8),s.activeLabel,'Timeline',card);}},
         RC(CartesianGrid,{vertical:false,stroke:'#eef0f2'}),
         RC(XAxis,{dataKey:'date',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
         RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:36}),
@@ -5802,19 +5898,80 @@ function initDashboard(){
     [['Online News',56.30,295],['Blogs',15.46,81],['Broadsheet',10.11,53],['Tabloid',2.10,11],['Provincial',0.57,3],['TV',3.05,64],['Radio',0.57,17]]
   ].map(cat=>cat.map(([name,value,count])=>({name,value,count,color:CMP_MEDIA_COLORS[name]})));
   function CmpMediaDonut(ci){
-    const data=CMP_MEDIA_DIST[ci]||CMP_MEDIA_DIST[0];
+    const data=CMP_MEDIA_DIST[ci%CMP_MEDIA_DIST.length];
     return RC(ResponsiveContainer,{width:'99%',height:'100%'},
-      RC(PieChart,{},RC(Pie,{data,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none'},...data.map((d,i)=>RC(Cell,{key:i,fill:d.color}))),RC(Tooltip,{})));
+      RC(PieChart,{},RC(Pie,{data,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none',cursor:'pointer',onClick:(d,idx,e)=>{const nm=d&&(d.name||(d.payload&&d.payload.name));if(!nm)return;const t=e&&(e.target||e.currentTarget);const card=t&&t.closest?t.closest('.db-card'):null;window.openInsListPanel(_insSample('med-'+nm,8),nm,'Media Exposure',card);}},...data.map((d,i)=>RC(Cell,{key:i,fill:d.color}))),RC(Tooltip,{})));
   }
   function renderCompareMedia(){
-    _cmpCats.forEach((cat,ci)=>{
-      const hdEl=document.getElementById('db-compare-media-hd-'+ci);if(hdEl)hdEl.style.color=cat.color;
-      const nameEl=document.getElementById('db-compare-media-name-'+ci);if(nameEl)nameEl.textContent=cat.name;
-      const leg=document.getElementById('db-compare-media-leg-'+ci);
-      const data=CMP_MEDIA_DIST[ci]||CMP_MEDIA_DIST[0];
-      if(leg)leg.innerHTML=data.map(d=>`<div class="cmp-leg-item"><span class="cmp-leg-dot" style="background:${d.color}"></span>${d.name}: ${d.value.toFixed(2)}% (${d.count})</div>`).join('');
-      dbMount('db-compare-media-'+ci,CmpMediaDonut(ci));
-    });
+    const wrap=document.getElementById('db-compare-media-wrap');if(!wrap)return;
+    wrap.style.gridTemplateColumns='repeat('+(_cmpCats.length<=3?_cmpCats.length:2)+',1fr)';   // 2→2, 3→3, 4→2×2
+    wrap.innerHTML=_cmpCats.map((cat,ci)=>{
+      const data=CMP_MEDIA_DIST[ci%CMP_MEDIA_DIST.length];
+      const leg=data.map(d=>`<div class="cmp-leg-item"><span class="cmp-leg-dot" style="background:${d.color}"></span>${d.name}: ${d.value.toFixed(2)}% (${d.count})</div>`).join('');
+      return `<div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" style="color:${cat.color}">${cat.name}</span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div><div class="cmp-donut-body"><div class="cmp-donut-legend">${leg}</div><div class="db-chart-wrap" id="db-compare-media-${ci}" style="height:280px"></div></div></div>`;
+    }).join('');
+    _cmpCats.forEach((cat,ci)=>dbMount('db-compare-media-'+ci,CmpMediaDonut(ci)));
+    initIcons();
+  }
+  // Per-media-type comparison cards below Media Exposure — reuses the DS .cmp-ov-tbl table
+  const CMP_MT_STATS=[
+    {name:'Online News',c0:{ps:'1.57',ave:'9.7M',sv:'116',wc:'413',art:'56'},c1:{ps:'2.19',ave:'68.3M',sv:'0',wc:'544',art:'303'}},
+    {name:'Blogs',c0:{ps:'5.99',ave:'1.3M',sv:'43',wc:'363',art:'11'},c1:{ps:'1.76',ave:'14.8M',sv:'0',wc:'624',art:'74'}},
+    {name:'Broadsheet',c0:{ps:'1.74',ave:'2.2M',sv:'22',wc:'281',art:'7'},c1:{ps:'1.74',ave:'20.3M',sv:'0',wc:'487',art:'55'}},
+    {name:'Tabloid',c0:{ps:'5.14',ave:'229.1K',sv:'3',wc:'307',art:'1'},c1:{ps:'5.14',ave:'3.7M',sv:'0',wc:'477',art:'13'}},
+    {name:'Provincial',c0:{ps:'0.19',ave:'85.0K',sv:'1',wc:'271',art:'1'},c1:{ps:'0.37',ave:'593.4K',sv:'0',wc:'364',art:'6'}},
+    {name:'TV',c0:{ps:'0.98',ave:'1.1M',sv:'4',wc:'916',art:'3'},c1:{ps:'7.8',ave:'173.4M',sv:'0',wc:'1.4K',art:'56'}},
+    {name:'Radio',c0:{ps:'0.05',ave:'854.7K',sv:'2',wc:'1.7K',art:'1'},c1:{ps:'0',ave:'15.1M',sv:'0',wc:'4.9K',art:'14'}}
+  ];
+  function renderCompareMediaTypeStats(){
+    const host=document.getElementById('db-compare-mediatype');if(!host)return;
+    const cats=_cmpCats,n=cats.length;
+    const short=c=>(c.name.split(' - ').pop()||c.name).split(' ')[0]||c.name;
+    const metrics=[['PUB SCORE','ps'],['TOTAL AVE','ave'],['TOTAL STORY VALUE','sv'],['AVG. WORD COUNT','wc'],['TOTAL ARTICLES','art']];
+    // Labeled matrix: each category gets its own labeled, color-coded column under each metric group (scrolls horizontally at 3–4 categories)
+    const head1=metrics.map(m=>`<th colspan="${n}" class="cmp-mt-grp">${m[0]}</th>`).join('');
+    const head2=metrics.map(()=>cats.map((c,ci)=>`<th class="${ci===0?'cmp-mt-gstart':''}" style="color:${c.color}">${short(c)}</th>`).join('')).join('');
+    const body=CMP_MT_STATS.map(m=>{const cd=[m.c0,m.c1];return `<tr><td class="cmp-mt-type">${m.name}</td>${metrics.map(([_,k])=>cats.map((c,ci)=>`<td class="cmp-mt-num ${ci===0?'cmp-mt-gstart':''}" style="color:${c.color}">${cd[ci%2][k]}</td>`).join('')).join('')}</tr>`;}).join('');
+    host.innerHTML=`<div class="db-card">
+      <div class="db-card-hd db-tl-hd"><span class="db-card-title">Media Type Breakdown <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+      <div class="cmp-mt-legend">${cats.map(c=>`<span class="cmp-leg-item"><span class="cmp-leg-dot" style="background:${c.color}"></span>${c.name}</span>`).join('')}</div>
+      <div class="tbl-scroll"><table class="tbl cmp-mt-matrix">
+        <thead>
+          <tr><th rowspan="2" class="cmp-mt-th-type">Media Type</th>${head1}</tr>
+          <tr>${head2}</tr>
+        </thead>
+        <tbody>${body}</tbody>
+      </table></div>
+    </div>`;
+  }
+  // Topic Emphasis (Main vs Mention) per category — reuses the dashboard EmphasisBar pattern; null = No Data
+  const CMP_EMPHASIS=[{main:60.71,mention:39.29},{main:44.80,mention:55.20},{main:52.40,mention:47.60},{main:66.30,mention:33.70}];
+  const cmpEmpSeries=[{key:'main',label:'Main',color:'#5b8def',labelColor:'#fff'},{key:'mention',label:'Mention',color:'#4bd0a0',labelColor:'#0f5137'}];
+  function CmpEmphasisBar(props){
+    const ci=(props&&props.ci)||0,d=CMP_EMPHASIS[ci]||{main:0,mention:0};
+    const data=[{name:'',main:d.main,mention:d.mention}];
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data,layout:'vertical',margin:{top:22,right:10,bottom:22,left:10}},
+        RC(XAxis,{type:'number',domain:[0,100],hide:true}),
+        RC(YAxis,{type:'category',dataKey:'name',hide:true}),
+        RC(Tooltip,{cursor:false}),
+        ...cmpEmpSeries.map((s,i)=>RC(Bar,{key:s.key,dataKey:s.key,stackId:'a',fill:s.color,maxBarSize:50,isAnimationActive:false,cursor:'pointer',
+          onClick:(dd,idx,e)=>{const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;const cat=_cmpCats[ci]||{name:''};window.openInsListPanel(_insSample('emp-'+ci+'-'+s.key,8),cat.name,s.label+' emphasis',card);},
+          radius:i===0?[5,0,0,5]:[0,5,5,0]},
+          RC(LabelList,{dataKey:s.key,position:'center',formatter:v=>v>=10?`${s.label.toUpperCase()}: ${v}%`:'',style:{fontSize:11,fontWeight:600,fill:s.labelColor}})
+        ))
+      ));
+  }
+  function renderCompareEmphasis(){
+    const host=document.getElementById('db-compare-emphasis');if(!host)return;
+    host.innerHTML=_cmpCats.map((cat,ci)=>{
+      const d=CMP_EMPHASIS[ci];
+      const inner=d?`<div class="db-chart-wrap" id="db-compare-emphasis-${ci}" style="height:96px"></div>`
+        :`<div class="cmp-emp-nodata"><i data-lucide="inbox"></i><div>No Data Available</div></div>`;
+      return `<div class="cmp-emp-row"><div class="cmp-emp-name" style="color:${cat.color}">${cat.name}</div>${inner}</div>`;
+    }).join('');
+    _cmpCats.forEach((cat,ci)=>{if(CMP_EMPHASIS[ci])dbMount('db-compare-emphasis-'+ci,RC(CmpEmphasisBar,{ci}));});
+    initIcons();
   }
   const CMP_SOV=[{label:'Articles',vals:[363,573]},{label:'Story Value',vals:[95,120]},{label:'AVE',vals:[18.32,279.9]}];
   function CmpSoVDonut(mi){
@@ -5823,18 +5980,228 @@ function initDashboard(){
     return RC(ResponsiveContainer,{width:'99%',height:'100%'},
       RC(PieChart,{},RC(Pie,{data,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none'},...data.map((d,i)=>RC(Cell,{key:i,fill:d.color}))),RC(Tooltip,{})));
   }
+  // Per-category sentiment donut + tonality timeline for the compare "Tonality" view
+  const CMP_SENT=[
+    [{name:'Positive',value:59},{name:'Neutral',value:21},{name:'Negative',value:2}],
+    [{name:'Positive',value:333},{name:'Neutral',value:170},{name:'Negative',value:31}]
+  ];
+  const CMP_TON_TIMELINE=[
+    [{date:'Jul 01',Positive:1,Neutral:0,Negative:0},{date:'Jul 02',Positive:8,Neutral:5,Negative:0},{date:'Jul 03',Positive:23,Neutral:5,Negative:2},{date:'Jul 04',Positive:7,Neutral:3,Negative:0},{date:'Jul 05',Positive:8,Neutral:3,Negative:0},{date:'Jul 06',Positive:5,Neutral:7,Negative:0},{date:'Jul 07',Positive:5,Neutral:1,Negative:0},{date:'Jul 08',Positive:2,Neutral:1,Negative:1}],
+    [{date:'Jul 01',Positive:12,Neutral:4,Negative:1},{date:'Jul 02',Positive:51,Neutral:19,Negative:2},{date:'Jul 03',Positive:32,Neutral:20,Negative:2},{date:'Jul 04',Positive:36,Neutral:9,Negative:2},{date:'Jul 05',Positive:41,Neutral:31,Negative:4},{date:'Jul 06',Positive:59,Neutral:32,Negative:9},{date:'Jul 07',Positive:56,Neutral:26,Negative:9},{date:'Jul 08',Positive:40,Neutral:25,Negative:1},{date:'Jul 09',Positive:6,Neutral:6,Negative:3}]
+  ];
+  function CmpSentDonut(ci){
+    const data=CMP_SENT[ci]||CMP_SENT[0];
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(PieChart,{},
+        RC(Pie,{data,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none',cursor:'pointer',onClick:(d,i,e)=>{const n=d&&(d.name||(d.payload&&d.payload.name));if(!n)return;const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;window.openInsListPanel(_insByTone(n),n+' tonality','Tonality',card);}},
+          ...data.map(d=>RC(Cell,{key:d.name,fill:tonColors[d.name]}))),
+        RC(Tooltip,{content:TonDonutTip})
+      ));
+  }
+  function CmpTonTimeline(ci){
+    const data=CMP_TON_TIMELINE[ci]||CMP_TON_TIMELINE[0];
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(ComposedChart,{data,margin:{top:16,right:28,bottom:8,left:0}},
+        RC(CartesianGrid,{vertical:false,stroke:'#eef0f2'}),
+        RC(XAxis,{dataKey:'date',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
+        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:28}),
+        RC(Tooltip,{}),
+        RC(Legend,{iconType:'plainline',wrapperStyle:{fontSize:12,paddingTop:10}}),
+        ...['Positive','Neutral','Negative'].map(k=>RC(Line,{key:k,type:'linear',dataKey:k,stroke:tonColors[k],strokeWidth:2,dot:{r:4,fill:tonColors[k],strokeWidth:0},activeDot:{r:5}}))
+      ));
+  }
   window.openCompareView=function(cats){
     if(!cats||cats.length<2)cats=['Company News - DITO Telecommunity','Competitor News - Globe Telecom'];
-    _cmpCats=cats.slice(0,2).map((n,i)=>({name:n,color:CMP_COLORS[i%CMP_COLORS.length]}));
+    _cmpCats=cats.slice(0,4).map((n,i)=>({name:n,color:CMP_COLORS[i%CMP_COLORS.length]}));
     const wrap=_showExplore('db-compare-explore');if(!wrap)return;
     renderCompareChips();
     renderCompareOverview();
     dbMount('db-compare-timeline',CompareTimeline());
     renderCompareMedia();
-    [0,1,2].forEach(mi=>dbMount('db-compare-sov-'+mi,CmpSoVDonut(mi)));
+    renderCompareMediaTypeStats();
+    renderCompareEmphasis();
     _bindExploreScroll(wrap);
     initIcons();
   };
+  // ── Compare detail drill-down (opened from an Overview metric row): reuses explore-data layout, per category ──
+  const CMP_PUBLISHERS=[
+    [['Manila Times Online',6],['Business Mirror Online',5],['Inquirer Online',4],['Head Topics Online',4],['Manila Standard Online',3],['INQUIRER PLUS',3],['Philippine Daily Inquirer',2],['Manila Bulletin Online',2],['Manila Standard',2],['BILYONARYO Online',2]],
+    [['Bllyonaryo News Channel',20],['Inquirer Online',19],['Philstar Online',18],['Manila Standard Online',16],['Business World Online',15],['News Stringer TV',14],['Malaya Business Insight Online',13],['Trade Like Gorillas',12],['Business Mirror Online',12],['BusinessWorld',11]]
+  ];
+  const CMP_AUTHORS=[
+    [['Logan Kal-El M. Zapanta',5],['Joel Lacsamana',2],['Fr. Shay Cullen, Ssc',1],['Barbie Salvador-muhlach',1],['Bryan Rilloraza',1],['Inquirer.net',1],['Bedalyn Aguas',1],['Donald Lim',1],['Miguel R. Camus',1],['Darwin G. Amojelar',1]],
+    [['Vicky Morales',8],['Emil Sumangil',8],['Mel Tiangco',8],['Iya Villana-Arellano',8],['Monique Tuzon',8],['Korina Sanchez-Roxas',6],['Willard Cheng',6],['Pinky Webb',6],['Apa Ongpin',6],['Maan Macapagal',5]]
+  ];
+  const CMP_AUTHORCARDS=[
+    {name:'Logan Kal-El M. Zapanta',articles:5,score:'0.00',ave:'748.9K',svalue:'9.64',exposure:'9.64'},
+    {name:'Joel Lacsamana',articles:2,score:'0.45',ave:'1.9M',svalue:'4.08',exposure:'4.08'},
+    {name:'Fr. Shay Cullen, Ssc',articles:1,score:'0.00',ave:'594.7K',svalue:'1.13',exposure:'1.13'},
+    {name:'Barbie Salvador-muhlach',articles:1,score:'0.92',ave:'35.0K',svalue:'1.21',exposure:'1.21'},
+    {name:'Bryan Rilloraza',articles:1,score:'0.00',ave:'66.9K',svalue:'3.29',exposure:'3.29'},
+    {name:'Inquirer.net',articles:1,score:'0.29',ave:'287.6K',svalue:'2.73',exposure:'2.73'},
+    {name:'Bedalyn Aguas',articles:1,score:'0.00',ave:'92.1K',svalue:'1.79',exposure:'1.79'},
+    {name:'Donald Lim',articles:1,score:'0.01',ave:'744.0K',svalue:'1.93',exposure:'1.93'},
+    {name:'Miguel R. Camus',articles:1,score:'0.00',ave:'142.8K',svalue:'1.80',exposure:'1.80'},
+    {name:'Darwin G. Amojelar',articles:1,score:'0.01',ave:'138.4K',svalue:'1.72',exposure:'1.72'},
+    {name:'Darwin G. Amor',articles:1,score:'0.00',ave:'253.6K',svalue:'1.75',exposure:'1.75'},
+    {name:'Arthur Fuentes',articles:1,score:'0.00',ave:'69.9K',svalue:'1.95',exposure:'1.95'}
+  ];
+  const CMP_SECTIONS=[[['news',34]],[['business',311]]];
+  const CMP_PROGRAMS=[
+    [['Karambola',1],['Balitang A2Z',1],['Business 360',1],['News Night',1]],
+    [['24 Oras',4],['Money Talks',4],['The Score Card',3],['13 News',3],['Mata ng Agila',2],['Ulat Bayan Weekend',2],['Tutok 13',2],['PTV News Tonight',2],['Agenda',1],['Business 360',1]]
+  ];
+  const CMP_PUBCARDS=[
+    {name:'Manila Times Online',articles:6,score:'1.57',ave:'1.8M',svalue:'9.79',exposure:'9.79'},
+    {name:'Business Mirror Online',articles:5,score:'3.62',ave:'887.2K',svalue:'14.79',exposure:'14.79'},
+    {name:'Inquirer Online',articles:4,score:'3.16',ave:'1.5M',svalue:'11.82',exposure:'11.82'},
+    {name:'Head Topics Online',articles:4,score:'9.45',ave:'921.0K',svalue:'21.52',exposure:'21.52'},
+    {name:'Manila Standard Online',articles:3,score:'1.23',ave:'327.2K',svalue:'5.25',exposure:'5.25'},
+    {name:'INQUIRER PLUS',articles:3,score:'1.95',ave:'622.8K',svalue:'4.47',exposure:'4.47'},
+    {name:'Philippine Daily Inquirer',articles:2,score:'6.77',ave:'1.0M',svalue:'8.00',exposure:'8.00'},
+    {name:'Manila Bulletin Online',articles:2,score:'1.58',ave:'414.8K',svalue:'3.78',exposure:'3.78'},
+    {name:'Manila Standard',articles:2,score:'1.74',ave:'581.6K',svalue:'3.82',exposure:'3.82'},
+    {name:'BILYONARYO Online',articles:2,score:'1.80',ave:'338.0K',svalue:'3.38',exposure:'3.38'},
+    {name:'ABS-CBN News Online',articles:2,score:'1.81',ave:'167.7K',svalue:'3.09',exposure:'3.09'},
+    {name:'Context.PH',articles:2,score:'1.12',ave:'182.1K',svalue:'3.28',exposure:'3.28'}
+  ];
+  function renderCmpBarList(hostId,items,color,sub){
+    const host=document.getElementById(hostId);if(!host)return;
+    const max=Math.max(...items.map(i=>i[1]),1);
+    host.innerHTML=items.map(([n,c])=>`<div class="ps-media-pub" style="cursor:pointer" onclick="cmpOpenList('${String(n).replace(/'/g,"\\'")}','${sub||''}',this)">
+        <div class="ps-media-pub-name">${n}</div>
+        <div class="ps-media-bar"><div class="ps-media-bar-fill" style="width:${Math.round(c/max*100)}%;background:${color}"></div><span class="ps-media-bar-lbl${c===max?' over-fill':''}">${c} Article/s</span></div>
+      </div>`).join('');
+  }
+  // Top Entity view data + helpers
+  const CMP_TOP_ENTITIES=[
+    [['Eric Alberto',15],['PLDT',15],['DITO Telecommunity',14],['Manuel V Pangilinan',14],['DITO',13]],
+    [['GCash',88],['Philippines',53],['Filipinos',50],['Filipino',47],['Philippine',39]]
+  ];
+  const _ENT_COL={ORG:'#8d7ba8',PERSON:'#6b7fb0',GPE:'#6bb0bd',NORP:'#5fb088',PRODUCT:'#b6d95a',LOC:'#5cc98a',LAW:'#e8c14a'};
+  const _ENT_DSC={ORG:'Organization Entities: businesses, societies, associations.',PERSON:'Person Entities: names of people, including fictional.',GPE:'Geopolitical Entities: countries, cities, states.',NORP:'Nationalities or religious / political groups.',PRODUCT:'Products: objects, vehicles, foods, etc.',LOC:'Non-GPE locations: mountains, bodies of water.',LAW:'Named legal documents / laws.'};
+  const _cmpEnt=pairs=>pairs.map(([n,v])=>({name:n,value:v,color:_ENT_COL[n],desc:_ENT_DSC[n]}));
+  const CMP_ENTMAP=[
+    _cmpEnt([['ORG',37.31],['PERSON',34.26],['GPE',16.75],['NORP',8.63],['PRODUCT',2.03],['LOC',0.76],['LAW',0.25]]),
+    _cmpEnt([['ORG',37.08],['PERSON',34.89],['GPE',11.43],['NORP',6.19],['PRODUCT',4.92],['LOC',1.03],['LAW',0.79]])
+  ];
+  function renderCmpKeywords(hostId,items){
+    const host=document.getElementById(hostId);if(!host)return;
+    host.innerHTML=items.map(([n,c])=>`<span class="ent-kw-pill" onclick="openInsEntity('${String(n).replace(/'/g,"\\'")}')"><span class="ent-kw-count">${c}</span>${n}</span>`).join('');
+  }
+  // Open the Insights article-list panel for a clicked compare graph item (publisher / section / program / medium).
+  // Pass the clicked element as focusEl so its .db-card is spotlighted (focus mode) instead of dimming everything.
+  window.cmpOpenList=function(name,sub,el){
+    const arts=getEntityArticles('pub',name);
+    window.openInsListPanel(arts&&arts.length?arts:_insSample((sub||'')+'-'+name,6),name,sub||'Compare',el||null);
+  };
+  window.openCompareDetail=function(metric,el){
+    if(!_cmpCats||_cmpCats.length<2)_cmpCats=['Company News - DITO Telecommunity','Competitor News - Globe Telecom'].map((n,i)=>({name:n,color:CMP_COLORS[i%CMP_COLORS.length]}));
+    // "Most Articles in a day" is a single peak-day figure — show the article list in the side panel, don't navigate to a page
+    if(/most articles in a day/i.test(metric||'')){
+      window.openInsListPanel(_insSample('mostarticles',8),'Most Articles in a day','Peak coverage day',el||null);
+      return;
+    }
+    const wrap=_showExplore('db-compare-detail');if(!wrap)return;
+    const crumb=document.getElementById('db-cmpd-crumb');if(crumb)crumb.textContent=metric||'Top Results';
+    const chips=document.getElementById('db-cmpd-chips');
+    if(chips)chips.innerHTML=_cmpCats.map(c=>`<span class="cmp-chip" style="border-color:${c.color};color:${c.color}"><span class="cmp-chip-dot" style="background:${c.color}"></span>${c.name}</span>`).join('');
+    _cmpCats.forEach((cat,ci)=>{
+      const nameEl=document.getElementById('db-cmpd-media-name-'+ci);if(nameEl){nameEl.textContent=cat.name;nameEl.style.color=cat.color;}
+      const leg=document.getElementById('db-cmpd-media-leg-'+ci),data=CMP_MEDIA_DIST[ci]||CMP_MEDIA_DIST[0];
+      if(leg)leg.innerHTML=data.map(d=>`<div class="cmp-leg-item"><span class="cmp-leg-dot" style="background:${d.color}"></span>${d.name}: ${d.value.toFixed(2)}% (${d.count})</div>`).join('');
+      dbMount('db-cmpd-media-'+ci,CmpMediaDonut(ci));
+      const ph=document.getElementById('db-cmpd-pub-hd-'+ci);if(ph){ph.textContent=cat.name;ph.style.color=cat.color;}
+      renderCmpBarList('db-cmpd-pub-'+ci,CMP_PUBLISHERS[ci]||[],cat.color,'Top Publisher');
+    });
+    // Per-metric view routing
+    const isAuthor=/top author/i.test(metric||'');
+    const isToppub=/media exposure by publisher/i.test(metric||'');
+    const isMedium=/media exposure by medium/i.test(metric||'');
+    const isTonality=/tonality/i.test(metric||'');
+    const isEntity=/top entity/i.test(metric||'');
+    const common=document.getElementById('db-cmpd-common');
+    const vTotal=document.getElementById('db-cmpd-view-total'),vTop=document.getElementById('db-cmpd-view-toppub'),vAuthor=document.getElementById('db-cmpd-view-author'),vMedium=document.getElementById('db-cmpd-view-medium'),vTon=document.getElementById('db-cmpd-view-tonality'),vEnt=document.getElementById('db-cmpd-view-entity');
+    if(common)common.classList.toggle('on',!isAuthor&&!isMedium&&!isTonality&&!isEntity);   // Media Exposure + Top Publishers: hidden for entity-focused views
+    if(vTotal)vTotal.classList.toggle('on',!isAuthor&&!isToppub&&!isMedium&&!isTonality&&!isEntity);
+    if(vTop)vTop.classList.toggle('on',isToppub);
+    if(vAuthor)vAuthor.classList.toggle('on',isAuthor);
+    if(vMedium)vMedium.classList.toggle('on',isMedium);
+    if(vTon)vTon.classList.toggle('on',isTonality);
+    if(vEnt)vEnt.classList.toggle('on',isEntity);
+    if(isEntity){
+      _cmpCats.forEach((cat,ci)=>{
+        ['en-hd','en-kwhd','en-mapname'].forEach(k=>{const h=document.getElementById('db-cmpd-'+k+'-'+ci);if(h){h.textContent=cat.name;h.style.color=cat.color;}});
+        renderCmpBarList('db-cmpd-en-'+ci,CMP_TOP_ENTITIES[ci]||[],cat.color,'Top Entity');
+        renderCmpKeywords('db-cmpd-en-kw-'+ci,CMP_TOP_ENTITIES[ci]||[]);
+        renderEntMap('db-cmpd-en-map-'+ci,CMP_ENTMAP[ci]||CMP_ENTMAP[0]);
+        const leg=document.getElementById('db-cmpd-en-leg-'+ci);
+        if(leg)leg.innerHTML=(CMP_ENTMAP[ci]||CMP_ENTMAP[0]).map(e=>`<span class="db-ent-leg-item"><span class="sq" style="background:${e.color}"></span>${e.name}</span>`).join('');
+      });
+    } else if(isTonality){
+      _cmpCats.forEach((cat,ci)=>{
+        const nm=document.getElementById('db-cmpd-tn-name-'+ci);if(nm){nm.textContent=cat.name;nm.style.color=cat.color;}
+        const tnm=document.getElementById('db-cmpd-tn-tlname-'+ci);if(tnm){tnm.textContent=cat.name;tnm.style.color=cat.color;}
+        const arr=CMP_SENT[ci]||CMP_SENT[0],grand=arr.reduce((s,d)=>s+d.value,0)||1;
+        const leg=document.getElementById('db-cmpd-tn-leg-'+ci);
+        if(leg)leg.innerHTML=arr.map(s=>`<div class="cmp-leg-item"><span class="cmp-leg-dot" style="background:${tonColors[s.name]}"></span>${s.name} ${(s.value/grand*100).toFixed(2)}% (${s.value})</div>`).join('');
+        dbMount('db-cmpd-tn-donut-'+ci,CmpSentDonut(ci));
+        dbMount('db-cmpd-tn-tl-'+ci,CmpTonTimeline(ci));
+      });
+      const tncat=document.getElementById('db-cmpd-tn-tbl-cat');if(tncat)tncat.innerHTML=_cmpCats.map(c=>`<option>${c.name}</option>`).join('');
+      window.renderMentionsTable('db-cmpd-tn-table',0,metric,'All articles');
+    } else if(isMedium){
+      _cmpCats.forEach((cat,ci)=>{
+        const psn=document.getElementById('db-cmpd-md-ps-name-'+ci);if(psn){psn.textContent=cat.name;psn.style.color=cat.color;}
+        dbMount('db-cmpd-md-ps-'+ci,RC(CmpPubscoreDist,{ci}));
+        const ph=document.getElementById('db-cmpd-md-pub-hd-'+ci);if(ph){ph.textContent=cat.name;ph.style.color=cat.color;}
+        renderCmpBarList('db-cmpd-md-pub-'+ci,CMP_PUBLISHERS[ci]||[],cat.color,'Top Publisher');
+      });
+      dbMount('db-cmpd-md-timeline',CompareTimeline());
+      const mtcat=document.getElementById('db-cmpd-md-tbl-cat');if(mtcat)mtcat.innerHTML=_cmpCats.map(c=>`<option>${c.name}</option>`).join('');
+      window.renderMentionsTable('db-cmpd-md-table',0,metric,'All articles');
+    } else if(isAuthor){
+      _cmpCats.forEach((cat,ci)=>{
+        const h=document.getElementById('db-cmpd-au-hd-'+ci);if(h){h.textContent=cat.name;h.style.color=cat.color;}
+        renderCmpBarList('db-cmpd-au-'+ci,CMP_AUTHORS[ci]||[],cat.color,'Top Author');
+      });
+      renderCmpAuthorMT();
+      const auHd=document.getElementById('db-cmpd-au-cards-hd');if(auHd)auHd.textContent='Top Authors for '+_cmpCats[0].name;
+      renderEntityCards('db-cmpd-au-cards',CMP_AUTHORCARDS,'Author Score','author');
+      const atcat=document.getElementById('db-cmpd-au-tbl-cat');if(atcat)atcat.innerHTML=_cmpCats.map(c=>`<option>${c.name}</option>`).join('');
+      window.renderMentionsTable('db-cmpd-au-table',0,metric,'All articles');
+    } else if(isToppub){
+      renderCmpMediaType();
+      const tcat=document.getElementById('db-cmpd-tbl-cat');if(tcat)tcat.innerHTML=_cmpCats.map(c=>`<option>${c.name}</option>`).join('');
+      window.renderMentionsTable('db-cmpd-table',0,metric,'All articles');
+    } else {
+      _cmpCats.forEach((cat,ci)=>{
+        ['sec','prog'].forEach(k=>{const h=document.getElementById('db-cmpd-'+k+'-hd-'+ci);if(h){h.textContent=cat.name;h.style.color=cat.color;}});
+        renderCmpBarList('db-cmpd-sec-'+ci,CMP_SECTIONS[ci]||[],cat.color,'Top Section');
+        renderCmpBarList('db-cmpd-prog-'+ci,CMP_PROGRAMS[ci]||[],cat.color,'Top Program');
+      });
+      const cardHd=document.getElementById('db-cmpd-cards-hd');if(cardHd)cardHd.textContent='Top Publishers for '+_cmpCats[0].name;
+      renderEntityCards('db-cmpd-cards',CMP_PUBCARDS,'Pub Score','pub');
+    }
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  // Top Publishers per Media Type: per-category columns (empty-state placeholder, matches the compare page)
+  function renderCmpMediaType(){
+    (_cmpCats||[]).forEach((cat,ci)=>{
+      const hd=document.getElementById('db-cmpd-mt-hd-'+ci);if(hd){hd.textContent=cat.name;hd.style.color=cat.color;}
+      const host=document.getElementById('db-cmpd-mt-'+ci);if(host)host.innerHTML='<div class="cmp-nodata">No Data Available</div>';
+    });
+  }
+  window.renderCmpMediaType=renderCmpMediaType;
+  // Top Author view: Top Publishers per Media Type (with data, per category)
+  function renderCmpAuthorMT(){
+    (_cmpCats||[]).forEach((cat,ci)=>{
+      const hd=document.getElementById('db-cmpd-au-mt-hd-'+ci);if(hd){hd.textContent=cat.name;hd.style.color=cat.color;}
+      renderCmpBarList('db-cmpd-au-mt-'+ci,CMP_PUBLISHERS[ci]||[],cat.color,'Top Publisher');
+    });
+  }
+  window.renderCmpAuthorMT=renderCmpAuthorMT;
 
   // ── Author Story Value Distribution (tabbed: bubble plot + horizontal bar) ──
   const authorData=[
@@ -5994,7 +6361,7 @@ function initDashboard(){
   ];
   const entEl=document.getElementById('db-entities');
   if(entEl){
-    const cell=e=>'<div class="db-entmap-cell" style="flex:'+e.value+';background:'+e.color+';cursor:pointer" onclick="openInsEntity(\''+e.name+'\')" data-btip="'+_makeTip({label:e.name+' ('+e.value.toFixed(2)+'%)',detail:e.desc})+'">'+e.name+' ('+e.value.toFixed(2)+'%)</div>';
+    const cell=e=>'<div class="db-entmap-cell" style="flex:'+e.value+';background:'+e.color+';cursor:pointer" onclick="entDrill(this.closest(\'.db-entmap\'),\''+e.name+'\',\''+e.color+'\')" data-btip="'+_makeTip({label:e.name+' ('+e.value.toFixed(2)+'%)',detail:e.desc})+'">'+e.name+' ('+e.value.toFixed(2)+'%)</div>';
     const leftSum=entityData[0].value+entityData[1].value,rightSum=entityData[2].value+entityData[3].value;
     entEl.innerHTML='<div class="db-entmap-col" style="flex:'+leftSum+'">'+cell(entityData[0])+cell(entityData[1])+'</div>'+
                     '<div class="db-entmap-col" style="flex:'+rightSum+'">'+cell(entityData[2])+cell(entityData[3])+'</div>';
@@ -6671,6 +7038,46 @@ function mountEntityChart(kind,name){
 }
 
 // ── Pane: Entities (flexbox treemap, hash-seeded distribution) ──
+// ── Entity Map drill-down: click a category cell → its member entities (shared by all entity maps) ──
+const ENT_MEMBERS={
+  ORG:[['GCash',102],['Globe',35],['BSP',29],['InstaPay',24],['Maya',24],['Globe Telecom',22],['RCBC',21],['BPI',20],['Mynt',19],['PESONet',19],['SEC',18],['BPI Globe Telecom',13],['PSE',13],['Starlink',11]],
+  PERSON:[['Alex Eala',34],['Eala',33],['Eli Remolona Jr',9],['Carl Cruz',9],['Iga Swiatek',9],['Jasmine Paulino',6],['Samantha Vinluan',5]],
+  GPE:[['Philippines',72],['Philippine',36],['Pilipinas',17],['the Middle East',15],['MANILA',15],['Metro Manila',14],['Southeast Asia',12],['US',12],['Cebu',9],['Japan',7],['Singapore',7]],
+  NORP:[['Filipinos',71],['Filipino',51],['Filipina',19],['Pinoy',14],['Pilipino',14],['Polish',8]],
+  PRODUCT:[['Android',9],['Starlink',11],['GCash App',12],['Maya App',8],['e-wallet',6]],
+  LOC:[['Southeast Asia',12],['Metro Manila',9],['Visayas',6],['Mindanao',5]],
+  LAW:[['BSP Circular No 1238',9],['Data Privacy Act',6],['SIM Registration Act',5],['R.A. 11934',3]]
+};
+function _entShade(hex,i,n){
+  hex=String(hex||'#8d7ba8');const t=n>1?(i/(n-1))*0.4:0;
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  const mx=c=>Math.round(c+(255-c)*t);return 'rgb('+mx(r)+','+mx(g)+','+mx(b)+')';
+}
+function _entMemberCols(members,cellFn){
+  const L=[],R=[];let ls=0,rs=0;
+  members.forEach(m=>{if(ls<=rs){L.push(m);ls+=m.value;}else{R.push(m);rs+=m.value;}});
+  return '<div class="db-entmap-col" style="flex:'+(ls||1)+'">'+L.map(cellFn).join('')+'</div>'+
+         '<div class="db-entmap-col" style="flex:'+(rs||1)+'">'+R.map(cellFn).join('')+'</div>';
+}
+window.entDrill=function(hostEl,cat,color){
+  if(!hostEl)return;
+  const raw=ENT_MEMBERS[cat];
+  if(!raw||!raw.length){if(window.openInsEntity)openInsEntity(cat);return;}   // no breakdown data → keep prior behavior
+  if(hostEl.__entTop==null)hostEl.__entTop=hostEl.innerHTML;                  // stash category-level markup for "back"
+  const total=raw.reduce((s,m)=>s+m[1],0)||1;
+  const members=raw.map((m,i)=>({name:m[0],count:m[1],value:m[1],pct:(m[1]/total*100).toFixed(1),color:_entShade(color,i,raw.length)}));
+  const cell=e=>'<div class="db-entmap-cell" style="flex:'+e.value+';background:'+e.color+';cursor:pointer" onclick="event.stopPropagation();openInsEntity(\''+e.name.replace(/'/g,"\\'")+'\')" data-btip="'+_makeTip({label:e.name,detail:'Article Count: '+e.count})+'">'+e.name+' ('+e.pct+'%)</div>';
+  hostEl.classList.add('ent-drilled');
+  hostEl.innerHTML='<div class="ent-drill-crumb"><span class="ent-drill-back" onclick="entHome(this.closest(\'.db-entmap\'))">Entities</span><span class="ent-drill-sep">/</span><span class="ent-drill-cur">'+cat+'</span></div>'+
+    '<div class="db-entmap-inner">'+_entMemberCols(members,cell)+'</div>';
+  if(window.initIcons)initIcons();
+};
+window.entHome=function(hostEl){
+  if(!hostEl||hostEl.__entTop==null)return;
+  hostEl.classList.remove('ent-drilled');
+  hostEl.innerHTML=hostEl.__entTop;
+  if(window.initIcons)initIcons();
+};
 function _paneEntities(kind,name){
   const h0=_entHash((kind==='pub'?'p:':'a:')+name);
   // Six fixed entity types, percentages hash-seeded but normalized to 100
@@ -6690,7 +7097,7 @@ function _paneEntities(kind,name){
   // Two-column layout: largest in left column, rest in right column
   const left=[data[0]];
   const right=data.slice(1);
-  const cell=e=>`<div class="db-entmap-cell" style="flex:${e.value};background:${e.color};cursor:pointer" onclick="openInsEntity('${e.name}')" data-btip="${_makeTip({label:e.name+' ('+e.value.toFixed(2)+'%)',detail:e.desc})}">${e.name} (${e.value.toFixed(2)}%)</div>`;
+  const cell=e=>`<div class="db-entmap-cell" style="flex:${e.value};background:${e.color};cursor:pointer" onclick="entDrill(this.closest('.db-entmap'),'${e.name}','${e.color}')" data-btip="${_makeTip({label:e.name+' ('+e.value.toFixed(2)+'%)',detail:e.desc})}">${e.name} (${e.value.toFixed(2)}%)</div>`;
   const leftSum=left.reduce((s,e)=>s+e.value,0);
   const rightSum=right.reduce((s,e)=>s+e.value,0);
   return `<div class="ent-entities-wrap">

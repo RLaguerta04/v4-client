@@ -231,7 +231,7 @@
             </div>
             <div class="b-spark-row">
               <span class="b-updated"><i data-lucide="clock" class="icon-sm"></i> Updated 2 min ago</span>
-              <span class="dot-sep">·</span>
+              <span class="dot-sep"><i data-lucide="dot"></i></span>
               <span class="b-spark-val" tabindex="0">↑ +22% mentions
                 <span class="b-tip" role="tooltip">
                   <span class="b-tip-title">Mentions vs yesterday</span>
@@ -243,13 +243,16 @@
                 </span>
               </span>
               <span class="b-spark-label">vs yesterday</span>
-              <span class="dot-sep">·</span>
+              <span class="dot-sep"><i data-lucide="dot"></i></span>
               <span class="b-trending-flag"><i data-lucide="flame" class="icon-sm"></i> DITO 5G expansion trending</span>
             </div>
           </div>
-          <div class="b-chev-wrap">
-            <span class="b-chev-label" id="b-chev-label">View full brief</span>
-            <i data-lucide="chevron-down" class="b-chev icon-lg" id="b-chev"></i>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            <button class="b-regen-btn" data-btip="btip-regen" aria-label="Regenerate brief" onclick="regenerateBrief(event)"><i data-lucide="refresh-cw"></i></button>
+            <div class="b-chev-wrap">
+              <span class="b-chev-label" id="b-chev-label">View full brief</span>
+              <i data-lucide="chevron-down" class="b-chev icon-lg" id="b-chev"></i>
+            </div>
           </div>
         </div>
 
@@ -304,6 +307,7 @@
                 <button class="btn-nl" onclick="showNewsletter(trendStories[0])"><i data-lucide="mail" class="icon-lg"></i> Send as newsletter</button>
                 <button class="btn-primary" onclick="showAIReport(trendStories[0])"><i data-lucide="file-text" class="icon-lg"></i> Generate AI report</button>
                 <button class="btn-track" id="spot-track-btn" onclick="trackSpot()"><i data-lucide="megaphone" class="icon-lg"></i> Track this story</button>
+                <button class="btn-primary" onclick="exportStory(trendStories[0].id)"><i data-lucide="download" class="icon-lg"></i> Export</button>
               </div>
               <div class="why-strip">
                 <span class="why-strip-lbl"><i data-lucide="zap"></i> Why this was picked</span>

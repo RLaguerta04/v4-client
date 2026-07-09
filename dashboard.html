@@ -275,16 +275,19 @@
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
           </div>
-          <!-- invisible spacer matches the Author card's tab row so both charts align -->
-          <div class="db-tabs2" aria-hidden="true" style="visibility:hidden"><div class="db-tab2">Bubble Plot</div></div>
+          <div class="db-tabs2" id="db-pubscore-tabs">
+            <div class="db-tab2 on" data-t="bubble" onclick="setPubScoreTab('bubble')">Bubble Plot</div>
+            <div class="db-tab2" data-t="bar" onclick="setPubScoreTab('bar')">Bar Chart</div>
+          </div>
           <div class="db-chart-wrap" id="db-pubscore" style="height:440px"></div>
+          <div class="db-chart-wrap" id="db-pubscore-bar" style="height:380px;display:none"></div>
         </div>
         <div class="db-card" id="db-author-card">
           <div class="db-card-hd db-tl-hd">
             <span class="db-card-title">Author Story Value Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
               <button class="db-tl-explore db-tl-insights" onclick="openAuthorInsights()"><i data-lucide="sparkles"></i> Insights</button>
-              <button class="db-tl-explore" onclick="openTimelineExplore()">Explore Data</button>
+              <button class="db-tl-explore" onclick="openTopAuthorExplore()">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
           </div>
@@ -304,7 +307,7 @@
             <span class="db-card-title">Top Publishers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
               <button class="db-tl-explore db-tl-insights" onclick="openTopPubInsights()"><i data-lucide="sparkles"></i> Insights</button>
-              <button class="db-tl-explore" onclick="openTimelineExplore()">Explore Data</button>
+              <button class="db-tl-explore" onclick="openTopPubMedExplore()">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
           </div>
@@ -320,7 +323,7 @@
             <span class="db-card-title">Entities Map <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
             <div class="db-tl-actions">
               <button class="db-tl-explore db-tl-insights" onclick="openEntitiesInsights()"><i data-lucide="sparkles"></i> Insights</button>
-              <button class="db-tl-explore" onclick="openTimelineExplore()">Explore Data</button>
+              <button class="db-tl-explore" onclick="openTopEntitiesExplore()">Explore Data</button>
               <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
             </div>
           </div>
@@ -692,29 +695,229 @@
           </div>
           <div class="db-card">
             <div class="db-card-hd db-tl-hd"><span class="db-card-title">Media Exposure <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
-            <div class="cmp-2col">
-              <div class="cmp-donut-block">
-                <div class="cmp-donut-hd" id="db-compare-media-hd-0"><span class="cmp-donut-name" id="db-compare-media-name-0"></span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div>
-                <div class="cmp-donut-body">
-                  <div class="cmp-donut-legend" id="db-compare-media-leg-0"></div>
-                  <div class="db-chart-wrap" id="db-compare-media-0" style="height:280px"></div>
-                </div>
+            <div class="cmp-media-grid" id="db-compare-media-wrap"></div>
+          </div>
+          <div id="db-compare-mediatype"></div>
+          <div class="db-card" id="db-compare-emphasis-card">
+            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Topic Emphasis <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+            <div id="db-compare-emphasis"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compare detail drill-down (opened from an Overview metric row): reuses explore-data layout, per category -->
+      <div class="db-explore-wrap" id="db-compare-detail">
+        <div class="db-explore-crumb">
+          <div class="db-explore-crumb-in">
+            <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
+            <span class="db-crumb-sep">/</span>
+            <span class="db-crumb-link" onclick="openCompareView()">Compare Topics</span>
+            <span class="db-crumb-sep">/</span>
+            <span class="db-crumb-cur" id="db-cmpd-crumb">Top Results</span>
+          </div>
+        </div>
+        <div class="db-explore-inner">
+          <div class="cmp-chips" id="db-cmpd-chips"></div>
+          <!-- Common (Media Exposure + Top Publishers): shown for Total Results & Top Media Exposure by Publisher; hidden for Top Author -->
+          <div id="db-cmpd-common" class="cmp-metric-view">
+            <div class="db-card">
+              <div class="db-card-hd db-tl-hd"><span class="db-card-title">Media Exposure by (Article Count) <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+              <div class="cmp-2col">
+                <div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" id="db-cmpd-media-name-0"></span></div><div class="cmp-donut-body"><div class="cmp-donut-legend" id="db-cmpd-media-leg-0"></div><div class="db-chart-wrap" id="db-cmpd-media-0" style="height:260px"></div></div></div>
+                <div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" id="db-cmpd-media-name-1"></span></div><div class="cmp-donut-body"><div class="cmp-donut-legend" id="db-cmpd-media-leg-1"></div><div class="db-chart-wrap" id="db-cmpd-media-1" style="height:260px"></div></div></div>
               </div>
-              <div class="cmp-donut-block">
-                <div class="cmp-donut-hd" id="db-compare-media-hd-1"><span class="cmp-donut-name" id="db-compare-media-name-1"></span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div>
-                <div class="cmp-donut-body">
-                  <div class="cmp-donut-legend" id="db-compare-media-leg-1"></div>
-                  <div class="db-chart-wrap" id="db-compare-media-1" style="height:280px"></div>
-                </div>
+            </div>
+            <div class="db-card">
+              <div class="db-card-hd db-tl-hd"><span class="db-card-title">Top Publishers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+              <div class="cmp-2col">
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-pub-hd-0"></div><div class="ps-media-pubs" id="db-cmpd-pub-0"></div></div>
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-pub-hd-1"></div><div class="ps-media-pubs" id="db-cmpd-pub-1"></div></div>
               </div>
             </div>
           </div>
-          <div class="db-card">
-            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Share of Voice <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
-            <div class="cmp-3col">
-              <div><div class="cmp-sov-lbl">Articles</div><div class="db-chart-wrap" id="db-compare-sov-0" style="height:220px"></div></div>
-              <div><div class="cmp-sov-lbl">Story Value</div><div class="db-chart-wrap" id="db-compare-sov-1" style="height:220px"></div></div>
-              <div><div class="cmp-sov-lbl">AVE</div><div class="db-chart-wrap" id="db-compare-sov-2" style="height:220px"></div></div>
+          <!-- View A: Total Results (also the default for other metrics) -->
+          <div id="db-cmpd-view-total" class="cmp-metric-view">
+            <div class="db-card">
+              <div class="db-card-hd db-tl-hd"><span class="db-card-title">Top Sections <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+              <div class="cmp-2col">
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-sec-hd-0"></div><div class="ps-media-pubs" id="db-cmpd-sec-0"></div></div>
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-sec-hd-1"></div><div class="ps-media-pubs" id="db-cmpd-sec-1"></div></div>
+              </div>
+            </div>
+            <div class="db-card">
+              <div class="db-card-hd db-tl-hd"><span class="db-card-title">Top Programs <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+              <div class="cmp-2col">
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-prog-hd-0"></div><div class="ps-media-pubs" id="db-cmpd-prog-0"></div></div>
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-prog-hd-1"></div><div class="ps-media-pubs" id="db-cmpd-prog-1"></div></div>
+              </div>
+            </div>
+            <div class="db-card ex-pub-section">
+              <div class="db-card-hd db-tl-hd"><span class="db-card-title" id="db-cmpd-cards-hd">Top Publishers</span></div>
+              <div class="ex-pub-grid" id="db-cmpd-cards"></div>
+            </div>
+          </div>
+          <!-- View B: Top Media Exposure by Publisher -->
+          <div id="db-cmpd-view-toppub" class="cmp-metric-view">
+            <div class="db-card">
+              <div class="db-card-hd db-tl-hd">
+                <span class="db-card-title">Top Publishers per Media Type <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+                <div class="tbl-select"><select id="db-cmpd-mt-select" onchange="renderCmpMediaType()"><option>Online News</option><option>Blogs</option><option>Broadsheet</option><option>Tabloid</option><option>Provincial</option><option>TV</option><option>Radio</option></select></div>
+              </div>
+              <div class="cmp-2col">
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-mt-hd-0"></div><div id="db-cmpd-mt-0"></div></div>
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-mt-hd-1"></div><div id="db-cmpd-mt-1"></div></div>
+              </div>
+            </div>
+            <div class="tbl-header">
+              <div class="tbl-header-left">
+                <div class="tbl-select"><select id="db-cmpd-tbl-cat"></select></div>
+                <div class="tbl-select"><select><option>Newest Articles</option><option>Oldest Articles</option><option>Highest Value</option><option>Lowest Value</option></select></div>
+                <div class="tbl-select"><select><option>Saved Articles</option><option>All Articles</option><option>Unsaved Articles</option></select></div>
+              </div>
+              <div class="tbl-header-right">
+                <div class="tbl-view-toggle"><button class="tbl-view-btn on" title="Table view"><i data-lucide="table-2"></i></button><button class="tbl-view-btn" title="Card view"><i data-lucide="layout-grid"></i></button></div>
+                <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
+                <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
+                <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+                <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+                <button class="btn-export">Export</button>
+              </div>
+            </div>
+            <div class="db-card db-ton-table-card" id="db-cmpd-table"></div>
+          </div>
+          <!-- View C: Top Author -->
+          <div id="db-cmpd-view-author" class="cmp-metric-view">
+            <div class="db-card">
+              <div class="db-card-hd db-tl-hd"><span class="db-card-title">Top Authors <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+              <div class="cmp-2col">
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-au-hd-0"></div><div class="ps-media-pubs" id="db-cmpd-au-0"></div></div>
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-au-hd-1"></div><div class="ps-media-pubs" id="db-cmpd-au-1"></div></div>
+              </div>
+            </div>
+            <div class="db-card">
+              <div class="db-card-hd db-tl-hd">
+                <span class="db-card-title">Top Publishers per Media Type <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+                <div class="tbl-select"><select id="db-cmpd-au-mt-select" onchange="renderCmpAuthorMT()"><option>Online News</option><option>Blogs</option><option>Broadsheet</option><option>Tabloid</option><option>Provincial</option><option>TV</option><option>Radio</option></select></div>
+              </div>
+              <div class="cmp-2col">
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-au-mt-hd-0"></div><div class="ps-media-pubs" id="db-cmpd-au-mt-0"></div></div>
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-au-mt-hd-1"></div><div class="ps-media-pubs" id="db-cmpd-au-mt-1"></div></div>
+              </div>
+            </div>
+            <div class="db-card ex-pub-section">
+              <div class="db-card-hd db-tl-hd"><span class="db-card-title" id="db-cmpd-au-cards-hd">Top Authors</span></div>
+              <div class="ex-pub-grid" id="db-cmpd-au-cards"></div>
+            </div>
+            <div class="tbl-header">
+              <div class="tbl-header-left">
+                <div class="tbl-select"><select id="db-cmpd-au-tbl-cat"></select></div>
+                <div class="tbl-select"><select><option>Newest Articles</option><option>Oldest Articles</option><option>Highest Value</option><option>Lowest Value</option></select></div>
+                <div class="tbl-select"><select><option>Saved Articles</option><option>All Articles</option><option>Unsaved Articles</option></select></div>
+              </div>
+              <div class="tbl-header-right">
+                <div class="tbl-view-toggle"><button class="tbl-view-btn on" title="Table view"><i data-lucide="table-2"></i></button><button class="tbl-view-btn" title="Card view"><i data-lucide="layout-grid"></i></button></div>
+                <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
+                <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
+                <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+                <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+                <button class="btn-export">Export</button>
+              </div>
+            </div>
+            <div class="db-card db-ton-table-card" id="db-cmpd-au-table"></div>
+          </div>
+          <!-- View D: Top Media Exposure by Medium -->
+          <div id="db-cmpd-view-medium" class="cmp-metric-view">
+            <div class="db-card">
+              <div class="db-card-hd db-tl-hd"><span class="db-card-title">Pubscore Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+              <div class="cmp-2col">
+                <div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" id="db-cmpd-md-ps-name-0"></span></div><div class="db-chart-wrap" id="db-cmpd-md-ps-0" style="height:300px"></div></div>
+                <div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" id="db-cmpd-md-ps-name-1"></span></div><div class="db-chart-wrap" id="db-cmpd-md-ps-1" style="height:300px"></div></div>
+              </div>
+            </div>
+            <div class="db-card">
+              <div class="db-card-hd db-tl-hd"><span class="db-card-title">Top Publishers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+              <div class="cmp-2col">
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-md-pub-hd-0"></div><div class="ps-media-pubs" id="db-cmpd-md-pub-0"></div></div>
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-md-pub-hd-1"></div><div class="ps-media-pubs" id="db-cmpd-md-pub-1"></div></div>
+              </div>
+            </div>
+            <div class="db-card">
+              <div class="db-card-hd db-tl-hd"><span class="db-card-title">Timeline <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+              <div class="db-chart-wrap" id="db-cmpd-md-timeline" style="height:320px"></div>
+            </div>
+            <div class="tbl-header">
+              <div class="tbl-header-left">
+                <div class="tbl-select"><select id="db-cmpd-md-tbl-cat"></select></div>
+                <div class="tbl-select"><select><option>Newest Articles</option><option>Oldest Articles</option><option>Highest Value</option><option>Lowest Value</option></select></div>
+                <div class="tbl-select"><select><option>Saved Articles</option><option>All Articles</option><option>Unsaved Articles</option></select></div>
+              </div>
+              <div class="tbl-header-right">
+                <div class="tbl-view-toggle"><button class="tbl-view-btn on" title="Table view"><i data-lucide="table-2"></i></button><button class="tbl-view-btn" title="Card view"><i data-lucide="layout-grid"></i></button></div>
+                <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
+                <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
+                <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+                <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+                <button class="btn-export">Export</button>
+              </div>
+            </div>
+            <div class="db-card db-ton-table-card" id="db-cmpd-md-table"></div>
+          </div>
+          <!-- View E: Tonality -->
+          <div id="db-cmpd-view-tonality" class="cmp-metric-view">
+            <div class="db-card">
+              <div class="cmp-2col">
+                <div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" id="db-cmpd-tn-name-0"></span></div><div class="cmp-donut-body"><div class="cmp-donut-legend" id="db-cmpd-tn-leg-0"></div><div class="db-chart-wrap" id="db-cmpd-tn-donut-0" style="height:260px"></div></div></div>
+                <div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" id="db-cmpd-tn-name-1"></span></div><div class="cmp-donut-body"><div class="cmp-donut-legend" id="db-cmpd-tn-leg-1"></div><div class="db-chart-wrap" id="db-cmpd-tn-donut-1" style="height:260px"></div></div></div>
+              </div>
+            </div>
+            <div class="db-card">
+              <div class="cmp-2col">
+                <div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" id="db-cmpd-tn-tlname-0"></span></div><div class="db-chart-wrap" id="db-cmpd-tn-tl-0" style="height:320px"></div></div>
+                <div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" id="db-cmpd-tn-tlname-1"></span></div><div class="db-chart-wrap" id="db-cmpd-tn-tl-1" style="height:320px"></div></div>
+              </div>
+            </div>
+            <div class="tbl-header">
+              <div class="tbl-header-left">
+                <div class="tbl-select"><select id="db-cmpd-tn-tbl-cat"></select></div>
+                <div class="tbl-select"><select><option>Positive</option><option>Neutral</option><option>Negative</option><option>All Sentiment</option></select></div>
+                <div class="tbl-select"><select><option>Newest Articles</option><option>Oldest Articles</option><option>Highest Value</option><option>Lowest Value</option></select></div>
+                <div class="tbl-select"><select><option>Saved Articles</option><option>All Articles</option><option>Unsaved Articles</option></select></div>
+              </div>
+              <div class="tbl-header-right">
+                <div class="tbl-view-toggle"><button class="tbl-view-btn on" title="Table view"><i data-lucide="table-2"></i></button><button class="tbl-view-btn" title="Card view"><i data-lucide="layout-grid"></i></button></div>
+                <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
+                <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
+                <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+                <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+                <button class="btn-export">Export</button>
+              </div>
+            </div>
+            <div class="db-card db-ton-table-card" id="db-cmpd-tn-table"></div>
+          </div>
+          <!-- View F: Top Entity -->
+          <div id="db-cmpd-view-entity" class="cmp-metric-view">
+            <div class="db-card">
+              <div class="db-card-hd db-tl-hd"><span class="db-card-title">Top Entities <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+              <div class="cmp-2col">
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-en-hd-0"></div><div class="ps-media-pubs" id="db-cmpd-en-0"></div></div>
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-en-hd-1"></div><div class="ps-media-pubs" id="db-cmpd-en-1"></div></div>
+              </div>
+            </div>
+            <div class="db-card">
+              <div class="db-card-hd db-tl-hd"><span class="db-card-title">Top Keywords <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+              <div class="cmp-2col">
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-en-kwhd-0"></div><div id="db-cmpd-en-kw-0" style="display:flex;flex-wrap:wrap;gap:8px"></div></div>
+                <div class="cmp-list-block"><div class="cmp-col-hd" id="db-cmpd-en-kwhd-1"></div><div id="db-cmpd-en-kw-1" style="display:flex;flex-wrap:wrap;gap:8px"></div></div>
+              </div>
+            </div>
+            <div class="db-card">
+              <div class="db-card-hd db-tl-hd"><span class="db-card-title">Entities <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+              <div class="cmp-col-hd" id="db-cmpd-en-mapname-0"></div>
+              <div class="db-entmap" id="db-cmpd-en-map-0"></div>
+              <div class="db-ent-legend" id="db-cmpd-en-leg-0"></div>
+              <div class="cmp-col-hd" id="db-cmpd-en-mapname-1" style="margin-top:24px"></div>
+              <div class="db-entmap" id="db-cmpd-en-map-1"></div>
+              <div class="db-ent-legend" id="db-cmpd-en-leg-1"></div>
             </div>
           </div>
         </div>
