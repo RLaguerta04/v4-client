@@ -133,7 +133,7 @@
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-down">-2% <span class="db-kpi-arrow">▼</span></div>
         </div>
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openMostEngagingExplore()">
           <div class="db-kpi-label">Most Engaging Posts</div>
           <div class="db-kpi-val db-kpi-val--md">BNSATOfficial</div>
           <div class="db-kpi-detail">7.2K posts</div>
@@ -148,28 +148,28 @@
           <div class="db-kpi-delta db-kpi-up">8% <span class="db-kpi-arrow">▲</span></div>
         </div>
         <!-- Row 2 -->
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openDomExplore('instagram')">
           <div class="db-kpi-label">Most Dominant - Instagram</div>
           <div class="db-kpi-val db-kpi-val--md">ditophofficial</div>
           <div class="db-kpi-detail">1 posts</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-down">-90% <span class="db-kpi-arrow">▼</span></div>
         </div>
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openDomExplore('facebook')">
           <div class="db-kpi-label">Most Dominant - Facebook</div>
           <div class="db-kpi-val db-kpi-val--md">jmccautosupply</div>
           <div class="db-kpi-detail">56 posts</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-down">-2% <span class="db-kpi-arrow">▼</span></div>
         </div>
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openDomExplore('twitter')">
           <div class="db-kpi-label">Most Dominant - Twitter</div>
           <div class="db-kpi-val db-kpi-val--md">bilyonaryo_ph</div>
           <div class="db-kpi-detail">12 posts</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-down">-50% <span class="db-kpi-arrow">▼</span></div>
         </div>
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openDomExplore('youtube')">
           <div class="db-kpi-label">Most Dominant - Youtube</div>
           <div class="db-kpi-val db-kpi-val--md">DITOTelecomPH</div>
           <div class="db-kpi-detail">9 posts</div>
@@ -177,14 +177,14 @@
           <div class="db-kpi-delta db-kpi-down">-12% <span class="db-kpi-arrow">▼</span></div>
         </div>
         <!-- Row 3 -->
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openDomExplore('tiktok')">
           <div class="db-kpi-label">Most Dominant - Tiktok</div>
           <div class="db-kpi-val db-kpi-val--md">dito.ph</div>
           <div class="db-kpi-detail">6 posts</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-up">5% <span class="db-kpi-arrow">▲</span></div>
         </div>
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openDomExplore('reddit')">
           <div class="db-kpi-label">Most Dominant - Reddit</div>
           <div class="db-kpi-val db-kpi-val--md">r/Philippines</div>
           <div class="db-kpi-detail">4 posts</div>
@@ -381,9 +381,176 @@
             <div class="db-card-hd db-tl-hd"><span class="db-card-title">Top Influencers</span></div>
             <div class="ex-pub-grid" id="db-ti-cards"></div>
           </div>
-          <div class="db-card">
-            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Posts</span></div>
+          <div class="tbl-card">
+            <div class="tbl-header">
+              <div class="tbl-header-left">
+                <div class="tbl-select"><select><option>Newest Post</option><option>Oldest Post</option><option>Highest Eng Score</option><option>Lowest Eng Score</option></select></div>
+                <div class="tbl-select"><select><option>Saved Posts</option><option>All Posts</option><option>Unsaved Posts</option></select></div>
+              </div>
+              <div class="tbl-header-right">
+                <div class="tbl-view-toggle">
+                  <button class="tbl-view-btn on" title="Table view"><i data-lucide="table-2"></i></button>
+                  <button class="tbl-view-btn" title="Card view"><i data-lucide="layout-grid"></i></button>
+                </div>
+                <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
+                <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
+                <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+                <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+                <button class="btn-export">Export</button>
+              </div>
+            </div>
             <div id="db-ti-table"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Most Engaging Posts explore (opened from the "Most Engaging Posts" KPI card) -->
+      <div class="db-explore-wrap" id="db-mostengaging-explore">
+        <div class="db-explore-crumb">
+          <div class="db-explore-crumb-in">
+            <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
+            <span class="db-crumb-sep">/</span>
+            <span class="db-crumb-cur">Most Engaging Posts</span>
+          </div>
+        </div>
+        <div class="db-explore-inner">
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Top Influencers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions">
+                <button class="db-tl-explore">Go to Influencers</button>
+                <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+              </div>
+            </div>
+            <div class="db-chart-wrap" id="db-me-topinf" style="height:440px"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Comparison of Top Profiles <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions">
+                <button class="db-tl-explore">Explore Data</button>
+                <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+              </div>
+            </div>
+            <div class="db-tabs2" id="db-me-inf-tabs">
+              <div class="db-tab2 on" data-t="bubble" onclick="setMeInfTab('bubble')">Bubble Plot</div>
+              <div class="db-tab2" data-t="bar" onclick="setMeInfTab('bar')">Bar Chart</div>
+            </div>
+            <div class="db-chart-wrap" id="db-me-inf-bubble" style="height:440px"></div>
+            <div class="db-chart-wrap" id="db-me-inf-bar" style="height:380px;display:none"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title">Frequency Distribution of Posts <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions">
+                <button class="db-tl-explore">Explore Data</button>
+                <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+              </div>
+            </div>
+            <div class="db-chart-wrap" id="db-me-frequency" style="height:360px"></div>
+          </div>
+          <div class="tp-plat-grid" id="db-me-platforms"></div>
+          <div class="db-card ex-pub-section">
+            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Top Influencers</span></div>
+            <div class="ex-pub-grid" id="db-me-cards"></div>
+          </div>
+          <div class="tbl-card">
+            <div class="tbl-header">
+              <div class="tbl-header-left">
+                <div class="tbl-select"><select><option>Newest Post</option><option>Oldest Post</option><option>Highest Eng Score</option><option>Lowest Eng Score</option></select></div>
+                <div class="tbl-select"><select><option>Saved Posts</option><option>All Posts</option><option>Unsaved Posts</option></select></div>
+              </div>
+              <div class="tbl-header-right">
+                <div class="tbl-view-toggle">
+                  <button class="tbl-view-btn on" title="Table view"><i data-lucide="table-2"></i></button>
+                  <button class="tbl-view-btn" title="Card view"><i data-lucide="layout-grid"></i></button>
+                </div>
+                <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
+                <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
+                <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+                <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+                <button class="btn-export">Export</button>
+              </div>
+            </div>
+            <div id="db-me-table"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Most Dominant platform explore (shared panel, driven by openDomExplore(platform)) -->
+      <div class="db-explore-wrap" id="db-dom-explore">
+        <div class="db-explore-crumb">
+          <div class="db-explore-crumb-in">
+            <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
+            <span class="db-crumb-sep">/</span>
+            <span class="db-crumb-cur" id="db-dom-crumb">Most Dominant</span>
+          </div>
+        </div>
+        <div class="db-explore-inner">
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title" id="db-dom-topinf-title">Top Influencers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions">
+                <span id="db-dom-topinf-count" class="db-card-subtitle" style="font-size:12px;color:var(--muted);margin-right:4px"></span>
+                <button class="db-tl-explore">Go to Influencers</button>
+                <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+              </div>
+            </div>
+            <div class="db-chart-wrap" id="db-dom-topinf" style="height:440px"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title" id="db-dom-dist-title">Story Value Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions">
+                <button class="db-tl-explore">Explore Data</button>
+                <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+              </div>
+            </div>
+            <div class="db-tabs2" id="db-dom-inf-tabs">
+              <div class="db-tab2 on" data-t="bubble" onclick="setDomInfTab('bubble')">Bubble Plot</div>
+              <div class="db-tab2" data-t="bar" onclick="setDomInfTab('bar')">Bar Chart</div>
+            </div>
+            <div class="db-chart-wrap" id="db-dom-inf-bubble" style="height:440px"></div>
+            <div class="db-chart-wrap" id="db-dom-inf-bar" style="height:380px;display:none"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title" id="db-dom-freq-title">Posts Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span>
+              <div class="db-tl-actions">
+                <button class="db-tl-explore">Explore Data</button>
+                <button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button>
+              </div>
+            </div>
+            <div class="db-chart-wrap" id="db-dom-frequency" style="height:360px"></div>
+          </div>
+          <div class="db-card ex-pub-section">
+            <div class="db-card-hd db-tl-hd">
+              <span class="db-card-title" id="db-dom-cards-title">Top Influencers</span>
+              <div class="db-tl-actions">
+                <button class="db-tl-explore">Go to Influencers</button>
+              </div>
+            </div>
+            <div class="ex-pub-grid" id="db-dom-cards"></div>
+          </div>
+          <div class="tbl-card">
+            <div class="tbl-header">
+              <div class="tbl-header-left">
+                <div class="tbl-select"><select><option>Newest Post</option><option>Oldest Post</option><option>Highest Eng Score</option><option>Lowest Eng Score</option></select></div>
+                <div class="tbl-select"><select><option>Saved Posts</option><option>All Posts</option><option>Unsaved Posts</option></select></div>
+              </div>
+              <div class="tbl-header-right">
+                <div class="tbl-view-toggle">
+                  <button class="tbl-view-btn on" title="Table view"><i data-lucide="table-2"></i></button>
+                  <button class="tbl-view-btn" title="Card view"><i data-lucide="layout-grid"></i></button>
+                </div>
+                <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
+                <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
+                <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+                <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+                <button class="btn-export">Export</button>
+              </div>
+            </div>
+            <div id="db-dom-table"></div>
           </div>
         </div>
       </div>

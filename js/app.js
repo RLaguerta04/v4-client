@@ -5974,6 +5974,395 @@ function initDashboard(){
     if(bar)bar.style.display=t==='bar'?'':'none';
     document.querySelectorAll('#db-ti-inf-tabs .db-tab2').forEach(el=>el.classList.toggle('on',el.dataset.t===t));
   };
+  // ── Most Engaging Posts explore (from the "Most Engaging Posts" KPI card) ──
+  const ME_INF=[
+    {name:'BNSATOfficial',  platform:'facebook', posts:56, score:'7.20', eng:'7200', exposure:'28.80'},
+    {name:'DITOphofficial', platform:'facebook', posts:12, score:'2.89', eng:'1240', exposure:'20.24'},
+    {name:'pldt',           platform:'facebook', posts:10, score:'6.20', eng:'980',  exposure:'19.60'},
+    {name:'bilyonaryo_ph',  platform:'twitter',  posts:9,  score:'6.00', eng:'820',  exposure:'18.00'},
+    {name:'negosyantenews', platform:'facebook', posts:8,  score:'5.80', eng:'750',  exposure:'14.50'},
+    {name:'SHAYLIBAND5',    platform:'facebook', posts:6,  score:'3.10', eng:'640',  exposure:'7.30'},
+    {name:'dylanburton02',  platform:'facebook', posts:5,  score:'0.80', eng:'520',  exposure:'2.60'},
+    {name:'ConvergeICT',    platform:'facebook', posts:4,  score:'1.30', eng:'460',  exposure:'3.91'},
+    {name:'contextdotph',   platform:'twitter',  posts:3,  score:'0.51', eng:'310',  exposure:'2.57'},
+    {name:'BilyonaryoPh',   platform:'facebook', posts:2,  score:'8.40', eng:'280',  exposure:'18.20'},
+    {name:'OfficialiWant',  platform:'facebook', posts:2,  score:'0.28', eng:'210',  exposure:'0.83'},
+    {name:'ANCalerts',      platform:'twitter',  posts:1,  score:'1.00', eng:'190',  exposure:'4.00'}
+  ];
+  const ME_PLATFORMS={
+    facebook:[['BNSATOfficial',56],['DITOphofficial',12],['pldt',10],['negosyantenews',8],['SHAYLIBAND5',6],['dylanburton02',5],['ConvergeICT',4],['BilyonaryoPh',2],['OfficialiWant',2]],
+    twitter:[['bilyonaryo_ph',9],['contextdotph',3],['ANCalerts',1]],
+    instagram:[['ditophofficial',1],['iwantofficial',1]],
+    youtube:[['DITOTelecomPH',9],['TechReviewPH',5],['GadgetPilipinas',4],['UnboxPH',3],['PHTechChannel',2],['5GSpeedTest',1]],
+    reddit:[['r/Philippines',4],['r/telecomPH',3],['u/ph_telcos',2],['u/dito_user',2],['r/gadgets',1]],
+    tiktok:[['dito.ph',6],['itsmevince',4],['techtokph',3],['pinoygadget',2],['viraltelco',1]]
+  };
+  const meEngData=[
+    {name:'BNSATOfficial', posts:56, sv:28.8, score:7.20, color:'#2563eb'},
+    {name:'DITOphofficial',posts:12, sv:20.2, score:2.89, color:'#7c3aed'},
+    {name:'pldt',          posts:10, sv:19.6, score:6.20, color:'#e94f37'},
+    {name:'bilyonaryo_ph', posts:9,  sv:18.0, score:6.00, color:'#16a34a'},
+    {name:'negosyantenews',posts:8,  sv:14.5, score:5.80, color:'#6b7280'},
+    {name:'SHAYLIBAND5',   posts:6,  sv:7.3,  score:3.10, color:'#db2777'},
+    {name:'dylanburton02', posts:5,  sv:2.6,  score:0.80, color:'#0891b2'},
+    {name:'ConvergeICT',   posts:4,  sv:3.9,  score:1.30, color:'#d97706'},
+    {name:'contextdotph',  posts:3,  sv:2.6,  score:0.51, color:'#64748b'},
+    {name:'BilyonaryoPh',  posts:2,  sv:18.2, score:8.40, color:'#f59e0b'},
+    {name:'OfficialiWant', posts:2,  sv:0.8,  score:0.28, color:'#4f46e5'},
+    {name:'ANCalerts',     posts:1,  sv:4.0,  score:1.00, color:'#059669'}
+  ];
+  const meEngDesc=[...meEngData].sort((a,b)=>b.posts-a.posts);
+  const meEngAsc=[...meEngData].sort((a,b)=>a.posts-b.posts);
+  const meEngMaxX=Math.max(...meEngData.map(a=>a.posts))+4;
+  function MeEngBubble(){
+    const n=meEngAsc.length;
+    const [rng,setRng]=React.useState([0,n-1]);
+    const shown=meEngAsc.slice(rng[0],rng[1]+1);
+    return RC('div',{style:{display:'flex',flexDirection:'column',height:'100%'}},
+      RC('div',{style:{flex:1,minHeight:0}},
+        RC(ResponsiveContainer,{width:'99%',height:'100%'},
+          RC(ScatterChart,{margin:{top:16,right:20,bottom:24,left:8}},
+            RC(CartesianGrid,{stroke:'#f0f1f3'}),
+            RC(XAxis,{type:'number',dataKey:'posts',name:'Post Count',domain:[0,meEngMaxX],tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Post Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
+            RC(YAxis,{type:'number',dataKey:'sv',name:'Engagement Score',domain:[0,35],tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:40,label:{value:'Engagement Score',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
+            RC(Tooltip,{content:InflTip,cursor:{strokeDasharray:'3 3',stroke:'rgba(0,0,0,0.12)'}}),
+            RC(Scatter,{data:shown,shape:InflDot,cursor:'pointer',onClick:(d)=>{const n=d&&(d.name||(d.payload&&d.payload.name));openInsCard(window.WS_DATA.socialMentions,n||'Influencer','Most Engaging Posts','db-mostengaging-explore');}})
+          ))),
+      RC('div',{className:'db-pub-legend'},meEngData.map(a=>RC('span',{key:a.name,className:'db-pub-leg-item'},RC('span',{className:'dot',style:{background:a.color}}),a.name))),
+      RC('div',{style:{height:30,flexShrink:0}},
+        RC(ResponsiveContainer,{width:'99%',height:'100%'},
+          RC(ComposedChart,{data:meEngAsc,margin:{top:2,right:20,bottom:2,left:8}},
+            RC(XAxis,{dataKey:'posts',hide:true}),RC(YAxis,{hide:true}),
+            RC(Area,{dataKey:'sv',stroke:'transparent',fill:'transparent',isAnimationActive:false}),
+            RC(Brush,{dataKey:'name',height:24,stroke:'#b9a4f7',fill:'#f3eefc',travellerWidth:8,tickFormatter:()=>'',startIndex:rng[0],endIndex:rng[1],onChange:e=>{if(e&&e.startIndex!=null)setRng([e.startIndex,e.endIndex]);}})
+          )))
+    );
+  }
+  function MeEngBar(){
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data:meEngDesc,layout:'vertical',margin:{top:16,right:24,bottom:24,left:8}},
+        RC(CartesianGrid,{horizontal:false,stroke:'#f0f1f3'}),
+        RC(XAxis,{type:'number',dataKey:'posts',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'Post Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
+        RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:140}),
+        RC(Tooltip,{content:InflBarTip,cursor:{fill:'rgba(24,29,38,0.04)'}}),
+        RC(Bar,{dataKey:'posts',maxBarSize:26,radius:[0,4,4,0]},
+          ...meEngDesc.map((a,i)=>RC(Cell,{key:i,fill:a.color})),
+          RC(LabelList,{dataKey:'posts',position:'right',style:{fontSize:11,fontWeight:600,fill:'#6b7280'}})
+        )
+      ));
+  }
+  function MeEngTopBar(){
+    const data=ME_INF.map(x=>({name:x.name+' ('+(SOCIAL_PLATFORMS[x.platform]||{label:x.platform}).label.replace(' (Twitter)','')+')',posts:x.posts,fill:x.platform==='twitter'?'#4aa3ff':'#2563eb',key:x.name}));
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data,layout:'vertical',margin:{top:8,right:40,bottom:24,left:8}},
+        RC(CartesianGrid,{horizontal:false,stroke:'#eef0f2'}),
+        RC(XAxis,{type:'number',domain:[0,60],tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'POST COUNT',position:'insideBottom',offset:-10,fontSize:10,fill:'#9ca3af'}}),
+        RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:10,fill:'#4b5563'},width:190,axisLine:false,tickLine:false}),
+        RC(Tooltip,{content:DarkTip,cursor:{fill:'rgba(0,0,0,0.03)'}}),
+        RC(Bar,{dataKey:'posts',name:'Post Count',radius:[0,4,4,0],maxBarSize:15,isAnimationActive:false,cursor:'pointer',onClick:(d)=>{if(d&&d.key)window.openInsListPanel(_insSample('me-'+d.key,8),d.key,'Most Engaging Posts',document.querySelector('.db-explore-wrap.on .db-card'));}},
+          ...data.map((d,i)=>RC(Cell,{key:i,fill:d.fill})))
+      ));
+  }
+  function MeEngFreq(){
+    const bins=[0,1,2,3,4,5,6,7,8,9,10];
+    const counts=bins.map(b=>({value:b,count:ME_INF.filter(x=>Math.floor(parseFloat(x.score))===b).length}));
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data:counts,margin:{top:16,right:24,bottom:36,left:8}},
+        RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
+        RC(XAxis,{dataKey:'value',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'ENGAGEMENT SCORE',position:'insideBottom',offset:-20,fontSize:10,fill:'#9ca3af'}}),
+        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'POST COUNT',angle:-90,position:'insideLeft',style:{fontSize:10,fill:'#9ca3af',textAnchor:'middle'}}}),
+        RC(Tooltip,{content:DarkTip,cursor:{fill:'rgba(0,0,0,0.03)'}}),
+        RC(Bar,{dataKey:'count',fill:'#2563eb',radius:[3,3,0,0],maxBarSize:36,isAnimationActive:false})
+      ));
+  }
+  function renderMePlatforms(){
+    const grid=document.getElementById('db-me-platforms');if(!grid)return;
+    grid.innerHTML=['facebook','twitter','instagram','youtube','reddit','tiktok'].map(pk=>{
+      const p=SOCIAL_PLATFORMS[pk]||{label:pk,color:'#888',icon:'fa-globe'},list=ME_PLATFORMS[pk]||[];
+      let body;
+      if(list.length){const max=Math.max(...list.map(i=>i[1]),1);body='<div class="ps-media-pubs">'+list.map(([n,c])=>`<div class="ps-media-pub" style="cursor:pointer" onclick="openTpInfluencer('${String(n).replace(/'/g,"\\'")}',this.closest('.tp-plat-card'))"><div class="ps-media-pub-name">${n}</div><div class="ps-media-bar"><div class="ps-media-bar-fill" style="width:${Math.round(c/max*100)}%;background:${p.color}"></div><span class="ps-media-bar-lbl${c===max?' over-fill':''}">${c}</span></div></div>`).join('')+'</div>';}
+      else body='<div class="cmp-emp-nodata"><i data-lucide="inbox"></i><div>No Data Found</div></div>';
+      return `<div class="db-card tp-plat-card"><div class="db-card-hd db-tl-hd"><span class="db-card-title"><i class="fa-brands ${p.icon}" style="color:${p.color};margin-right:7px"></i>${p.label}</span></div>${body}</div>`;
+    }).join('');
+  }
+  function renderMeInfCards(){
+    const grid=document.getElementById('db-me-cards');if(!grid)return;
+    grid.innerHTML=ME_INF.map((x)=>{const [ic,col]=ONE_SOC_SET[({facebook:0,twitter:1,instagram:2,youtube:3,reddit:4,tiktok:5})[x.platform]||0];
+      const soc=`<div class="md-socials"><span class="md-soc" style="background:${col}">${ic==='fa-x-twitter'?X_SVG:`<i class="fa-brands ${ic}"></i>`}</span></div>`;
+      return `<div class="ex-pub-card" onclick="openTpInfluencer('${x.name.replace(/'/g,"\\'")}',this)">
+      <div class="ex-pub-hd">
+        <div class="ex-pub-hd-l"><div class="ex-pub-name" title="${x.name}">${x.name}</div><div class="ex-pub-socialrow">${soc}</div></div>
+        <span class="ex-pub-avatar">${x.name.charAt(0).toUpperCase()}</span>
+      </div>
+      <div class="ex-pub-metrics tp-metrics">
+        <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Post Count</div><div class="ex-pub-stat-val">${x.posts}</div></div>
+        <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Influencer Score</div><div class="ex-pub-stat-val">${x.score}</div></div>
+        <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Eng. Score</div><div class="ex-pub-stat-val">${x.eng}</div></div>
+        <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Platform Exposure</div><div class="ex-pub-stat-val">${x.exposure}</div></div>
+      </div>
+    </div>`;}).join('');
+  }
+  window.openMostEngagingExplore=function(){
+    const wrap=_showExplore('db-mostengaging-explore');if(!wrap)return;
+    dbMount('db-me-topinf',RC(MeEngTopBar));
+    dbMount('db-me-inf-bubble',RC(MeEngBubble));
+    dbMount('db-me-inf-bar',RC(MeEngBar));
+    const _bar=document.getElementById('db-me-inf-bar');if(_bar)_bar.style.display='none';
+    dbMount('db-me-frequency',RC(MeEngFreq));
+    renderMePlatforms();
+    renderMeInfCards();
+    window.renderTiPosts('db-me-table',0);
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  window.setMeInfTab=function(t){
+    const bub=document.getElementById('db-me-inf-bubble'),bar=document.getElementById('db-me-inf-bar');
+    if(bub)bub.style.display=t==='bubble'?'':'none';
+    if(bar)bar.style.display=t==='bar'?'':'none';
+    document.querySelectorAll('#db-me-inf-tabs .db-tab2').forEach(el=>el.classList.toggle('on',el.dataset.t===t));
+  };
+  // ── Most Dominant platform explore (shared panel driven by openDomExplore(platform)) ──
+  const DOM_DATA={
+    facebook:{
+      label:'Facebook', color:'#1877f2', icon:'fa-facebook',
+      inf:[
+        {name:'jmccautosupply',platform:'facebook',posts:12,score:'0.83',eng:'252',exposure:'9.96'},
+        {name:'DITOphofficial',platform:'facebook',posts:7,score:'2.89',eng:'512',exposure:'20.24'},
+        {name:'dylanburton02',platform:'facebook',posts:4,score:'0.76',eng:'77',exposure:'3.04'},
+        {name:'pldt',platform:'facebook',posts:3,score:'3.62',eng:'275',exposure:'10.87'},
+        {name:'OfficialiWant',platform:'facebook',posts:3,score:'0.28',eng:'21',exposure:'0.83'},
+        {name:'ConvergeICT',platform:'facebook',posts:3,score:'1.30',eng:'99',exposure:'3.91'},
+        {name:'SHAYLIBAND5',platform:'facebook',posts:3,score:'1.24',eng:'94',exposure:'3.72'},
+        {name:'BilyonaryoPh',platform:'facebook',posts:2,score:'1.32',eng:'67',exposure:'2.65'},
+        {name:'M360PR',platform:'facebook',posts:2,score:'0.02',eng:'1',exposure:'0.04'},
+        {name:'negosyantenews',platform:'facebook',posts:2,score:'0.04',eng:'2',exposure:'0.08'},
+        {name:'iamsuperbianca',platform:'facebook',posts:2,score:'0.92',eng:'232',exposure:'9.17'},
+        {name:'contextdotph',platform:'facebook',posts:1,score:'0.51',eng:'65',exposure:'2.57'}
+      ],
+      bubble:[
+        {name:'jmccautosupply',posts:12,sv:9.9, score:0.83,color:'#2563eb'},
+        {name:'DITOphofficial',posts:7, sv:20.2,score:2.89,color:'#7c3aed'},
+        {name:'dylanburton02', posts:4, sv:3.0, score:0.76,color:'#0891b2'},
+        {name:'pldt',          posts:3, sv:10.9,score:3.62,color:'#e94f37'},
+        {name:'OfficialiWant', posts:3, sv:0.8, score:0.28,color:'#4f46e5'},
+        {name:'ConvergeICT',   posts:3, sv:3.9, score:1.30,color:'#d97706'},
+        {name:'SHAYLIBAND5',   posts:3, sv:3.7, score:1.24,color:'#db2777'},
+        {name:'BilyonaryoPh',  posts:2, sv:2.7, score:1.32,color:'#16a34a'},
+        {name:'M360PR',        posts:2, sv:0.04,score:0.02,color:'#6b7280'},
+        {name:'negosyantenews',posts:2, sv:0.08,score:0.04,color:'#64748b'},
+        {name:'iamsuperbianca',posts:2, sv:9.2, score:0.92,color:'#f59e0b'},
+        {name:'contextdotph',  posts:1, sv:2.6, score:0.51,color:'#059669'}
+      ],
+      freq:[[0,90],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[9,0],[10,0]]
+    },
+    instagram:{
+      label:'Instagram', color:'#e4405f', icon:'fa-instagram',
+      inf:[
+        {name:'ditophofficial',  platform:'instagram',posts:5,score:'1.20',eng:'1840',exposure:'7.36'},
+        {name:'techreviewph_ig', platform:'instagram',posts:3,score:'2.10',eng:'960', exposure:'9.60'},
+        {name:'gadgetpinoy',     platform:'instagram',posts:2,score:'1.65',eng:'720', exposure:'6.60'},
+        {name:'pinoytech_ig',    platform:'instagram',posts:2,score:'1.40',eng:'580', exposure:'5.60'},
+        {name:'iwantofficial',   platform:'instagram',posts:1,score:'0.85',eng:'320', exposure:'3.40'},
+        {name:'ditoofficial_ig', platform:'instagram',posts:1,score:'0.72',eng:'240', exposure:'2.88'}
+      ],
+      bubble:[
+        {name:'ditophofficial',  posts:5,sv:7.4,score:1.20,color:'#e4405f'},
+        {name:'techreviewph_ig', posts:3,sv:6.2,score:2.10,color:'#7c3aed'},
+        {name:'gadgetpinoy',     posts:2,sv:4.1,score:1.65,color:'#2563eb'},
+        {name:'pinoytech_ig',    posts:2,sv:3.5,score:1.40,color:'#16a34a'},
+        {name:'iwantofficial',   posts:1,sv:3.4,score:0.85,color:'#d97706'},
+        {name:'ditoofficial_ig', posts:1,sv:1.8,score:0.72,color:'#0891b2'}
+      ],
+      freq:[[0,0],[1,2],[2,2],[3,1],[4,0],[5,0],[6,0],[7,1],[8,0],[9,0],[10,0]]
+    },
+    twitter:{
+      label:'X (Twitter)', color:'#000000', icon:'fa-x-twitter',
+      inf:[
+        {name:'bilyonaryo_ph',platform:'twitter',posts:3,score:'6.00',eng:'9',exposure:'18.00'},
+        {name:'ofc_iwant',    platform:'twitter',posts:3,score:'1.33',eng:'2',exposure:'4.00'},
+        {name:'contextdotph', platform:'twitter',posts:2,score:'0.51',eng:'65',exposure:'2.57'},
+        {name:'ABSCBNNews',   platform:'twitter',posts:1,score:'0.80',eng:'120',exposure:'3.20'},
+        {name:'pnagovph',     platform:'twitter',posts:1,score:'0.60',eng:'45',exposure:'1.80'},
+        {name:'technobaboy',  platform:'twitter',posts:1,score:'0.40',eng:'30',exposure:'1.20'},
+        {name:'adobotech',    platform:'twitter',posts:1,score:'0.35',eng:'22',exposure:'0.88'},
+        {name:'ABSCBN',       platform:'twitter',posts:1,score:'0.55',eng:'60',exposure:'2.20'},
+        {name:'digitalspaceph',platform:'twitter',posts:1,score:'0.30',eng:'18',exposure:'0.72'},
+        {name:'chubbzzz717',  platform:'twitter',posts:1,score:'0.25',eng:'10',exposure:'0.40'}
+      ],
+      bubble:[
+        {name:'bilyonaryo_ph', posts:3,sv:18.0,score:6.00,color:'#16a34a'},
+        {name:'ofc_iwant',     posts:3,sv:4.0, score:1.33,color:'#2563eb'},
+        {name:'contextdotph',  posts:2,sv:2.6, score:0.51,color:'#64748b'},
+        {name:'ABSCBNNews',    posts:1,sv:3.2, score:0.80,color:'#e94f37'},
+        {name:'pnagovph',      posts:1,sv:1.8, score:0.60,color:'#7c3aed'},
+        {name:'technobaboy',   posts:1,sv:1.2, score:0.40,color:'#d97706'},
+        {name:'adobotech',     posts:1,sv:0.9, score:0.35,color:'#db2777'},
+        {name:'ABSCBN',        posts:1,sv:2.2, score:0.55,color:'#0891b2'},
+        {name:'digitalspaceph',posts:1,sv:0.7, score:0.30,color:'#6b7280'},
+        {name:'chubbzzz717',   posts:1,sv:0.4, score:0.25,color:'#f59e0b'}
+      ],
+      freq:[[0,0],[1,8],[2,1],[3,1],[4,0],[5,0],[6,0],[7,0],[8,0],[9,0],[10,0]]
+    },
+    youtube:{
+      label:'YouTube', color:'#ff0000', icon:'fa-youtube',
+      inf:[
+        {name:'DITOTelecomPH',  platform:'youtube',posts:9,score:'3.20',eng:'1200',exposure:'12.80'},
+        {name:'TechReviewPH',   platform:'youtube',posts:5,score:'2.10',eng:'780',exposure:'8.40'},
+        {name:'GadgetPilipinas',platform:'youtube',posts:4,score:'1.80',eng:'640',exposure:'7.20'},
+        {name:'UnboxPH',        platform:'youtube',posts:3,score:'1.40',eng:'480',exposure:'5.60'},
+        {name:'PHTechChannel',  platform:'youtube',posts:2,score:'0.90',eng:'310',exposure:'3.60'},
+        {name:'5GSpeedTest',    platform:'youtube',posts:1,score:'0.50',eng:'180',exposure:'2.00'}
+      ],
+      bubble:[
+        {name:'DITOTelecomPH',  posts:9,sv:12.8,score:3.20,color:'#ff0000'},
+        {name:'TechReviewPH',   posts:5,sv:8.4, score:2.10,color:'#2563eb'},
+        {name:'GadgetPilipinas',posts:4,sv:7.2, score:1.80,color:'#7c3aed'},
+        {name:'UnboxPH',        posts:3,sv:5.6, score:1.40,color:'#16a34a'},
+        {name:'PHTechChannel',  posts:2,sv:3.6, score:0.90,color:'#d97706'},
+        {name:'5GSpeedTest',    posts:1,sv:2.0, score:0.50,color:'#6b7280'}
+      ],
+      freq:[[0,0],[1,1],[2,1],[3,1],[4,1],[5,1],[6,0],[7,0],[8,0],[9,1],[10,0]]
+    },
+    reddit:{
+      label:'Reddit', color:'#ff4500', icon:'fa-reddit',
+      inf:[
+        {name:'r/Philippines',platform:'reddit',posts:4,score:'1.60',eng:'280',exposure:'6.40'},
+        {name:'r/telecomPH',  platform:'reddit',posts:3,score:'1.20',eng:'210',exposure:'4.80'},
+        {name:'u/ph_telcos',  platform:'reddit',posts:2,score:'0.80',eng:'140',exposure:'3.20'},
+        {name:'u/dito_user',  platform:'reddit',posts:2,score:'0.70',eng:'120',exposure:'2.80'},
+        {name:'r/gadgets',    platform:'reddit',posts:1,score:'0.40',eng:'60',exposure:'1.60'}
+      ],
+      bubble:[
+        {name:'r/Philippines',posts:4,sv:6.4,score:1.60,color:'#ff4500'},
+        {name:'r/telecomPH',  posts:3,sv:4.8,score:1.20,color:'#2563eb'},
+        {name:'u/ph_telcos',  posts:2,sv:3.2,score:0.80,color:'#7c3aed'},
+        {name:'u/dito_user',  posts:2,sv:2.8,score:0.70,color:'#16a34a'},
+        {name:'r/gadgets',    posts:1,sv:1.6,score:0.40,color:'#d97706'}
+      ],
+      freq:[[0,0],[1,1],[2,2],[3,1],[4,1],[5,0],[6,0],[7,0],[8,0],[9,0],[10,0]]
+    },
+    tiktok:{
+      label:'TikTok', color:'#111111', icon:'fa-tiktok',
+      inf:[
+        {name:'dito.ph',    platform:'tiktok',posts:6,score:'2.40',eng:'860',exposure:'9.60'},
+        {name:'itsmevince', platform:'tiktok',posts:4,score:'1.80',eng:'640',exposure:'7.20'},
+        {name:'techtokph',  platform:'tiktok',posts:3,score:'1.20',eng:'420',exposure:'4.80'},
+        {name:'pinoygadget',platform:'tiktok',posts:2,score:'0.80',eng:'280',exposure:'3.20'},
+        {name:'viraltelco', platform:'tiktok',posts:1,score:'0.40',eng:'140',exposure:'1.60'}
+      ],
+      bubble:[
+        {name:'dito.ph',    posts:6,sv:9.6,score:2.40,color:'#111111'},
+        {name:'itsmevince', posts:4,sv:7.2,score:1.80,color:'#7c3aed'},
+        {name:'techtokph',  posts:3,sv:4.8,score:1.20,color:'#2563eb'},
+        {name:'pinoygadget',posts:2,sv:3.2,score:0.80,color:'#16a34a'},
+        {name:'viraltelco', posts:1,sv:1.6,score:0.40,color:'#d97706'}
+      ],
+      freq:[[0,0],[1,1],[2,1],[3,1],[4,0],[5,0],[6,1],[7,0],[8,0],[9,0],[10,0]]
+    }
+  };
+  window.openDomExplore=function(platform){
+    const wrap=_showExplore('db-dom-explore');if(!wrap)return;
+    const d=DOM_DATA[platform]||DOM_DATA.facebook;
+    const platLabel=d.label;
+    // update dynamic titles and crumb
+    const _t=function(id,txt){const el=document.getElementById(id);if(el)el.firstChild.textContent=txt+' ';};
+    const _s=function(id,txt){const el=document.getElementById(id);if(el)el.textContent=txt;};
+    _s('db-dom-crumb','Most Dominant - '+platLabel);
+    _t('db-dom-topinf-title','Top Influencers');
+    _t('db-dom-dist-title',platLabel+' Story Value Distribution');
+    _t('db-dom-freq-title',platLabel+' Posts Distribution');
+    _s('db-dom-cards-title','Top Influencers for Company News - '+platLabel);
+    // reset tab to bubble
+    const bub=document.getElementById('db-dom-inf-bubble'),bar=document.getElementById('db-dom-inf-bar');
+    if(bub)bub.style.display='';if(bar)bar.style.display='none';
+    document.querySelectorAll('#db-dom-inf-tabs .db-tab2').forEach(el=>el.classList.toggle('on',el.dataset.t==='bubble'));
+    // Top influencers bar — integer-safe domain so small datasets don't get fractional ticks
+    const infData=d.inf.map(x=>({name:x.name,posts:x.posts,fill:d.color,key:x.name}));
+    const maxPosts=Math.max(...infData.map(x=>x.posts),1);
+    const barDomainMax=maxPosts+Math.max(Math.ceil(maxPosts*0.25),1);
+    const barTicks=Array.from({length:barDomainMax+1},(_,i)=>i);
+    dbMount('db-dom-topinf',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data:infData,layout:'vertical',margin:{top:8,right:40,bottom:24,left:8}},
+        RC(CartesianGrid,{horizontal:false,stroke:'#eef0f2'}),
+        RC(XAxis,{type:'number',domain:[0,barDomainMax],ticks:barTicks,tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'POST COUNT',position:'insideBottom',offset:-10,fontSize:10,fill:'#9ca3af'}}),
+        RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:10,fill:'#4b5563'},width:190,axisLine:false,tickLine:false}),
+        RC(Tooltip,{content:DarkTip,cursor:{fill:'rgba(0,0,0,0.03)'}}),
+        RC(Bar,{dataKey:'posts',name:'Post Count',radius:[0,4,4,0],maxBarSize:15,isAnimationActive:false,cursor:'pointer',onClick:(x)=>{if(x&&x.key)window.openInsListPanel(_insSample('dom-'+x.key,8),x.key,platLabel,document.querySelector('.db-explore-wrap.on .db-card'));}},
+          ...infData.map((x,i)=>RC(Cell,{key:i,fill:x.fill})))
+      )));
+    // Bubble plot — spread x-axis so same-post-count dots don't stack; cap Y at rounded max
+    const bubData=[...d.bubble].sort((a,b)=>a.posts-b.posts);
+    const bubMaxX=Math.max(...bubData.map(a=>a.posts),1)+Math.max(Math.ceil(Math.max(...bubData.map(a=>a.posts),1)*0.3),1);
+    const bubMaxY=Math.ceil(Math.max(...bubData.map(a=>a.sv),4)/2)*2+2;
+    const DomDot=(p)=>p.cx==null?null:RC('circle',{cx:p.cx,cy:p.cy,r:6+p.payload.score*1.4,fill:p.payload.color,opacity:0.72});
+    dbMount('db-dom-inf-bubble',RC('div',{style:{display:'flex',flexDirection:'column',height:'100%'}},
+      RC('div',{style:{flex:1,minHeight:0}},
+        RC(ResponsiveContainer,{width:'99%',height:'100%'},
+          RC(ScatterChart,{margin:{top:16,right:20,bottom:24,left:8}},
+            RC(CartesianGrid,{stroke:'#f0f1f3'}),
+            RC(XAxis,{type:'number',dataKey:'posts',name:'Post Count',domain:[0,bubMaxX],tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Post Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
+            RC(YAxis,{type:'number',dataKey:'sv',name:'Story Value',domain:[0,bubMaxY],tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:40,label:{value:'Story Value',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
+            RC(Tooltip,{content:InflTip,cursor:{strokeDasharray:'3 3',stroke:'rgba(0,0,0,0.12)'}}),
+            RC(Scatter,{data:bubData,shape:DomDot,cursor:'pointer',onClick:(pt)=>{const n=pt&&(pt.name||(pt.payload&&pt.payload.name));if(n)window.openInsListPanel(_insSample('dom-bub-'+n,8),n,platLabel+' Story Value',document.querySelector('.db-explore-wrap.on .db-card'));}})
+          ))),
+      RC('div',{className:'db-pub-legend'},d.bubble.map(a=>RC('span',{key:a.name,className:'db-pub-leg-item'},RC('span',{className:'dot',style:{background:a.color}}),a.name)))
+    ));
+    // Bar chart
+    const barDesc=[...d.bubble].sort((a,b)=>b.posts-a.posts);
+    dbMount('db-dom-inf-bar',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data:barDesc,layout:'vertical',margin:{top:16,right:24,bottom:24,left:8}},
+        RC(CartesianGrid,{horizontal:false,stroke:'#f0f1f3'}),
+        RC(XAxis,{type:'number',dataKey:'posts',allowDecimals:false,tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'Post Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
+        RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:140}),
+        RC(Tooltip,{content:InflBarTip,cursor:{fill:'rgba(24,29,38,0.04)'}}),
+        RC(Bar,{dataKey:'posts',maxBarSize:26,radius:[0,4,4,0],cursor:'pointer',onClick:(a,idx,e)=>{const n=a&&a.name;if(!n)return;const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;window.openInsListPanel(_insSample('dom-bar-'+n,8),n,platLabel,card);}},
+          ...barDesc.map((a,i)=>RC(Cell,{key:i,fill:a.color})),
+          RC(LabelList,{dataKey:'posts',position:'right',style:{fontSize:11,fontWeight:600,fill:'#6b7280'}})
+        )
+      )));
+    // Frequency histogram — integer Y ticks only
+    const freqData=d.freq.map(([v,c])=>({value:v,count:c}));
+    const freqMaxY=Math.max(...freqData.map(f=>f.count),1);
+    const freqYTicks=Array.from({length:freqMaxY+1},(_,i)=>i);
+    dbMount('db-dom-frequency',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data:freqData,margin:{top:16,right:24,bottom:36,left:8}},
+        RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
+        RC(XAxis,{dataKey:'value',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'STORY VALUE',position:'insideBottom',offset:-20,fontSize:10,fill:'#9ca3af'}}),
+        RC(YAxis,{ticks:freqYTicks,domain:[0,freqMaxY+1],tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'POST COUNT',angle:-90,position:'insideLeft',style:{fontSize:10,fill:'#9ca3af',textAnchor:'middle'}}}),
+        RC(Tooltip,{content:DarkTip,cursor:{fill:'rgba(0,0,0,0.03)'}}),
+        RC(Bar,{dataKey:'count',fill:d.color,radius:[3,3,0,0],maxBarSize:36,isAnimationActive:false,cursor:'pointer',onClick:(fd,idx,e)=>{if(!fd||fd.count===0)return;const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;window.openInsListPanel(_insSample('dom-freq-'+fd.value,8),platLabel+' Story Value '+fd.value,platLabel+' Posts Distribution',card);}})
+      )));
+    // Influencer cards
+    const cardsGrid=document.getElementById('db-dom-cards');
+    if(cardsGrid){
+      const platIdx={facebook:0,twitter:1,instagram:2,youtube:3,reddit:4,tiktok:5};
+      cardsGrid.innerHTML=d.inf.map((x)=>{
+        const [ic,col]=ONE_SOC_SET[platIdx[x.platform]||0];
+        const soc=`<div class="md-socials"><span class="md-soc" style="background:${col}">${ic==='fa-x-twitter'?X_SVG:`<i class="fa-brands ${ic}"></i>`}</span></div>`;
+        return `<div class="ex-pub-card" onclick="openTpInfluencer('${x.name.replace(/'/g,"\\'")}',this)">
+        <div class="ex-pub-hd">
+          <div class="ex-pub-hd-l"><div class="ex-pub-name" title="${x.name}">${x.name}</div><div class="ex-pub-socialrow">${soc}</div></div>
+          <span class="ex-pub-avatar">${x.name.charAt(0).toUpperCase()}</span>
+        </div>
+        <div class="ex-pub-metrics tp-metrics">
+          <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Post Count</div><div class="ex-pub-stat-val">${x.posts}</div></div>
+          <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Influencer Score</div><div class="ex-pub-stat-val">${x.score}</div></div>
+          <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Eng. Score</div><div class="ex-pub-stat-val">${x.eng}</div></div>
+          <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Platform Exposure</div><div class="ex-pub-stat-val">${x.exposure}</div></div>
+        </div>
+      </div>`;}).join('');
+    }
+    // Posts table
+    window.renderTiPosts('db-dom-table',0);
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  window.setDomInfTab=function(t){
+    const bub=document.getElementById('db-dom-inf-bubble'),bar=document.getElementById('db-dom-inf-bar');
+    if(bub)bub.style.display=t==='bubble'?'':'none';
+    if(bar)bar.style.display=t==='bar'?'':'none';
+    document.querySelectorAll('#db-dom-inf-tabs .db-tab2').forEach(el=>el.classList.toggle('on',el.dataset.t===t));
+  };
   // Posts table for the Top Influencers explore — reuses the social row renderer + opens the post preview
   window.renderTiPosts=function(hostId,page){
     const host=document.getElementById(hostId);if(!host)return;
