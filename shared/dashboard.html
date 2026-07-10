@@ -120,13 +120,13 @@
       <!-- KPI Cards — social metrics, 3 rows (4 + 4 + 2) -->
       <div class="db-kpi-grid">
         <!-- Row 1 -->
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openTotalPostsExplore()">
           <div class="db-kpi-label">Total Results</div>
           <div class="db-kpi-val">69</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-down">-24% <span class="db-kpi-arrow">▼</span></div>
         </div>
-        <div class="db-kpi-card">
+        <div class="db-kpi-card db-kpi-clickable" onclick="openTopInfExplore()">
           <div class="db-kpi-label">Top Influencer</div>
           <div class="db-kpi-val db-kpi-val--md">jmccautosupply</div>
           <div class="db-kpi-detail">56 posts</div>
@@ -326,6 +326,67 @@
 
       </div><!-- /db-content-inner -->
       </div><!-- /db-content -->
+
+      <!-- Explore Data drill-down: Total Posts Count (Platform Exposure + Top Influencers + per-platform + influencer cards) -->
+      <div class="db-explore-wrap" id="db-totalposts-explore">
+        <div class="db-explore-crumb">
+          <div class="db-explore-crumb-in">
+            <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
+            <span class="db-crumb-sep">/</span>
+            <span class="db-crumb-cur">Total Posts Count</span>
+          </div>
+        </div>
+        <div class="db-explore-inner">
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Platform Exposure (Post Count) <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+            <div class="db-chart-wrap" id="db-tp-exposure" style="height:110px"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Top Influencers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+            <div class="db-chart-wrap" id="db-tp-topinf" style="height:440px"></div>
+          </div>
+          <div class="tp-plat-grid" id="db-tp-platforms"></div>
+          <div class="db-card ex-pub-section">
+            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Top Influencers</span></div>
+            <div class="ex-pub-grid" id="db-tp-cards"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Influencers explore (opened from the "Top Influencer" KPI card) -->
+      <div class="db-explore-wrap" id="db-topinf-explore">
+        <div class="db-explore-crumb">
+          <div class="db-explore-crumb-in">
+            <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
+            <span class="db-crumb-sep">/</span>
+            <span class="db-crumb-cur">Top Influencers</span>
+          </div>
+        </div>
+        <div class="db-explore-inner">
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Top Influencers <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+            <div class="db-chart-wrap" id="db-ti-topinf" style="height:440px"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Influencer Story Value Distribution <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+            <div class="db-tabs2" id="db-ti-inf-tabs">
+              <div class="db-tab2 on" data-t="bubble" onclick="setTiInfTab('bubble')">Bubble Plot</div>
+              <div class="db-tab2" data-t="bar" onclick="setTiInfTab('bar')">Bar Chart</div>
+            </div>
+            <div class="db-chart-wrap" id="db-ti-inf-bubble" style="height:440px"></div>
+            <div class="db-chart-wrap" id="db-ti-inf-bar" style="height:380px;display:none"></div>
+          </div>
+          <div class="tp-plat-grid" id="db-ti-platforms"></div>
+          <div class="db-card ex-pub-section">
+            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Top Influencers</span></div>
+            <div class="ex-pub-grid" id="db-ti-cards"></div>
+          </div>
+          <div class="db-card">
+            <div class="db-card-hd db-tl-hd"><span class="db-card-title">Posts</span></div>
+            <div id="db-ti-table"></div>
+          </div>
+        </div>
+      </div>
 
       <!-- Article preview (publishers-style 3-column) opened from an Insights table row -->
       <div class="ent-preview-wrap ins-preview-wrap">

@@ -379,7 +379,9 @@ svg.lucide-chevron-down{width:18px!important;height:18px!important}
 
 /* ── TABLE CARD ── */
 .tbl-card{background:transparent;padding:0;border-top:none}
-.tbl-header{padding:14px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:none}
+.tbl-header{padding:14px 0 4px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:none}
+.tbl-header + .db-ton-table-card{margin-top:-6px}
+.tbl-header + .tbl-scroll{margin-top:14px}
 .tbl-header-left{display:flex;align-items:center;gap:8px}
 .tbl-select{position:relative}
 .tbl-select select{appearance:none;-webkit-appearance:none;font-size:12px;padding:7px 28px 7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font-family:inherit;font-weight:500;cursor:pointer;outline:none;min-width:148px}
@@ -766,7 +768,7 @@ body.aireport-open .app-body{margin-right:var(--aa-w)}
 .exp-cancel:hover{background:var(--canvas);border-color:var(--focus-border)}
 .exp-send{font-size:12.5px;padding:8px 18px;background:var(--ink);color:#fff;border:1px solid var(--ink);border-radius:var(--radius-sm);cursor:pointer;font-weight:500;font-family:inherit;transition:background 0.12s}
 .exp-send:hover:not(:disabled){background:var(--accent-hover)}
-.exp-send:disabled{background:var(--canvas);border-color:var(--border);color:var(--muted);cursor:not-allowed}
+.exp-send:disabled{background:var(--canvas)!important;border-color:var(--border)!important;color:var(--muted)!important;cursor:not-allowed}
 /* Compare Topics modal — reuses the .exp-* shell; scrollable checkbox list + purple primary */
 .cmp-modal{width:520px}
 .cmp-modal .exp-head{border-bottom:1px solid var(--border)}
@@ -1779,7 +1781,7 @@ body.ws-shared #page-mentions.detail-open .tbl td:nth-child(9){display:none}
 .db-card.ex-pub-section{background:transparent;border:none;box-shadow:none;padding:0}
 .db-card.ex-pub-section:hover{box-shadow:none}
 /* Tonality Explore toolbar — tighten the gap to the table below it */
-.db-ton-toolbar{padding-bottom:2px;margin-bottom:-14px}
+.db-ton-toolbar{padding-bottom:4px;margin-bottom:0}
 /* Tonality Explore table card — transparent, table flush to the edges, footer inside */
 .db-card.db-ton-table-card{background:transparent;border:none;box-shadow:none;padding:0;overflow:hidden;gap:0}
 .db-card.db-ton-table-card:hover{box-shadow:none}
@@ -1802,6 +1804,17 @@ body.ws-shared #page-mentions.detail-open .tbl td:nth-child(9){display:none}
 .cmp-leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .cmp-3col{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .cmp-sov-lbl{text-align:center;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px}
+.cmp-sov-legend{margin-top:12px}
+.cmp-ent-block{margin-bottom:24px}
+.cmp-ent-block:last-child{margin-bottom:0}
+/* SharedView Total Posts Count explore: per-platform grid */
+.tp-plat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.tp-plat-card{min-height:220px}
+.tp-plat-card .cmp-emp-nodata{padding:48px 0}
+/* Chart card "•••" dropdown (Print / Download JPEG / PNG) */
+.chart-menu{position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 8px 28px rgba(24,29,38,0.16);padding:5px;min-width:184px;animation:wsIn 0.14s ease}
+.chart-menu-item{padding:8px 12px;font-size:13px;color:var(--ink);cursor:pointer;border-radius:var(--radius-sm);white-space:nowrap}
+.chart-menu-item:hover{background:var(--canvas)}
 .cmp-ov-section .db-card-hd{margin-bottom:12px}
 #db-compare-overview{border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden}
 /* Topic Emphasis — one Main/Mention bar (or empty state) per category */
@@ -1887,6 +1900,7 @@ body.ins-open .cmp-ov-row.is-focused td:first-child{box-shadow:inset 3px 0 0 #7c
 .ex-pub-socialrow .md-socials:hover .md-soc:first-child{margin-left:0}
 .ex-pub-rank{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#7c3aed;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
 .ex-pub-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 10px}
+.ex-pub-metrics.tp-metrics{grid-template-columns:repeat(2,1fr)}
 .ex-pub-metrics .ex-pub-stat:nth-child(5){grid-column:span 2}   /* Media Exposure spans cols 2-3 so its label stays one line */
 .ex-pub-stat{min-width:0}
 .ex-pub-stat-lbl{font-size:11px;color:var(--muted);margin-bottom:4px}

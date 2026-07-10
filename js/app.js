@@ -4675,7 +4675,7 @@ function initDashboard(){
   const{
     ResponsiveContainer,ComposedChart,BarChart,ScatterChart,PieChart,
     Area,Line,Bar,Scatter,Pie,Cell,
-    XAxis,YAxis,CartesianGrid,Tooltip,Legend,LabelList,Brush,ReferenceArea,Customized,Rectangle
+    XAxis,YAxis,CartesianGrid,Tooltip,Legend,LabelList,Brush,ReferenceArea,Customized,Rectangle,Sector
   }=window.Recharts;
   const TT={
     contentStyle:{background:'#181d26',border:'none',borderRadius:6,padding:'8px 12px'},
@@ -5239,6 +5239,18 @@ function initDashboard(){
   const tonLeg=document.getElementById('db-ton-legend');
   if(tonLeg) tonLeg.innerHTML=tonPie.map(s=>`<span class="db-ton-leg-item"><span class="dot" style="background:${tonColors[s.name]}"></span>${s.name} <span class="muted">${(s.value/tonGrand*100).toFixed(2)}% (${s.value})</span></span>`).join('');
   const tipBox=(...kids)=>RC('div',{style:{background:'#181d26',border:'none',borderRadius:8,padding:'10px 13px',boxShadow:'0 6px 20px rgba(0,0,0,0.28)',minWidth:150}},...kids);
+  // Generic dark tooltip (used by charts that would otherwise fall back to the light Recharts default)
+  function DarkTip(o){
+    if(!o||!o.active||!o.payload||!o.payload.length)return null;
+    const rows=o.payload.filter(p=>p&&p.value!=null);
+    return tipBox(
+      (o.label!=null&&o.label!=='')?RC('div',{key:'l',style:{fontWeight:600,color:'#fff',marginBottom:7,fontSize:12.5}},o.label):null,
+      ...rows.map((p,i)=>RC('div',{key:i,style:{display:'flex',alignItems:'center',gap:8,fontSize:12,margin:'3px 0'}},
+        RC('span',{style:{width:7,height:7,borderRadius:'50%',background:p.color||(p.payload&&p.payload.color)||p.fill||'#888',flexShrink:0}}),
+        RC('span',{style:{color:'rgba(255,255,255,0.62)',flex:1,whiteSpace:'nowrap'}},(p.name!=null?p.name:'')+':'),
+        RC('span',{style:{color:'#fff',fontWeight:600,marginLeft:18}},p.value)))
+    );
+  }
   function TonDonutTip(o){
     if(!o||!o.active||!o.payload||!o.payload.length)return null;
     const p=o.payload[0];
@@ -5250,30 +5262,41 @@ function initDashboard(){
       RC('div',{style:{fontWeight:600,color:'#fff',marginBottom:7,fontSize:12.5}},o.label),
       ...['Positive','Neutral','Negative'].map(k=>tlRow(tonColors[k],k,(o.payload.find(p=>p.dataKey===k)||{}).value||0)));
   }
-  dbMount('db-tonality-donut',RC(ResponsiveContainer,{width:'99%',height:'100%'},
-    RC(PieChart,{},
-      RC(Pie,{data:tonPie,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none',cursor:'pointer',onClick:(d)=>{const n=d&&(d.name||(d.payload&&d.payload.name));if(n)openInsCard(_insByTone(n),n+' tonality','Tonality Distribution','db-tonality-card');}},
-        ...tonPie.map(d=>RC(Cell,{key:d.name,fill:tonColors[d.name]}))),
-      RC(Tooltip,{content:TonDonutTip})
-    )));
+  // Focus-and-dim hover: active slice stays full + grows ~5px, others fade
+  const TonActiveShape=(p)=>RC(Sector,{cx:p.cx,cy:p.cy,innerRadius:p.innerRadius,outerRadius:p.outerRadius+5,startAngle:p.startAngle,endAngle:p.endAngle,fill:p.fill,stroke:'none'});
+  function TonDonut(){
+    const [hov,setHov]=React.useState(null);
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(PieChart,{},
+        RC(Pie,{data:tonPie,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none',cursor:'pointer',
+          activeIndex:hov==null?-1:hov,activeShape:TonActiveShape,onMouseEnter:(d,i)=>setHov(i),onMouseLeave:()=>setHov(null),
+          onClick:(d)=>{const n=d&&(d.name||(d.payload&&d.payload.name));if(n)openInsCard(_insByTone(n),n+' tonality','Tonality Distribution','db-tonality-card');}},
+          ...tonPie.map((d,i)=>RC(Cell,{key:d.name,fill:tonColors[d.name],fillOpacity:(hov==null||hov===i)?1:0.35}))),
+        RC(Tooltip,{content:TonDonutTip})
+      ));
+  }
+  dbMount('db-tonality-donut',RC(TonDonut));
   // round the top corners of whichever segment is the topmost non-zero one in each stack
   const tonOrder=['Positive','Neutral','Negative'];
-  const tonShape=key=>props=>{
-    if(!props||props.height<=0)return null;
-    const above=tonOrder.slice(tonOrder.indexOf(key)+1);
-    const isTop=above.every(k=>!props.payload[k]);
-    return RC(Rectangle,{...props,radius:isTop?[3,3,0,0]:0});
-  };
-  dbMount('db-tonality-bar',RC(ResponsiveContainer,{width:'99%',height:'100%'},
-    RC(BarChart,{data:tonDates,margin:{top:16,right:12,bottom:8,left:0}},
-      RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
-      RC(XAxis,{dataKey:'date',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
-      RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:28}),
-      RC(Tooltip,{content:TonBarTip,cursor:{fill:'rgba(24,29,38,0.04)'}}),
-      RC(Bar,{dataKey:'Positive',stackId:'s',fill:'#16a34a',maxBarSize:48,shape:tonShape('Positive'),cursor:'pointer',onClick:()=>openInsCard(_insByTone('Positive'),'Positive tonality','Tonality Distribution','db-tonality-card')}),
-      RC(Bar,{dataKey:'Neutral',stackId:'s',fill:'#9ca3af',maxBarSize:48,shape:tonShape('Neutral'),cursor:'pointer',onClick:()=>openInsCard(_insByTone('Neutral'),'Neutral tonality','Tonality Distribution','db-tonality-card')}),
-      RC(Bar,{dataKey:'Negative',stackId:'s',fill:'#dc2626',maxBarSize:48,shape:tonShape('Negative'),cursor:'pointer',onClick:()=>openInsCard(_insByTone('Negative'),'Negative tonality','Tonality Distribution','db-tonality-card')})
-    )));
+  function TonBar(){
+    const [hov,setHov]=React.useState(null);
+    const shape=key=>props=>{
+      if(!props||props.height<=0)return null;
+      const above=tonOrder.slice(tonOrder.indexOf(key)+1);
+      const isTop=above.every(k=>!props.payload[k]);
+      return RC(Rectangle,{...props,radius:isTop?[3,3,0,0]:0,fillOpacity:(hov!=null&&hov!==props.index)?0.3:1});
+    };
+    const bar=(key,fill)=>RC(Bar,{dataKey:key,stackId:'s',fill,maxBarSize:48,shape:shape(key),cursor:'pointer',isAnimationActive:false,onClick:()=>openInsCard(_insByTone(key),key+' tonality','Tonality Distribution','db-tonality-card')});
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data:tonDates,margin:{top:16,right:12,bottom:8,left:0},onMouseMove:(s)=>setHov(s&&s.activeTooltipIndex!=null?s.activeTooltipIndex:null),onMouseLeave:()=>setHov(null)},
+        RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
+        RC(XAxis,{dataKey:'date',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
+        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:28}),
+        RC(Tooltip,{content:TonBarTip,cursor:{fill:'rgba(24,29,38,0.07)'}}),
+        bar('Positive','#16a34a'),bar('Neutral','#9ca3af'),bar('Negative','#dc2626')
+      ));
+  }
+  dbMount('db-tonality-bar',RC(TonBar));
 
   // ── Frequency Distribution (story-value histogram + brush, focus-&-dim hover) ──
   const freqCounts={0:3,1:2,4:3};
@@ -5540,7 +5563,7 @@ function initDashboard(){
         RC(CartesianGrid,{horizontal:false,stroke:'#eef0f2'}),
         RC(XAxis,{type:'number',domain:[0,25],ticks:[0,5,10,15,20,25],tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'ARTICLES COUNT',position:'insideBottom',offset:-10,fontSize:10,fill:'#9ca3af'}}),
         RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#4b5563'},width:240,axisLine:false,tickLine:false}),
-        RC(Tooltip,{cursor:{fill:'rgba(0,0,0,0.03)'}}),
+        RC(Tooltip,{content:DarkTip,cursor:{fill:'rgba(0,0,0,0.03)'}}),
         RC(Bar,{dataKey:'articles',radius:[0,4,4,0],maxBarSize:15,isAnimationActive:false,cursor:'pointer',onClick:(d)=>{if(d&&d.pub){const c=document.querySelector('.db-explore-wrap.on .db-explore-toppub-chart');window.openInsPubArticles(d.pub,c&&c.closest('.db-card'));}}},
           ...data.map((d,i)=>RC(Cell,{key:i,fill:d.fill})))
       ));
@@ -5612,7 +5635,7 @@ function initDashboard(){
         RC(CartesianGrid,{vertical:false,stroke:'#eef0f2'}),
         RC(XAxis,{dataKey:'date',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
         RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:28,domain:[0,8]}),
-        RC(Tooltip,{}),
+        RC(Tooltip,{content:DarkTip}),
         RC(Legend,{iconType:'plainline',wrapperStyle:{fontSize:12,paddingTop:10}}),
         ...['Negative','Neutral','Positive'].map(k=>RC(Line,{key:k,type:'linear',dataKey:k,stroke:TON_LINE[k],strokeWidth:2,dot:{r:4,fill:TON_LINE[k],strokeWidth:0},activeDot:{r:5}}))
       ));
@@ -5700,7 +5723,7 @@ function initDashboard(){
         RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
         RC(XAxis,{dataKey:'score',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'PUBLICATION SCORE',position:'insideBottom',offset:-12,fontSize:10,fill:'#9ca3af'}}),
         RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:38,label:{value:'ARTICLE COUNT',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
-        RC(Tooltip,{cursor:false}),
+        RC(Tooltip,{content:DarkTip,cursor:false}),
         RC(Bar,{dataKey:'count',maxBarSize:34,radius:[3,3,0,0],isAnimationActive:false,cursor:'pointer',onMouseEnter:(d,i)=>setHov(i),onClick:(d)=>openInsCard(_insSample('pubscore-'+d.score,Math.max(4,Math.min(8,Math.round((d.count||0)/12)+3))),'Publication Score '+d.score,'Pubscore Distribution','db-expmed-pubscore-card')},
           ...pubscoreDistData.map((d,i)=>RC(Cell,{key:i,fill:(hov===null||hov===i)?'#6d5ae6':'#c9c0f2'})),
           RC(LabelList,{dataKey:'count',position:'top',style:{fontSize:11,fontWeight:600,fill:'#6b7280'}})
@@ -5720,7 +5743,7 @@ function initDashboard(){
         RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
         RC(XAxis,{dataKey:'score',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'PUBLICATION SCORE',position:'insideBottom',offset:-12,fontSize:10,fill:'#9ca3af'}}),
         RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:38,label:{value:'ARTICLE COUNT',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
-        RC(Tooltip,{cursor:false}),
+        RC(Tooltip,{content:DarkTip,cursor:false}),
         RC(Bar,{dataKey:'count',maxBarSize:34,radius:[3,3,0,0],isAnimationActive:false,cursor:'pointer',onMouseEnter:(d,i)=>setHov(i),onClick:(d,i,e)=>{if(!d)return;const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;window.openInsListPanel(_insSample('pubscore-'+d.score,8),'Publication Score '+d.score,'Pubscore Distribution',card);}},
           ...data.map((d,i)=>RC(Cell,{key:i,fill:(hov===null||hov===i)?'#6d5ae6':'#c9c0f2'})),
           RC(LabelList,{dataKey:'count',position:'top',style:{fontSize:11,fontWeight:600,fill:'#6b7280'}})
@@ -5778,7 +5801,7 @@ function initDashboard(){
         RC(CartesianGrid,{horizontal:false,stroke:'#eef0f2'}),
         RC(XAxis,{type:'number',domain:[0,8],ticks:[0,2,4,6,8],tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'ARTICLES COUNT',position:'insideBottom',offset:-10,fontSize:10,fill:'#9ca3af'}}),
         RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#4b5563'},width:160,axisLine:false,tickLine:false}),
-        RC(Tooltip,{cursor:{fill:'rgba(0,0,0,0.03)'}}),
+        RC(Tooltip,{content:DarkTip,cursor:{fill:'rgba(0,0,0,0.03)'}}),
         RC(Bar,{dataKey:'articles',radius:[0,4,4,0],maxBarSize:15,isAnimationActive:false,cursor:'pointer',onClick:(d)=>{if(d&&d.pub){const c=document.querySelector('.db-explore-wrap.on .db-explore-toppub-chart');window.openInsEntityCard('author',d.pub,c&&c.closest('.db-card'));}}},
           ...data.map((d,i)=>RC(Cell,{key:i,fill:d.fill})))
       ));
@@ -5816,7 +5839,7 @@ function initDashboard(){
         RC(CartesianGrid,{horizontal:false,stroke:'#eef0f2'}),
         RC(XAxis,{type:'number',domain:[0,120],ticks:[0,30,60,90,120],tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'ARTICLES COUNT',position:'insideBottom',offset:-10,fontSize:10,fill:'#9ca3af'}}),
         RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#4b5563'},width:120,axisLine:false,tickLine:false}),
-        RC(Tooltip,{cursor:{fill:'rgba(0,0,0,0.03)'}}),
+        RC(Tooltip,{content:DarkTip,cursor:{fill:'rgba(0,0,0,0.03)'}}),
         RC(Bar,{dataKey:'count',radius:[0,4,4,0],maxBarSize:16,isAnimationActive:false,fill:'#6d5ae6',cursor:'pointer',onClick:(d)=>{if(d&&d.pub)window.openInsEntity(d.pub);}})
       ));
   }
@@ -5850,6 +5873,134 @@ function initDashboard(){
     _bindExploreScroll(wrap);
     initIcons();
   };
+  // ── SharedView: "Total Posts Count" explore — Platform Exposure + Top Influencers + per-platform + influencer cards ──
+  const TP_INF=[
+    {name:'jmccautosupply',platform:'facebook',posts:12,score:'0.83',eng:'252',exposure:'9.96'},
+    {name:'iamsuperbianca',platform:'facebook',posts:10,score:'0.92',eng:'232',exposure:'9.17'},
+    {name:'DITOphofficial',platform:'facebook',posts:7,score:'2.89',eng:'512',exposure:'20.24'},
+    {name:'contextdotph',platform:'facebook',posts:5,score:'0.51',eng:'65',exposure:'2.57'},
+    {name:'dylanburton02',platform:'facebook',posts:4,score:'0.76',eng:'77',exposure:'3.04'},
+    {name:'pldt',platform:'facebook',posts:3,score:'3.62',eng:'275',exposure:'10.87'},
+    {name:'OfficialiWant',platform:'facebook',posts:3,score:'0.28',eng:'21',exposure:'0.83'},
+    {name:'ConvergeICT',platform:'facebook',posts:3,score:'1.30',eng:'99',exposure:'3.91'},
+    {name:'SHAYLIBAND5',platform:'facebook',posts:3,score:'1.24',eng:'94',exposure:'3.72'},
+    {name:'bilyonaryo_ph',platform:'twitter',posts:3,score:'6.00',eng:'9',exposure:'18.00'},
+    {name:'ofc_iwant',platform:'twitter',posts:3,score:'1.33',eng:'2',exposure:'4.00'},
+    {name:'BilyonaryoPh',platform:'facebook',posts:2,score:'1.32',eng:'67',exposure:'2.65'}
+  ];
+  const TP_PLATFORMS={
+    facebook:[['jmccautosupply',12],['DITOphofficial',7],['dylanburton02',4],['pldt',3],['OfficialiWant',3],['ConvergeICT',3],['SHAYLIBAND5',3],['BilyonaryoPh',2],['M360PR',2],['negosyantenews',2],['RodrigoDennisUy',1],['ANCAlerts',1],['newsbytesph',1]],
+    twitter:[['bilyonaryo_ph',3],['ofc_iwant',3],['contextdotph',2],['ABSCBNNews',1],['pnagovph',1],['technobaboy',1],['adobotech',1],['ABSCBN',1],['digitalspaceph',1],['chubbzzz717',1]],
+    instagram:[['ditophofficial',1],['iwantofficial',1]],
+    youtube:[['DITOTelecomPH',9],['TechReviewPH',5],['GadgetPilipinas',4],['UnboxPH',3],['PHTechChannel',2],['5GSpeedTest',1]],
+    reddit:[['r/Philippines',4],['r/telecomPH',3],['u/ph_telcos',2],['u/dito_user',2],['r/gadgets',1]],
+    tiktok:[['dito.ph',6],['itsmevince',4],['techtokph',3],['pinoygadget',2],['viraltelco',1]]
+  };
+  function TpInfluencerBar(){
+    const data=TP_INF.map(x=>({name:x.name+' ('+(SOCIAL_PLATFORMS[x.platform]||{label:x.platform}).label.replace(' (Twitter)','')+')',posts:x.posts,fill:x.platform==='twitter'?'#4aa3ff':'#2563eb',key:x.name}));
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data,layout:'vertical',margin:{top:8,right:40,bottom:24,left:8}},
+        RC(CartesianGrid,{horizontal:false,stroke:'#eef0f2'}),
+        RC(XAxis,{type:'number',domain:[0,12],ticks:[0,3,6,9,12],tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'POST COUNT',position:'insideBottom',offset:-10,fontSize:10,fill:'#9ca3af'}}),
+        RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:10,fill:'#4b5563'},width:190,axisLine:false,tickLine:false}),
+        RC(Tooltip,{content:DarkTip,cursor:{fill:'rgba(0,0,0,0.03)'}}),
+        RC(Bar,{dataKey:'posts',name:'Post Count',radius:[0,4,4,0],maxBarSize:15,isAnimationActive:false,cursor:'pointer',onClick:(d)=>{if(d&&d.key)window.openInsListPanel(_insSample('tpinf-'+d.key,8),d.key,'Top Influencers',document.querySelector('.db-explore-wrap.on .db-card'));}},
+          ...data.map((d,i)=>RC(Cell,{key:i,fill:d.fill})))
+      ));
+  }
+  function renderTpPlatforms(hostId){
+    const grid=document.getElementById(hostId||'db-tp-platforms');if(!grid)return;
+    grid.innerHTML=['facebook','twitter','instagram','youtube','reddit','tiktok'].map(pk=>{
+      const p=SOCIAL_PLATFORMS[pk]||{label:pk,color:'#888',icon:'fa-globe'},list=TP_PLATFORMS[pk]||[];
+      let body;
+      if(list.length){const max=Math.max(...list.map(i=>i[1]),1);body='<div class="ps-media-pubs">'+list.map(([n,c])=>`<div class="ps-media-pub" style="cursor:pointer" onclick="openTpInfluencer('${String(n).replace(/'/g,"\\'")}',this.closest('.tp-plat-card'))"><div class="ps-media-pub-name">${n}</div><div class="ps-media-bar"><div class="ps-media-bar-fill" style="width:${Math.round(c/max*100)}%;background:${p.color}"></div><span class="ps-media-bar-lbl${c===max?' over-fill':''}">${c}</span></div></div>`).join('')+'</div>';}
+      else body='<div class="cmp-emp-nodata"><i data-lucide="inbox"></i><div>No Data Found</div></div>';
+      return `<div class="db-card tp-plat-card"><div class="db-card-hd db-tl-hd"><span class="db-card-title"><i class="fa-brands ${p.icon}" style="color:${p.color};margin-right:7px"></i>${p.label}</span></div>${body}</div>`;
+    }).join('');
+  }
+  window.openTpInfluencer=function(name,el){window.openInsListPanel(_insSample('tpinf-'+name,8),name,'Top Influencers',el);};
+  function renderTpInfCards(hostId){
+    const grid=document.getElementById(hostId||'db-tp-cards');if(!grid)return;
+    grid.innerHTML=TP_INF.map((x)=>{const [ic,col]=ONE_SOC_SET[({facebook:0,twitter:1,instagram:2,youtube:3,reddit:4,tiktok:5})[x.platform]||0];
+      const soc=`<div class="md-socials"><span class="md-soc" style="background:${col}">${ic==='fa-x-twitter'?X_SVG:`<i class="fa-brands ${ic}"></i>`}</span></div>`;
+      return `<div class="ex-pub-card" onclick="openTpInfluencer('${x.name.replace(/'/g,"\\'")}',this)">
+      <div class="ex-pub-hd">
+        <div class="ex-pub-hd-l"><div class="ex-pub-name" title="${x.name}">${x.name}</div><div class="ex-pub-socialrow">${soc}</div></div>
+        <span class="ex-pub-avatar">${x.name.charAt(0).toUpperCase()}</span>
+      </div>
+      <div class="ex-pub-metrics tp-metrics">
+        <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Post Count</div><div class="ex-pub-stat-val">${x.posts}</div></div>
+        <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Influencer Score</div><div class="ex-pub-stat-val">${x.score}</div></div>
+        <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Eng. Score</div><div class="ex-pub-stat-val">${x.eng}</div></div>
+        <div class="ex-pub-stat"><div class="ex-pub-stat-lbl">Platform Exposure</div><div class="ex-pub-stat-val">${x.exposure}</div></div>
+      </div>
+    </div>`;}).join('');
+  }
+  window.openTotalPostsExplore=function(){
+    const wrap=_showExplore('db-totalposts-explore');if(!wrap)return;
+    dbMount('db-tp-exposure',RC(ExposureBar));
+    dbMount('db-tp-topinf',RC(TpInfluencerBar));
+    renderTpPlatforms();
+    renderTpInfCards();
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  // ── Top Influencers explore (from the "Top Influencer" KPI card) ──
+  window.openTopInfExplore=function(){
+    const wrap=_showExplore('db-topinf-explore');if(!wrap)return;
+    dbMount('db-ti-topinf',RC(TpInfluencerBar));
+    dbMount('db-ti-inf-bubble',RC(InfluencerBubble));
+    dbMount('db-ti-inf-bar',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data:inflDesc,layout:'vertical',margin:{top:16,right:24,bottom:24,left:8}},
+        RC(CartesianGrid,{horizontal:false,stroke:'#f0f1f3'}),
+        RC(XAxis,{type:'number',dataKey:'posts',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'Post Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
+        RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:140}),
+        RC(Tooltip,{content:InflBarTip,cursor:{fill:'rgba(24,29,38,0.04)'}}),
+        RC(Bar,{dataKey:'posts',maxBarSize:26,radius:[0,4,4,0]},
+          ...inflDesc.map((a,i)=>RC(Cell,{key:i,fill:a.color})),
+          RC(LabelList,{dataKey:'posts',position:'right',style:{fontSize:11,fontWeight:600,fill:'#6b7280'}})
+        )
+      )));
+    const _bar=document.getElementById('db-ti-inf-bar');if(_bar)_bar.style.display='none';
+    renderTpPlatforms('db-ti-platforms');
+    renderTpInfCards('db-ti-cards');
+    window.renderTiPosts('db-ti-table',0);
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  window.setTiInfTab=function(t){
+    const bub=document.getElementById('db-ti-inf-bubble'),bar=document.getElementById('db-ti-inf-bar');
+    if(bub)bub.style.display=t==='bubble'?'':'none';
+    if(bar)bar.style.display=t==='bar'?'':'none';
+    document.querySelectorAll('#db-ti-inf-tabs .db-tab2').forEach(el=>el.classList.toggle('on',el.dataset.t===t));
+  };
+  // Posts table for the Top Influencers explore — reuses the social row renderer + opens the post preview
+  window.renderTiPosts=function(hostId,page){
+    const host=document.getElementById(hostId);if(!host)return;
+    const data=(window.WS_DATA&&window.WS_DATA.socialMentions)||[];
+    const per=10,total=data.length,pages=Math.max(1,Math.ceil(total/per));
+    page=Math.max(0,Math.min(page||0,pages-1));
+    const start=page*per,end=Math.min(start+per,total);
+    const rows=data.slice(start,end).map((d,k)=>renderSocialRow(d,start+k)).join('');
+    let btns='';for(let p=0;p<pages;p++)btns+=`<button class="pgb${p===page?' on':''}" onclick="renderTiPosts('${hostId}',${p})">${p+1}</button>`;
+    host.innerHTML=`<div class="tbl-scroll"><table class="tbl"><thead><tr>
+        <th style="width:46px"><span class="tcb"></span></th>
+        <th style="width:120px">Estimated Reach</th>
+        <th style="width:100px">Eng Score</th>
+        <th>Post</th>
+        <th style="width:72px">Source</th>
+        <th style="width:120px">Sentiment</th>
+        <th style="width:160px">Influencer</th>
+        <th style="width:150px">As of</th>
+        <th style="width:40px"></th>
+      </tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="tbl-footer" style="display:flex;justify-content:space-between;align-items:center">
+        <div class="tbl-pg-info">${total?`${start+1}–${end} of ${total} results`:'0 results'}</div>
+        <div class="tbl-pg-btns">${pages>1?`<button class="pgb arrow" onclick="renderTiPosts('${hostId}',${page-1})"${page<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>${btns}<button class="pgb arrow" onclick="renderTiPosts('${hostId}',${page+1})"${page>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`:''}</div>
+      </div>`;
+    host.querySelectorAll('tbody tr[data-idx]').forEach(tr=>{tr.style.cursor='pointer';tr.onclick=()=>{insArts=data;openInsSocial(+tr.dataset.idx);};});
+    initIcons();
+  };
   // ── Compare view (Phase 1): chips + Overview table + Timeline + Media Exposure + Share of Voice ──
   const CMP_COLORS=['#7c3aed','#ea580c','#2563eb','#16a34a'];
   let _cmpCats=[];
@@ -5879,16 +6030,16 @@ function initDashboard(){
     const metricW=_cmpCats.length>=4?'22%':_cmpCats.length===3?'28%':'38%';   // narrow the Metric column as topics grow
     host.innerHTML=`<table class="cmp-ov-tbl"><thead><tr><th style="width:${metricW}">Metric</th>${_cmpCats.map(c=>`<th style="color:${c.color}">${c.name}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
   }
-  const cmpTimelineData=[{date:'Jun 30',c0:45,c1:52},{date:'Jul 01',c0:52,c1:70},{date:'Jul 02',c0:40,c1:55},{date:'Jul 03',c0:30,c1:48},{date:'Jul 04',c0:8,c1:35},{date:'Jul 05',c0:35,c1:88},{date:'Jul 06',c0:52,c1:60},{date:'Jul 07',c0:20,c1:30}];
+  const cmpTimelineData=[{date:'Jun 30',c0:45,c1:52,c2:33,c3:60},{date:'Jul 01',c0:52,c1:70,c2:41,c3:48},{date:'Jul 02',c0:40,c1:55,c2:50,c3:38},{date:'Jul 03',c0:30,c1:48,c2:22,c3:65},{date:'Jul 04',c0:8,c1:35,c2:44,c3:20},{date:'Jul 05',c0:35,c1:88,c2:60,c3:52},{date:'Jul 06',c0:52,c1:60,c2:30,c3:75},{date:'Jul 07',c0:20,c1:30,c2:48,c3:15}];
   function CompareTimeline(){
     // one line per compared category (2–4); c2/c3 mirror c0/c1 for the layout demo
-    const data=cmpTimelineData.map(row=>{const o={date:row.date};_cmpCats.forEach((c,i)=>{o['c'+i]=row['c'+(i%2)];});return o;});
+    const data=cmpTimelineData.map(row=>{const o={date:row.date};_cmpCats.forEach((c,i)=>{o['c'+i]=row['c'+i]!=null?row['c'+i]:row['c'+(i%2)];});return o;});
     return RC(ResponsiveContainer,{width:'99%',height:'100%'},
       RC(ComposedChart,{data,margin:{top:16,right:24,bottom:8,left:0},onClick:(s,e)=>{if(!s||!s.activeLabel)return;const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;window.openInsListPanel(_insSample('cmpdate-'+s.activeLabel,8),s.activeLabel,'Timeline',card);}},
         RC(CartesianGrid,{vertical:false,stroke:'#eef0f2'}),
         RC(XAxis,{dataKey:'date',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
         RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:36}),
-        RC(Tooltip,{}),RC(Legend,{iconType:'plainline',wrapperStyle:{fontSize:11,paddingTop:10}}),
+        RC(Tooltip,{content:DarkTip}),RC(Legend,{iconType:'plainline',wrapperStyle:{fontSize:11,paddingTop:10}}),
         ..._cmpCats.map((c,i)=>RC(Line,{key:i,type:'linear',dataKey:'c'+i,name:c.name,stroke:c.color,strokeWidth:2,dot:{r:3,fill:c.color},activeDot:{r:5}}))
       ));
   }
@@ -5897,10 +6048,15 @@ function initDashboard(){
     [['Online News',65.43,53],['Blogs',16.05,13],['Broadsheet',9.88,8],['Tabloid',2.47,2],['Provincial',1.23,1],['TV',1.23,3],['Radio',1.23,1]],
     [['Online News',56.30,295],['Blogs',15.46,81],['Broadsheet',10.11,53],['Tabloid',2.10,11],['Provincial',0.57,3],['TV',3.05,64],['Radio',0.57,17]]
   ].map(cat=>cat.map(([name,value,count])=>({name,value,count,color:CMP_MEDIA_COLORS[name]})));
-  function CmpMediaDonut(ci){
+  function CmpMediaDonut(props){
+    const ci=(props&&props.ci)||0;
     const data=CMP_MEDIA_DIST[ci%CMP_MEDIA_DIST.length];
+    const [hov,setHov]=React.useState(null);
     return RC(ResponsiveContainer,{width:'99%',height:'100%'},
-      RC(PieChart,{},RC(Pie,{data,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none',cursor:'pointer',onClick:(d,idx,e)=>{const nm=d&&(d.name||(d.payload&&d.payload.name));if(!nm)return;const t=e&&(e.target||e.currentTarget);const card=t&&t.closest?t.closest('.db-card'):null;window.openInsListPanel(_insSample('med-'+nm,8),nm,'Media Exposure',card);}},...data.map((d,i)=>RC(Cell,{key:i,fill:d.color}))),RC(Tooltip,{})));
+      RC(PieChart,{},RC(Pie,{data,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none',cursor:'pointer',
+        activeIndex:hov==null?-1:hov,activeShape:TonActiveShape,onMouseEnter:(d,i)=>setHov(i),onMouseLeave:()=>setHov(null),
+        onClick:(d,idx,e)=>{const nm=d&&(d.name||(d.payload&&d.payload.name));if(!nm)return;const t=e&&(e.target||e.currentTarget);const card=t&&t.closest?t.closest('.db-card'):null;window.openInsListPanel(_insSample('med-'+nm,8),nm,'Media Exposure',card);}},
+        ...data.map((d,i)=>RC(Cell,{key:i,fill:d.color,fillOpacity:(hov==null||hov===i)?1:0.35}))),RC(Tooltip,{content:DarkTip})));
   }
   function renderCompareMedia(){
     const wrap=document.getElementById('db-compare-media-wrap');if(!wrap)return;
@@ -5910,7 +6066,7 @@ function initDashboard(){
       const leg=data.map(d=>`<div class="cmp-leg-item"><span class="cmp-leg-dot" style="background:${d.color}"></span>${d.name}: ${d.value.toFixed(2)}% (${d.count})</div>`).join('');
       return `<div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" style="color:${cat.color}">${cat.name}</span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div><div class="cmp-donut-body"><div class="cmp-donut-legend">${leg}</div><div class="db-chart-wrap" id="db-compare-media-${ci}" style="height:280px"></div></div></div>`;
     }).join('');
-    _cmpCats.forEach((cat,ci)=>dbMount('db-compare-media-'+ci,CmpMediaDonut(ci)));
+    _cmpCats.forEach((cat,ci)=>dbMount('db-compare-media-'+ci,RC(CmpMediaDonut,{ci})));
     initIcons();
   }
   // Per-media-type comparison cards below Media Exposure — reuses the DS .cmp-ov-tbl table
@@ -5950,12 +6106,14 @@ function initDashboard(){
   function CmpEmphasisBar(props){
     const ci=(props&&props.ci)||0,d=CMP_EMPHASIS[ci]||{main:0,mention:0};
     const data=[{name:'',main:d.main,mention:d.mention}];
+    const [hov,setHov]=React.useState(null);
     return RC(ResponsiveContainer,{width:'99%',height:'100%'},
       RC(BarChart,{data,layout:'vertical',margin:{top:22,right:10,bottom:22,left:10}},
         RC(XAxis,{type:'number',domain:[0,100],hide:true}),
         RC(YAxis,{type:'category',dataKey:'name',hide:true}),
-        RC(Tooltip,{cursor:false}),
+        RC(Tooltip,{content:DarkTip,cursor:false}),
         ...cmpEmpSeries.map((s,i)=>RC(Bar,{key:s.key,dataKey:s.key,stackId:'a',fill:s.color,maxBarSize:50,isAnimationActive:false,cursor:'pointer',
+          fillOpacity:(hov&&hov!==s.key)?0.3:1,onMouseEnter:()=>setHov(s.key),onMouseLeave:()=>setHov(null),
           onClick:(dd,idx,e)=>{const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;const cat=_cmpCats[ci]||{name:''};window.openInsListPanel(_insSample('emp-'+ci+'-'+s.key,8),cat.name,s.label+' emphasis',card);},
           radius:i===0?[5,0,0,5]:[0,5,5,0]},
           RC(LabelList,{dataKey:s.key,position:'center',formatter:v=>v>=10?`${s.label.toUpperCase()}: ${v}%`:'',style:{fontSize:11,fontWeight:600,fill:s.labelColor}})
@@ -5973,12 +6131,30 @@ function initDashboard(){
     _cmpCats.forEach((cat,ci)=>{if(CMP_EMPHASIS[ci])dbMount('db-compare-emphasis-'+ci,RC(CmpEmphasisBar,{ci}));});
     initIcons();
   }
-  const CMP_SOV=[{label:'Articles',vals:[363,573]},{label:'Story Value',vals:[95,120]},{label:'AVE',vals:[18.32,279.9]}];
-  function CmpSoVDonut(mi){
-    const m=CMP_SOV[mi];
-    const data=_cmpCats.map((c,i)=>({name:c.name,value:m.vals[i]||1,color:c.color}));
+  const CMP_SOV=[
+    {label:'Articles',vals:[82,533,82,300],fmt:v=>v},
+    {label:'Story Value',vals:[195.67,0,120,60],fmt:v=>v},
+    {label:'AVE',vals:[16.4,287.4,50,120],fmt:v=>'PHP '+v+'M'}
+  ];
+  function CmpSoVDonut(props){
+    const mi=(props&&props.mi)||0,m=CMP_SOV[mi];
+    const data=_cmpCats.map((c,i)=>({name:c.name,value:m.vals[i]||0,color:c.color}));
+    const [hov,setHov]=React.useState(null);
     return RC(ResponsiveContainer,{width:'99%',height:'100%'},
-      RC(PieChart,{},RC(Pie,{data,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none'},...data.map((d,i)=>RC(Cell,{key:i,fill:d.color}))),RC(Tooltip,{})));
+      RC(PieChart,{},RC(Pie,{data,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none',cursor:'pointer',
+        activeIndex:hov==null?-1:hov,activeShape:TonActiveShape,onMouseEnter:(d,i)=>setHov(i),onMouseLeave:()=>setHov(null),
+        onClick:(d,idx,e)=>{const nm=d&&(d.name||(d.payload&&d.payload.name));if(!nm)return;const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;window.openInsListPanel(_insSample('sov-'+mi+'-'+nm,8),nm,m.label+' share',card);}},
+        ...data.map((d,i)=>RC(Cell,{key:i,fill:d.color,fillOpacity:(hov==null||hov===i)?1:0.35}))),RC(Tooltip,{content:DarkTip})));
+  }
+  function renderCompareSoV(){
+    const host=document.getElementById('db-compare-sov');if(!host)return;
+    host.innerHTML=CMP_SOV.map((m,mi)=>{
+      const total=_cmpCats.reduce((s,c,i)=>s+(m.vals[i]||0),0)||1;
+      const legend=_cmpCats.map((c,i)=>{const v=m.vals[i]||0;return `<div class="cmp-leg-item"><span class="cmp-leg-dot" style="background:${c.color}"></span>${c.name}: ${(v/total*100).toFixed(2)}% (${m.fmt(v)})</div>`;}).join('');
+      return `<div class="cmp-sov-block"><div class="cmp-sov-lbl">${m.label}</div><div class="db-chart-wrap" id="db-compare-sov-${mi}" style="height:220px"></div><div class="cmp-donut-legend cmp-sov-legend">${legend}</div></div>`;
+    }).join('');
+    [0,1,2].forEach(mi=>dbMount('db-compare-sov-'+mi,RC(CmpSoVDonut,{mi})));
+    initIcons();
   }
   // Per-category sentiment donut + tonality timeline for the compare "Tonality" view
   const CMP_SENT=[
@@ -5987,8 +6163,62 @@ function initDashboard(){
   ];
   const CMP_TON_TIMELINE=[
     [{date:'Jul 01',Positive:1,Neutral:0,Negative:0},{date:'Jul 02',Positive:8,Neutral:5,Negative:0},{date:'Jul 03',Positive:23,Neutral:5,Negative:2},{date:'Jul 04',Positive:7,Neutral:3,Negative:0},{date:'Jul 05',Positive:8,Neutral:3,Negative:0},{date:'Jul 06',Positive:5,Neutral:7,Negative:0},{date:'Jul 07',Positive:5,Neutral:1,Negative:0},{date:'Jul 08',Positive:2,Neutral:1,Negative:1}],
-    [{date:'Jul 01',Positive:12,Neutral:4,Negative:1},{date:'Jul 02',Positive:51,Neutral:19,Negative:2},{date:'Jul 03',Positive:32,Neutral:20,Negative:2},{date:'Jul 04',Positive:36,Neutral:9,Negative:2},{date:'Jul 05',Positive:41,Neutral:31,Negative:4},{date:'Jul 06',Positive:59,Neutral:32,Negative:9},{date:'Jul 07',Positive:56,Neutral:26,Negative:9},{date:'Jul 08',Positive:40,Neutral:25,Negative:1},{date:'Jul 09',Positive:6,Neutral:6,Negative:3}]
+    [{date:'Jul 01',Positive:12,Neutral:4,Negative:1},{date:'Jul 02',Positive:51,Neutral:19,Negative:2},{date:'Jul 03',Positive:32,Neutral:20,Negative:2},{date:'Jul 04',Positive:36,Neutral:9,Negative:2},{date:'Jul 05',Positive:41,Neutral:31,Negative:4},{date:'Jul 06',Positive:59,Neutral:32,Negative:9},{date:'Jul 07',Positive:56,Neutral:26,Negative:9},{date:'Jul 08',Positive:40,Neutral:25,Negative:1},{date:'Jul 09',Positive:6,Neutral:6,Negative:3}],
+    [{date:'Jul 01',Positive:6,Neutral:2,Negative:0},{date:'Jul 02',Positive:28,Neutral:5,Negative:1},{date:'Jul 03',Positive:12,Neutral:4,Negative:1},{date:'Jul 04',Positive:38,Neutral:7,Negative:1},{date:'Jul 05',Positive:20,Neutral:6,Negative:1},{date:'Jul 06',Positive:27,Neutral:6,Negative:1},{date:'Jul 07',Positive:29,Neutral:7,Negative:1},{date:'Jul 08',Positive:14,Neutral:8,Negative:1}],
+    [{date:'Jul 01',Positive:10,Neutral:3,Negative:1},{date:'Jul 02',Positive:18,Neutral:8,Negative:2},{date:'Jul 03',Positive:40,Neutral:12,Negative:3},{date:'Jul 04',Positive:15,Neutral:5,Negative:1},{date:'Jul 05',Positive:33,Neutral:10,Negative:2},{date:'Jul 06',Positive:22,Neutral:9,Negative:2},{date:'Jul 07',Positive:28,Neutral:11,Negative:2},{date:'Jul 08',Positive:12,Neutral:6,Negative:1}]
   ];
+  function CmpTonBar(props){
+    const ci=(props&&props.ci)||0,data=CMP_TON_TIMELINE[ci]||CMP_TON_TIMELINE[0];
+    const [hov,setHov]=React.useState(null);
+    const shape=key=>p=>{
+      if(!p||p.height<=0)return null;
+      const above=tonOrder.slice(tonOrder.indexOf(key)+1),isTop=above.every(k=>!p.payload[k]);
+      return RC(Rectangle,{...p,radius:isTop?[3,3,0,0]:0,fillOpacity:(hov!=null&&hov!==p.index)?0.3:1});
+    };
+    const bar=(key,fill)=>RC(Bar,{key,dataKey:key,stackId:'s',fill,maxBarSize:34,shape:shape(key),isAnimationActive:false});
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data,margin:{top:16,right:12,bottom:8,left:0},onMouseMove:(s)=>setHov(s&&s.activeTooltipIndex!=null?s.activeTooltipIndex:null),onMouseLeave:()=>setHov(null)},
+        RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
+        RC(XAxis,{dataKey:'date',tick:{fontSize:10,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
+        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:28}),
+        RC(Tooltip,{content:TonBarTip,cursor:{fill:'rgba(24,29,38,0.07)'}}),
+        bar('Positive','#16a34a'),bar('Neutral','#9ca3af'),bar('Negative','#dc2626')
+      ));
+  }
+  function renderCompareTonality(){
+    const wrap=document.getElementById('db-compare-tonality');if(!wrap)return;
+    wrap.style.gridTemplateColumns='repeat('+(_cmpCats.length<=3?_cmpCats.length:2)+',1fr)';
+    wrap.innerHTML=_cmpCats.map((cat,ci)=>`<div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" style="color:${cat.color}">${cat.name}</span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div><div class="db-chart-wrap" id="db-compare-tonality-${ci}" style="height:240px"></div></div>`).join('');
+    _cmpCats.forEach((cat,ci)=>dbMount('db-compare-tonality-'+ci,RC(CmpTonBar,{ci})));
+    initIcons();
+  }
+  // Frequency Distribution (story-value histogram) per category — reuses the dashboard FrequencyChart pattern
+  const CMP_FREQ=[{0:11,1:38,2:17,3:5,4:6,5:6,6:2},{0:45,1:110,2:60,3:30,4:20,5:15,6:8,7:3},{0:8,1:34,2:17,3:12,4:9,5:7,6:3},{0:20,1:52,2:30,3:15,4:11,5:8,6:4}];
+  function CmpFreqChart(props){
+    const ci=(props&&props.ci)||0,counts=CMP_FREQ[ci]||CMP_FREQ[0];
+    const data=[0,1,2,3,4,5,6,7,8,9,10].map(v=>({value:v.toFixed(2),count:counts[v]||0}));
+    const [hov,setHov]=React.useState(null);
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data,margin:{top:24,right:14,bottom:18,left:6},onMouseLeave:()=>setHov(null)},
+        RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
+        RC(XAxis,{dataKey:'value',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Story Value',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
+        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:36,label:{value:'Article Count',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
+        RC(Tooltip,{content:FreqTip,cursor:false}),
+        RC(Bar,{dataKey:'count',maxBarSize:24,radius:[3,3,0,0],isAnimationActive:false,cursor:'pointer',onMouseEnter:(d,i)=>setHov(i),onClick:(d,idx,e)=>{const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;const cat=_cmpCats[ci]||{name:''};window.openInsListPanel(_insSample('cmpfreq-'+ci+'-'+d.value,8),cat.name,'Story Value '+d.value,card);}},
+          ...data.map((d,i)=>RC(Cell,{key:i,fill:(hov===null||hov===i)?'#b9a4f7':'#e8e1fb'})),
+          RC(LabelList,{dataKey:'count',position:'top',style:{fontSize:11,fontWeight:600,fill:'#6b7280'}})
+        ),
+        RC(Brush,{dataKey:'value',height:28,stroke:'#b9a4f7',travellerWidth:8,tickFormatter:()=>''},
+          RC(Area,{dataKey:'count',type:'monotone',stroke:'#b9a4f7',fill:'#ece6fb',fillOpacity:0.6}))
+      ));
+  }
+  function renderCompareFrequency(){
+    const wrap=document.getElementById('db-compare-frequency');if(!wrap)return;
+    wrap.style.gridTemplateColumns='repeat('+(_cmpCats.length<=3?_cmpCats.length:2)+',1fr)';
+    wrap.innerHTML=_cmpCats.map((cat,ci)=>`<div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" style="color:${cat.color}">${cat.name}</span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div><div class="db-chart-wrap" id="db-compare-frequency-${ci}" style="height:300px"></div></div>`).join('');
+    _cmpCats.forEach((cat,ci)=>dbMount('db-compare-frequency-'+ci,RC(CmpFreqChart,{ci})));
+    initIcons();
+  }
   function CmpSentDonut(ci){
     const data=CMP_SENT[ci]||CMP_SENT[0];
     return RC(ResponsiveContainer,{width:'99%',height:'100%'},
@@ -6005,7 +6235,7 @@ function initDashboard(){
         RC(CartesianGrid,{vertical:false,stroke:'#eef0f2'}),
         RC(XAxis,{dataKey:'date',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
         RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:28}),
-        RC(Tooltip,{}),
+        RC(Tooltip,{content:DarkTip}),
         RC(Legend,{iconType:'plainline',wrapperStyle:{fontSize:12,paddingTop:10}}),
         ...['Positive','Neutral','Negative'].map(k=>RC(Line,{key:k,type:'linear',dataKey:k,stroke:tonColors[k],strokeWidth:2,dot:{r:4,fill:tonColors[k],strokeWidth:0},activeDot:{r:5}}))
       ));
@@ -6020,6 +6250,10 @@ function initDashboard(){
     renderCompareMedia();
     renderCompareMediaTypeStats();
     renderCompareEmphasis();
+    renderCompareTonality();
+    renderCompareFrequency();
+    renderCompareSoV();
+    renderCompareEntities();
     _bindExploreScroll(wrap);
     initIcons();
   };
@@ -6083,8 +6317,21 @@ function initDashboard(){
   const _cmpEnt=pairs=>pairs.map(([n,v])=>({name:n,value:v,color:_ENT_COL[n],desc:_ENT_DSC[n]}));
   const CMP_ENTMAP=[
     _cmpEnt([['ORG',37.31],['PERSON',34.26],['GPE',16.75],['NORP',8.63],['PRODUCT',2.03],['LOC',0.76],['LAW',0.25]]),
-    _cmpEnt([['ORG',37.08],['PERSON',34.89],['GPE',11.43],['NORP',6.19],['PRODUCT',4.92],['LOC',1.03],['LAW',0.79]])
+    _cmpEnt([['ORG',37.08],['PERSON',34.89],['GPE',11.43],['NORP',6.19],['PRODUCT',4.92],['LOC',1.03],['LAW',0.79]]),
+    _cmpEnt([['ORG',38.50],['PERSON',33.00],['GPE',14.00],['NORP',7.50],['PRODUCT',4.00],['LOC',1.50],['LAW',1.50]]),
+    _cmpEnt([['ORG',36.00],['PERSON',35.50],['GPE',12.50],['NORP',8.00],['PRODUCT',5.00],['LOC',1.50],['LAW',1.50]])
   ];
+  function renderCompareEntities(){
+    const host=document.getElementById('db-compare-entities');if(!host)return;
+    host.innerHTML=_cmpCats.map((cat,ci)=>`<div class="cmp-ent-block"><div class="cmp-col-hd" style="color:${cat.color}">${cat.name}</div><div class="db-entmap" id="db-compare-entmap-${ci}"></div><div class="db-ent-legend" id="db-compare-entleg-${ci}"></div></div>`).join('');
+    _cmpCats.forEach((cat,ci)=>{
+      const data=CMP_ENTMAP[ci]||CMP_ENTMAP[0];
+      renderEntMap('db-compare-entmap-'+ci,data);
+      const leg=document.getElementById('db-compare-entleg-'+ci);
+      if(leg)leg.innerHTML=data.map(e=>`<span class="db-ent-leg-item"><span class="sq" style="background:${e.color}"></span>${e.name}</span>`).join('');
+    });
+    initIcons();
+  }
   function renderCmpKeywords(hostId,items){
     const host=document.getElementById(hostId);if(!host)return;
     host.innerHTML=items.map(([n,c])=>`<span class="ent-kw-pill" onclick="openInsEntity('${String(n).replace(/'/g,"\\'")}')"><span class="ent-kw-count">${c}</span>${n}</span>`).join('');
@@ -6110,7 +6357,7 @@ function initDashboard(){
       const nameEl=document.getElementById('db-cmpd-media-name-'+ci);if(nameEl){nameEl.textContent=cat.name;nameEl.style.color=cat.color;}
       const leg=document.getElementById('db-cmpd-media-leg-'+ci),data=CMP_MEDIA_DIST[ci]||CMP_MEDIA_DIST[0];
       if(leg)leg.innerHTML=data.map(d=>`<div class="cmp-leg-item"><span class="cmp-leg-dot" style="background:${d.color}"></span>${d.name}: ${d.value.toFixed(2)}% (${d.count})</div>`).join('');
-      dbMount('db-cmpd-media-'+ci,CmpMediaDonut(ci));
+      dbMount('db-cmpd-media-'+ci,RC(CmpMediaDonut,{ci}));
       const ph=document.getElementById('db-cmpd-pub-hd-'+ci);if(ph){ph.textContent=cat.name;ph.style.color=cat.color;}
       renderCmpBarList('db-cmpd-pub-'+ci,CMP_PUBLISHERS[ci]||[],cat.color,'Top Publisher');
     });
@@ -7038,6 +7285,56 @@ function mountEntityChart(kind,name){
 }
 
 // ── Pane: Entities (flexbox treemap, hash-seeded distribution) ──
+// ── Chart card "•••" menu: Print / Download JPEG / Download PNG (delegated → works on every graph card, both dashboards) ──
+(function(){
+  let menuEl=null,menuBtn=null;
+  function closeMenu(){if(menuEl){menuEl.remove();menuEl=null;menuBtn=null;}}
+  function chartSvg(card){return card?card.querySelector('.db-chart-wrap svg')||card.querySelector('svg'):null;}
+  function exportImage(card,type){
+    const svg=chartSvg(card);if(!svg)return;
+    const rect=svg.getBoundingClientRect(),clone=svg.cloneNode(true);
+    clone.setAttribute('xmlns','http://www.w3.org/2000/svg');clone.setAttribute('width',rect.width);clone.setAttribute('height',rect.height);
+    const xml=new XMLSerializer().serializeToString(clone),img=new Image();
+    img.onload=function(){
+      const scale=2,canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(rect.width*scale));canvas.height=Math.max(1,Math.round(rect.height*scale));
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.setTransform(scale,0,0,scale,0,0);ctx.drawImage(img,0,0);
+      const a=document.createElement('a');a.download='chart.'+(type==='jpeg'?'jpg':'png');a.href=canvas.toDataURL(type==='jpeg'?'image/jpeg':'image/png',0.95);
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+    };
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(xml);
+  }
+  function printChart(card){
+    const svg=chartSvg(card),w=window.open('','_blank','width=900,height=640');if(!w)return;
+    let body='';
+    if(svg){const rect=svg.getBoundingClientRect(),clone=svg.cloneNode(true);clone.setAttribute('xmlns','http://www.w3.org/2000/svg');clone.setAttribute('width',rect.width);clone.setAttribute('height',rect.height);body=new XMLSerializer().serializeToString(clone);}
+    w.document.write('<!doctype html><title>Chart</title><body style="margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh">'+body+'</body>');
+    w.document.close();w.focus();setTimeout(function(){w.print();},300);
+  }
+  function run(a,card){if(a==='print')printChart(card);else exportImage(card,a);}
+  function openMenu(btn){
+    if(menuBtn===btn){closeMenu();return;}
+    closeMenu();
+    const card=btn.closest('.cmp-donut-block,.cmp-sov-block,.cmp-ent-block,.db-card');
+    const m=document.createElement('div');m.className='chart-menu';
+    m.innerHTML='<div class="chart-menu-item" data-a="print">Print chart</div><div class="chart-menu-item" data-a="jpeg">Download JPEG image</div><div class="chart-menu-item" data-a="png">Download PNG image</div>';
+    document.body.appendChild(m);
+    const r=btn.getBoundingClientRect();
+    m.style.top=(r.bottom+4)+'px';
+    m.style.left=Math.max(8,Math.min(r.right-m.offsetWidth,window.innerWidth-m.offsetWidth-8))+'px';
+    m.querySelectorAll('.chart-menu-item').forEach(function(it){it.addEventListener('click',function(ev){ev.stopPropagation();run(it.dataset.a,card);closeMenu();});});
+    menuEl=m;menuBtn=btn;
+  }
+  document.addEventListener('click',function(e){
+    const btn=e.target.closest&&e.target.closest('.db-tl-more');
+    if(btn){openMenu(btn);return;}
+    if(!(e.target.closest&&e.target.closest('.chart-menu')))closeMenu();
+  });
+  window.addEventListener('scroll',closeMenu,true);
+  window.addEventListener('resize',closeMenu);
+})();
 // ── Entity Map drill-down: click a category cell → its member entities (shared by all entity maps) ──
 const ENT_MEMBERS={
   ORG:[['GCash',102],['Globe',35],['BSP',29],['InstaPay',24],['Maya',24],['Globe Telecom',22],['RCBC',21],['BPI',20],['Mynt',19],['PESONet',19],['SEC',18],['BPI Globe Telecom',13],['PSE',13],['Starlink',11]],
