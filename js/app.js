@@ -1,5 +1,9 @@
 // ── BRIEF state ──
 let activeTrend=null,spotTracked=false;
+// Shared View uses social posts; MediaWatch uses news articles. Use this to word user-visible copy accordingly.
+function _SOC(){return !!(window.WS_DATA&&window.WS_DATA.socialMentions);}
+function _wPost(cap){return _SOC()?(cap?'Post':'post'):(cap?'Article':'article');}
+function _wPosts(cap){return _SOC()?(cap?'Posts':'posts'):(cap?'Articles':'articles');}
 const MC={'TV':'media-tv','Online':'media-online','Print':'media-print','Radio':'media-radio','Social':'media-social'};
 
 // ── Workspace data layer ──
@@ -18,7 +22,7 @@ function wsData(k,def){
 if(window.WS&&window.WS!=='mediawatch'&&document.body)document.body.classList.add('ws-'+window.WS);
 
 let trendStories=[
-  {id:0,rank:1,tier:'T1',hl:'Jimenez/PLDT executive rivalry — telco competitive landscape narrative',why:"Triggered by 'DITO Telecommunity' — Jimenez's pointed remarks on PLDT competitors picked up across Tier 1 business outlets, broadcast, and radio within 24 hours.",chips:[{cls:'c-neu',t:'Neutral'},{cls:'c-vel',t:'12 articles / 1 day'},{cls:'c-ch',t:'Online'},{cls:'c-ch',t:'Print'},{cls:'c-ch',t:'TV'},{cls:'c-ch',t:'Radio'}],tracked:false,ave:'PHP 4.41M',articles:[
+  {id:0,rank:1,tier:'T1',hl:'Jimenez/PLDT executive rivalry — telco competitive landscape narrative',why:"Triggered by 'DITO Telecommunity' — Jimenez's pointed remarks on PLDT competitors picked up across Tier 1 business outlets, broadcast, and radio within 24 hours.",chips:[{cls:'c-neu',t:'Neutral'},{cls:'c-vel',t:'12 '+_wPosts()+' / 1 day'},{cls:'c-ch',t:'Online'},{cls:'c-ch',t:'Print'},{cls:'c-ch',t:'TV'},{cls:'c-ch',t:'Radio'}],tracked:false,ave:'PHP 4.41M',articles:[
     {media:'Print',source:'Philippine Daily Inquirer',hl:"BIZ BUZZ: Jimenez twits PLDT's foes",date:'14 hours ago',ave:'PHP 397K',score:96,dateRank:14},
     {media:'Online',source:'INQUIRER PLUS',hl:'BIZ BUZZ: Jimenez twits PLDTs foes Inquirer Plus',date:'14 hours ago',ave:'PHP 206K',score:91,dateRank:14},
     {media:'Online',source:'Philstar Online',hl:"PLDTs 'butcher COO publicly slices telco rivals",date:'15 hours ago',ave:'PHP 631K',score:84,dateRank:15},
@@ -32,7 +36,7 @@ let trendStories=[
     {media:'Social',source:'X / Twitter',hl:'#Jimenez trends as PLDT-DITO feud goes public',date:'1 day ago',ave:'PHP 45K',score:64,dateRank:24},
     {media:'Online',source:'Tech in Asia',hl:'Philippines telco war: a tale of two execs',date:'1 day ago',ave:'PHP 180K',score:61,dateRank:24},
   ]},
-  {id:1,rank:2,tier:'T1',hl:"DITO crowned Philippines' fastest mobile network — Opensignal recognition",why:"Triggered by 'DITO Telecommunity' — independent Opensignal benchmark recognition. Reinforces network performance positioning.",chips:[{cls:'c-pos',t:'Positive'},{cls:'c-vel',t:'2 articles / 1 day'},{cls:'c-ch',t:'Online'}],tracked:false,ave:'PHP 281K',articles:[
+  {id:1,rank:2,tier:'T1',hl:"DITO crowned Philippines' fastest mobile network — Opensignal recognition",why:"Triggered by 'DITO Telecommunity' — independent Opensignal benchmark recognition. Reinforces network performance positioning.",chips:[{cls:'c-pos',t:'Positive'},{cls:'c-vel',t:'2 '+_wPosts()+' / 1 day'},{cls:'c-ch',t:'Online'}],tracked:false,ave:'PHP 281K',articles:[
     {media:'Online',source:'Inquirer Online',hl:'DITO reigns supreme as the Philippines fastest mobile network by Opens...',date:'1 day ago',ave:'PHP 190K',score:94},
     {media:'Online',source:'Manila Shaker Philippines',hl:'DITO StreamZone199 Now Available',date:'23 hours ago',ave:'PHP 91K',score:78},
   ]},
@@ -93,7 +97,7 @@ function renderTrendRows(){
         <div class="tr-num">#${s.rank}</div>
         <div class="tr-body">
           <div class="tr-hl">${s.hl}</div>
-          <div class="tr-meta"><span style="font-weight:600;color:#181d26">${s.tier}</span><span style="color:${sc};font-weight:500">${s.chips[0].t}</span><span style="color:#e4e6ea">·</span><span>${s.articles.length} articles</span><span style="color:#e4e6ea">·</span><span class="tot-ave">${s.ave}</span></div>
+          <div class="tr-meta"><span style="font-weight:600;color:#181d26">${s.tier}</span><span style="color:${sc};font-weight:500">${s.chips[0].t}</span><span style="color:#e4e6ea">·</span><span>${s.articles.length} ${_wPosts()}</span><span style="color:#e4e6ea">·</span><span class="tot-ave">${s.ave}</span></div>
         </div>
         <i data-lucide="chevron-down" class="tr-arrow"></i>
       </div>
@@ -178,7 +182,7 @@ function renderArticleList(articles,listId){
     let ws=Math.max(1,page-2),we=Math.min(totalPages,ws+4);ws=Math.max(1,we-4);
     const win=[];for(let i=ws;i<=we;i++)win.push(i);
     pager=`<div class="al-pager">
-      <span class="al-pg-info">${start+1}-${Math.min(start+PER_PAGE,filtered.length)} of ${filtered.length} articles</span>
+      <span class="al-pg-info">${start+1}-${Math.min(start+PER_PAGE,filtered.length)} of ${filtered.length} ${_wPosts()}</span>
       <div class="pg-btns">
         <button class="pgb arrow"${page===1?' disabled':''} onclick="setArtPage('${listId}',${page-1})"><i data-lucide="chevron-left"></i></button>
         ${win.map(n=>`<button class="pgb${n===page?' on':''}" onclick="setArtPage('${listId}',${n})">${n}</button>`).join('')}
@@ -187,7 +191,7 @@ function renderArticleList(articles,listId){
     </div>`;
   }
 
-  const empty=filtered.length===0?`<div class="al-empty">No articles match this filter.</div>`:'';
+  const empty=filtered.length===0?`<div class="al-empty">No ${_wPosts()} match this filter.</div>`:'';
 
   const rows=visible.map((a,i)=>{
     const ic=ATicn[a.media]||{cls:'type-online',icon:'newspaper'};
@@ -458,7 +462,7 @@ function sfSummaryParts(s){
   if(s.search)p.push('“'+s.search+'”');
   return p;
 }
-function sfSummaryText(s){const p=sfSummaryParts(s);return p.length?p.join(' · '):'All articles (no filters)';}
+function sfSummaryText(s){const p=sfSummaryParts(s);return p.length?p.join(' · '):('All '+_wPosts()+' (no filters)');}
 function sfIsEmpty(s){return sfSummaryParts(s).length===0;}
 function sfDefaultName(s){return sfSummaryParts(s).slice(0,2).join(' · ');}
 function sfSameState(a,b){return JSON.stringify({m:[...(a.media||[])].sort(),x:a.afx,q:a.search})===JSON.stringify({m:[...(b.media||[])].sort(),x:b.afx,q:b.search});}
@@ -668,7 +672,7 @@ function showNewsletter(story){
   const observations=[
     `Story reached <strong>${s.articles.length} outlets</strong> within 24 hours, spanning ${mediaList} — indicating strong cross-channel resonance.`,
     `Overall sentiment is <strong style="color:${sentColor}">${sentChip.t}</strong>, with Tier 1 outlets including ${topArts.slice(0,2).map(a=>a.source).join(' and ')} leading coverage.`,
-    `AVE of <strong>${totalAVE}</strong> signals significant earned media value. Top-performing article from ${topPub} (${topArts[0]?topArts[0].ave:'—'}).`,
+    `AVE of <strong>${totalAVE}</strong> signals significant earned media value. Top-performing ${_wPost()} from ${topPub} (${topArts[0]?topArts[0].ave:'—'}).`,
   ].map(o=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="color:#181d26;font-size:13px;flex-shrink:0;margin-top:1px">→</span><div style="font-size:12.5px;color:#41454d;line-height:1.6">${o}</div></div>`).join('');
 
   // secondary list
@@ -695,7 +699,7 @@ function showNewsletter(story){
         <div style="padding:24px 24px 20px;border-bottom:2px solid #181d26">
           <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#6b7280;margin-bottom:8px">Daily Digest &nbsp;·&nbsp; ${s.tier} Story</div>
           <div style="font-size:22px;font-weight:700;color:#181d26;line-height:1.25;font-family:'Inter Tight',sans-serif;margin-bottom:10px;letter-spacing:-0.3px">${s.hl}</div>
-          <div style="font-size:12.5px;color:#6b7280;margin-bottom:12px">${sentChip.t} sentiment &nbsp;·&nbsp; ${s.articles.length} articles &nbsp;·&nbsp; ${totalAVE} combined AVE</div>
+          <div style="font-size:12.5px;color:#6b7280;margin-bottom:12px">${sentChip.t} sentiment &nbsp;·&nbsp; ${s.articles.length} ${_wPosts()} &nbsp;·&nbsp; ${totalAVE} combined AVE</div>
           <div style="font-size:13px;color:#41454d;line-height:1.75">DITO Telecommunity's media presence surged this period, driven by executive commentary that cut across all major channels. The story gained rapid ${s.tier} traction within 24 hours, recorded across ${Object.keys(mediaCounts).join(', ')}. ${s.why}</div>
         </div>
 
@@ -799,17 +803,17 @@ function showAIReport(story){
       <div style="padding:22px 26px;display:flex;flex-direction:column;gap:20px">
         <div>
           <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#181d26;text-transform:uppercase;margin-bottom:6px">Executive Summary</div>
-          <div style="font-size:13.5px;color:#41454d;line-height:1.7">${s.why} Coverage spans <strong>${channelStr}</strong> with <strong>${s.articles.length} articles</strong> and total AVE of <strong>${s.ave}</strong>. The dominant sentiment is <strong style="color:${sentColor}">${sentChip.t.toLowerCase()}</strong>.</div>
+          <div style="font-size:13.5px;color:#41454d;line-height:1.7">${s.why} Coverage spans <strong>${channelStr}</strong> with <strong>${s.articles.length} ${_wPosts()}</strong> and total AVE of <strong>${s.ave}</strong>. The dominant sentiment is <strong style="color:${sentColor}">${sentChip.t.toLowerCase()}</strong>.</div>
         </div>
         <div>
           <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#181d26;text-transform:uppercase;margin-bottom:12px">Key Stories</div>
           ${s.articles.slice(0,4).map((a,i)=>`<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #e4e6ea;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:#181d26;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">${i+1}</div><div style="flex:1"><div style="font-size:14px;font-weight:600;color:#181d26;line-height:1.4">${a.hl}</div><div style="font-size:12.5px;color:#6b7280;margin-top:3px">${a.source} · ${a.date} · ${a.ave}</div></div></div>`).join('')}
-          ${s.articles.length>4?`<div style="font-size:12px;color:#6b7280;padding:8px 0">+${s.articles.length-4} additional articles not shown</div>`:''}
+          ${s.articles.length>4?`<div style="font-size:12px;color:#6b7280;padding:8px 0">+${s.articles.length-4} additional ${_wPosts()} not shown</div>`:''}
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div style="background:#f7f8fa;border-radius:8px;padding:14px;border:1px solid #e4e6ea">
             <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#181d26;text-transform:uppercase;margin-bottom:10px">Channel Breakdown</div>
-            ${channels.map(ch=>{const cnt=s.articles.filter(a=>a.media===ch).length;const pct=Math.round(cnt/s.articles.length*100);return`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12.5px;color:#41454d;margin-bottom:3px"><span>${ch}</span><span>${cnt} articles</span></div><div style="background:#e4e6ea;border-radius:3px;height:4px"><div style="background:#181d26;height:4px;border-radius:3px;width:${pct}%"></div></div></div>`;}).join('')}
+            ${channels.map(ch=>{const cnt=s.articles.filter(a=>a.media===ch).length;const pct=Math.round(cnt/s.articles.length*100);return`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12.5px;color:#41454d;margin-bottom:3px"><span>${ch}</span><span>${cnt} ${_wPosts()}</span></div><div style="background:#e4e6ea;border-radius:3px;height:4px"><div style="background:#181d26;height:4px;border-radius:3px;width:${pct}%"></div></div></div>`;}).join('')}
           </div>
           <div style="background:#f7f8fa;border-radius:8px;padding:14px;border:1px solid #e4e6ea">
             <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#181d26;text-transform:uppercase;margin-bottom:10px">AVE Breakdown</div>
@@ -821,7 +825,7 @@ function showAIReport(story){
           <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#181d26;text-transform:uppercase;margin-bottom:12px">Recommendations</div>
           ${recItems.map((r,i)=>`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #e4e6ea;font-size:13.5px;color:#41454d;line-height:1.5"><i data-lucide="circle-check" style="color:#16a34a;margin-top:2px;flex-shrink:0"></i>${r}</div>`).join('')}
         </div>
-        <div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:6px;padding:12px 14px;font-size:12px;color:#92400e"><i data-lucide="alert-triangle" style="margin-right:6px"></i>Generated by AI — verify figures against source articles before distribution.</div>
+        <div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:6px;padding:12px 14px;font-size:12px;color:#92400e"><i data-lucide="alert-triangle" style="margin-right:6px"></i>Generated by AI — verify figures against source ${_wPosts()} before distribution.</div>
       </div>`;
     document.getElementById('rpt-send-bar').style.display='flex';
   },1600);
@@ -1859,7 +1863,7 @@ function entCountMap(d){
 }
 function renderEntities(d){
   const ents=d.entities||[];
-  if(!ents.length)return `<div class="md-entities-empty">No entities extracted for this article</div>`;
+  if(!ents.length)return `<div class="md-entities-empty">No entities extracted for this ${_wPost()}</div>`;
   const cm=entCountMap(d);
   const shown=ents.slice(0,5).map(n=>entityPillHtml(n,cm)).join('');
   const more=ents.length>5?`<button class="ent-more" onclick="openEntities(event)">Show all ${ents.length}</button>`:'';
@@ -2089,7 +2093,7 @@ function renderTVCard(d,p){
       <span class="${p}-pub-dot"></span>
       <span class="${p}-posted">Aired ${d.aired||d.date}</span>
     </div>
-    ${renderArticleActions(d)}`;
+    ${renderArticleActions(d,p)}`;
   if(radio){
     // SoundCloud-style waveform: deterministic bar heights seeded from the title
     const N=140,ti=d.title||d.sub||'';
@@ -2283,17 +2287,161 @@ document.addEventListener('keydown',function(e){
     if(page&&page.classList.contains('theater'))page.classList.remove('theater');
   }
 });
+// ── Add any previewed article to the Activity Tracker (works from every preview / media type) ──
+function _aveNum(d){
+  if(typeof d.value==='number')return d.value;
+  const m=/([0-9.]+)\s*([KM])?/i.exec(String(d.ave||d.value||'0').replace(/,/g,''));
+  if(!m)return 0;let n=parseFloat(m[1])||0;const u=(m[2]||'').toUpperCase();
+  if(u==='K')n*=1000;else if(u==='M')n*=1000000;return Math.round(n);
+}
+function _atArtMedia(d){return d.media||({tv:'TV',radio:'Radio',print:'Print'}[d.type]||'Online');}
+function articleInActs(title){return acts.filter(a=>a.matches.some(m=>m.title===title));}
+function _atArtBtn(d){
+  const dl=s=>String(s==null?'':s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const n=articleInActs(d.title).length;
+  const lbl=n?`<i data-lucide="folder-check"></i> In Tracker · ${n}`:`<i data-lucide="folder-plus"></i> Add to Tracker`;
+  return `<button class="qa-btn qa-track${n?' qa-track-in':''}" onclick="openTrackArtMenu(this,event)" data-at-title="${dl(d.title)}" data-at-value="${_aveNum(d)}" data-at-media="${dl(_atArtMedia(d))}" data-at-source="${dl(d.sub||d.outlet||'')}" data-at-date="${dl(d.date||'')}">${lbl}</button>`;
+}
+let _trackArtCur=null,_trackArtBtn=null,_trackArtQuery='';
+function _atEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function _trackBodyHTML(){
+  const q=(_trackArtQuery||'').trim(),ql=q.toLowerCase();
+  const filtered=acts.filter(a=>!ql||a.title.toLowerCase().includes(ql));
+  const rows=filtered.map(a=>{const inIt=a.matches.some(m=>m.title===_trackArtCur.title);return `<div class="at-track-row${inIt?' on':''}">
+      <button class="at-track-item at-track-toggle" title="${_atEsc(a.title)}" onclick="atTrackToggle(${a.id})"><i data-lucide="${inIt?'check':'plus'}"></i><span>${_atEsc(a.title)}</span></button>
+      ${inIt?`<button class="at-track-open" title="Open in Activity Tracker" onclick="atTrackOpen(${a.id})"><i data-lucide="arrow-up-right"></i></button>`:''}
+    </div>`;}).join('')||`<div class="at-track-empty">No matching activities</div>`;
+  const newRow=`<button class="at-track-item at-track-new" onclick="atTrackNew()"><i data-lucide="folder-plus"></i><span>${q?'Create “'+_atEsc(q)+'”':'New activity from this article'}</span></button>`;
+  return `<div class="at-track-list">${rows}</div>${newRow}`;
+}
+function _renderTrackBody(){const el=document.getElementById('at-track-body');if(!el)return;el.innerHTML=_trackBodyHTML();initIcons();}
+function _trackMenuSearch(v){_trackArtQuery=v;_renderTrackBody();}
+function openTrackArtMenu(btn,e){
+  if(e)e.stopPropagation();
+  closeTrackArtMenu();
+  _trackArtCur={title:btn.dataset.atTitle,value:+btn.dataset.atValue||0,media:btn.dataset.atMedia,source:btn.dataset.atSource,date:btn.dataset.atDate};
+  _trackArtBtn=btn;_trackArtQuery='';
+  const menu=document.createElement('div');menu.className='at-track-menu';menu.id='at-track-menu';
+  menu.innerHTML=`<div class="at-track-menu-hd">Add to activity</div>
+    <div class="at-track-search"><i data-lucide="search"></i><input id="at-track-q" type="text" autocomplete="off" placeholder="Search or name an activity…" oninput="_trackMenuSearch(this.value)"></div>
+    <div id="at-track-body">${_trackBodyHTML()}</div>`;
+  document.body.appendChild(menu);
+  const r=btn.getBoundingClientRect();
+  menu.style.top=(r.bottom+6)+'px';
+  menu.style.left=Math.max(8,Math.min(r.left,window.innerWidth-menu.offsetWidth-8))+'px';
+  initIcons();
+  setTimeout(()=>{document.addEventListener('mousedown',_atMenuOutside);const q=document.getElementById('at-track-q');if(q)q.focus();},0);
+}
+function _atMenuOutside(e){const m=document.getElementById('at-track-menu');if(m&&!m.contains(e.target))closeTrackArtMenu();}
+function closeTrackArtMenu(){const m=document.getElementById('at-track-menu');if(m)m.remove();document.removeEventListener('mousedown',_atMenuOutside);}
+function _atUpdateBtn(){
+  if(!_trackArtBtn||!_trackArtCur)return;
+  const n=articleInActs(_trackArtCur.title).length;
+  _trackArtBtn.innerHTML=n?`<i data-lucide="folder-check"></i> In Tracker · ${n}`:`<i data-lucide="folder-plus"></i> Add to Tracker`;
+  _trackArtBtn.classList.toggle('qa-track-in',n>0);
+  initIcons();
+}
+// Toggle the article's membership in an activity (add ⇄ remove) — the picker stays open for multi-assignment
+function atTrackToggle(aid){
+  const art=_trackArtCur;if(!art)return;
+  const a=acts.find(x=>x.id===aid);if(!a)return;
+  if(a.matches.some(m=>m.title===art.title)){
+    a.matches=a.matches.filter(m=>m.title!==art.title);
+    if(typeof renderDetailOnly==='function')renderDetailOnly();
+    if(typeof showSimpleToast==='function')showSimpleToast(`Removed from <strong style="font-weight:600">${_atEsc(a.title)}</strong>`,'circle-minus');
+  }else{
+    addMan(aid,art.title,art.value,art.media,art.source,art.date);
+  }
+  const nb=document.getElementById('nb-tracker');if(nb)nb.textContent=acts.length;
+  _renderTrackBody();
+  _atUpdateBtn();
+}
+function atTrackOpen(aid){viewArtInTracker(aid);}
+function atTrackNew(){
+  const art=_trackArtCur;if(!art)return;
+  closeTrackArtMenu();
+  const prefill=(_trackArtQuery||'').trim();
+  const types=['Press Release','Event','Crisis','Trending','Product'];
+  let ov=document.getElementById('at-newact-overlay');if(ov)ov.remove();
+  ov=document.createElement('div');ov.className='at-newact-overlay';ov.id='at-newact-overlay';
+  ov.onclick=e=>{if(e.target===ov)closeNewAct();};
+  ov.innerHTML=`<div class="at-newact-modal">
+    <div class="na-modal-hd">
+      <div><div class="na-modal-title">New activity</div><div class="na-modal-sub">Add details about your activity, then add this article to it.</div></div>
+      <button class="na-x" onclick="closeNewAct()" title="Close"><i data-lucide="x"></i></button>
+    </div>
+    <div class="na-form">
+      <div class="na-field na-col2"><label class="form-label">Title <span style="color:var(--s-coral)">*</span></label><input class="form-input" type="text" id="na-title" placeholder="e.g. DITO 5G Launch Press Release" value="${_atEsc(prefill)}"></div>
+      <div class="na-field"><label class="form-label">Type <span style="color:var(--s-coral)">*</span></label>
+        <div class="at-type-dd ft-dd">
+          <div class="form-select ft-trigger" id="na-ft-trigger" onclick="naFtToggle(event)"><span id="na-ft-label" class="ft-ph">Select type...</span></div>
+          <div class="at-type-menu ft-menu" id="na-ft-menu">${types.map(t=>`<div class="at-type-opt" onclick="naFtPick('${t}')"><span>${t}</span></div>`).join('')}</div>
+          <input type="hidden" id="na-type" value="">
+        </div>
+      </div>
+      <div class="na-field"><label class="form-label">Date released</label><input class="form-input" type="date" id="na-date" value="${new Date().toISOString().split('T')[0]}"></div>
+      <div class="na-field na-col2"><label class="form-label">Content <span style="color:var(--s-coral)">*</span></label><textarea class="form-textarea" id="na-content" placeholder="Paste your press release or activity summary here..." style="min-height:150px"></textarea></div>
+    </div>
+    <div class="na-foot">
+      <span class="na-scan-note"><i data-lucide="paperclip"></i> “${_atEsc(art.title)}” will be added to this activity</span>
+      <div class="na-foot-btns">
+        <button class="btn-ghost" onclick="closeNewAct()"><i data-lucide="x" style="width:12px;height:12px"></i> Cancel</button>
+        <button class="at-btn-scan" onclick="atCreateActivity()"><i data-lucide="folder-plus" style="width:14px;height:14px"></i> Create new activity</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  requestAnimationFrame(()=>ov.classList.add('open'));
+  initIcons();
+  setTimeout(()=>document.getElementById('na-title')?.focus(),80);
+}
+function closeNewAct(){const ov=document.getElementById('at-newact-overlay');if(!ov)return;ov.classList.remove('open');setTimeout(()=>ov.remove(),180);}
+function naFtToggle(e){e.stopPropagation();const m=document.getElementById('na-ft-menu');if(m)m.classList.toggle('open');}
+function naFtPick(val){const inp=document.getElementById('na-type');if(inp)inp.value=val;const lbl=document.getElementById('na-ft-label');if(lbl){lbl.textContent=val;lbl.classList.remove('ft-ph');}document.querySelectorAll('#na-ft-menu .at-type-opt').forEach(o=>o.classList.toggle('active',o.textContent.trim()===val));document.getElementById('na-ft-trigger')?.classList.remove('ft-error');document.getElementById('na-ft-menu')?.classList.remove('open');}
+function atCreateActivity(){
+  const art=_trackArtCur;if(!art)return;
+  const title=(document.getElementById('na-title')?.value||'').trim();
+  const type=document.getElementById('na-type')?.value||'';
+  const dateISO=document.getElementById('na-date')?.value||'';
+  const content=(document.getElementById('na-content')?.value||'').trim();
+  const mark=(id,on)=>{const el=document.getElementById(id);if(el)el.classList.toggle('ft-error',on);};
+  mark('na-title',!title);mark('na-ft-trigger',!type);mark('na-content',!content);
+  if(!title||!type||!content)return;
+  const na={id:atNid++,title,type,date:dateISO||art.date||'',content,matches:[{id:'man'+(atNid*7919),media:art.media,source:art.source,title:art.title,date:art.date,value:art.value,score:null,manual:true}]};
+  acts.unshift(na);
+  const nb=document.getElementById('nb-tracker');if(nb)nb.textContent=acts.length;
+  if(typeof showSimpleToast==='function')showSimpleToast(`New activity <strong style="font-weight:600">${_atEsc(title)}</strong> created`,'circle-check');
+  _atUpdateBtn();
+  closeNewAct();
+}
+function viewArtInTracker(aid,e){
+  if(e)e.stopPropagation();
+  closeTrackArtMenu();
+  if(window.goPage)goPage('tracker');
+  trackerSel=aid;if(!trackerTabs[aid])trackerTabs[aid]='matches';
+  if(typeof renderTracker==='function')renderTracker();
+  if(typeof renderDetailOnly==='function')renderDetailOnly();
+  setTimeout(()=>{const c=document.querySelector('.activity-card[data-id="'+aid+'"]');if(c)c.scrollIntoView({behavior:'smooth',block:'center'});},120);
+}
 // Quick share/download actions for a content preview (Email + PDF for all; + media download for TV/Radio)
-function renderArticleActions(d){
+function renderArticleActions(d,p){
   const src=d.videoUrl||d.audioUrl||'Video/Tensyon%20sumiklab%20sa%20pagitan.mp4';
   let extra='';
   if(d.type==='tv')extra=`<button class="qa-btn" onclick="qaDownload('${src}',event)"><i data-lucide="video"></i> Download Video</button>`;
   else if(d.type==='radio')extra=`<button class="qa-btn" onclick="qaDownload('${src}',event)"><i data-lucide="headphones"></i> Download Audio</button>`;
   else if(isPdfPreview(d))extra=`<button class="qa-btn" onclick="openBroadsheet('${d.fullImage||'image/2.png'}')"><i data-lucide="book-open"></i> Preview full broadsheet</button>`;
+  // Online news: "Read Full Article" sits beside Export as PDF (moved up from the article body)
+  const read=(!isPdfPreview(d)&&!isBroadcast(d))
+    ?(p==='mr'
+      ?`<button class="qa-btn mr-read"><i data-lucide="book-open"></i> Read Full Article</button>`
+      :`<button class="qa-btn" onclick="setMdMode('reader')"><i data-lucide="book-open"></i> Read Full Article</button>`)
+    :'';
   return `<div class="qa-row">
     <button class="qa-btn" onclick="qaEmail(event)"><i data-lucide="mail"></i> Send via Email</button>
     <button class="qa-btn" onclick="qaPdf(event)"><i data-lucide="file-down"></i> Export as PDF</button>
+    ${read}
     ${extra}
+    ${_atArtBtn(d)}
   </div>`;
 }
 function qaEmail(e){if(e)e.stopPropagation();showTrackerToast('Article sent via email');}
@@ -2313,7 +2461,7 @@ function renderArticleBody(d,p){
         <span class="${p}-pub-dot"></span>
         <span class="${p}-posted">Published ${d.date}${d.page?' · Page '+d.page:''}</span>
       </div>
-      ${renderArticleActions(d)}
+      ${renderArticleActions(d,p)}
       <div class="bs-pdf"><iframe src="${pdf}#view=Fit" title="${d.title}" loading="lazy"></iframe></div>`;
   }
   const excerpt=`This article from ${d.sub} covers "${d.title}". ${d.sub} reports on the developments around the story, its key players, and the wider market impact. Coverage continues across online, print and broadcast outlets as the narrative develops. Read the full piece at the source for complete context, quotes and figures…`;
@@ -2324,13 +2472,12 @@ function renderArticleBody(d,p){
       <span class="${p}-pub-dot"></span>
       <span class="${p}-posted">Posted on ${d.date}</span>
     </div>
-    ${renderArticleActions(d)}
+    ${renderArticleActions(d,p)}
     <div class="${p}-hero">
       <img class="${p}-hero-img" src="https://picsum.photos/seed/${encodeURIComponent(d.outlet+d.sv)}/880/495" alt="">
       <span class="${p==='adp'?'adp-hero-credit':'mr-credit'}">${d.outlet.toUpperCase()}</span>
     </div>
-    <p class="${p}-excerpt">${excerpt}</p>
-    ${p==='adp'?`<button class="adp-read-btn" onclick="setMdMode('reader')">Read Full Article</button>`:`<button class="mr-read">Read Full Article</button>`}`;
+    <p class="${p}-excerpt">${excerpt}</p>`;
 }
 // Full-broadsheet lightbox
 function openBroadsheet(src){
@@ -2841,7 +2988,7 @@ function renderTracker(){
   if(trackerSel){
     detailEl.innerHTML=renderTrackerDetail();
   } else {
-    detailEl.innerHTML=`<div class="at-empty-state"><i data-lucide="mouse-pointer-2"></i><p>Select an activity to view matched articles</p></div>`;
+    detailEl.innerHTML=`<div class="at-empty-state"><i data-lucide="mouse-pointer-2"></i><p>Select an activity to view matched ${_wPosts()}</p></div>`;
   }
   initIcons();
 }
@@ -2961,10 +3108,10 @@ function renderDetailInner(a){
 
       <!-- Section header + filter bar: hidden before scan -->
       ${!freshTrack[a.id]?`<div class="dpane-section-hd">
-        <span class="dpane-section-hd-label"><i data-lucide="newspaper" style="color:#181d26"></i> Matched articles</span>
+        <span class="dpane-section-hd-label"><i data-lucide="newspaper" style="color:#181d26"></i> Matched ${_wPosts()}</span>
         <div style="display:flex;gap:6px;align-items:center">
           <button class="at-btn-outline" onclick="openAISummary(${a.id})"><i data-lucide="sparkles" style="width:12px;height:12px"></i> AI summary</button>
-          <button class="at-btn-outline" onclick="openAddArt(${a.id})"><i data-lucide="plus" style="width:12px;height:12px"></i> Add article</button>
+          <button class="at-btn-outline" onclick="openAddArt(${a.id})"><i data-lucide="plus" style="width:12px;height:12px"></i> Add ${_wPost()}</button>
         </div>
       </div>
       <div class="art-filter-bar">
@@ -3042,8 +3189,8 @@ function buildArtList(a){
       <button class="at-btn-ghost" onclick="dismissScan(${a.id})" style="font-size:11px;margin-top:8px;border:none;background:transparent;color:#bbb;cursor:pointer;font-family:'Inter',sans-serif">Dismiss</button>
     </div>`;
   }
-  if(list.length===0&&a.matches.length===0) return`<div style="padding:28px 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px"><i data-lucide="search" style="width:20px;height:20px;color:#ddd"></i><div style="font-size:13px;font-weight:600;color:#aaa">No coverage yet</div><div style="font-size:12px;color:#ccc;margin-bottom:4px">Use "+ Add article" to search and add coverage manually.</div></div>`;
-  if(list.length===0) return`<div style="padding:18px 0;text-align:center;color:#ccc;font-size:12px">No articles match this filter.</div>`;
+  if(list.length===0&&a.matches.length===0) return`<div style="padding:28px 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px"><i data-lucide="search" style="width:20px;height:20px;color:#ddd"></i><div style="font-size:13px;font-weight:600;color:#aaa">No coverage yet</div><div style="font-size:12px;color:#ccc;margin-bottom:4px">Use "+ Add ${_wPost()}" to search and add coverage manually.</div></div>`;
+  if(list.length===0) return`<div style="padding:18px 0;text-align:center;color:#ccc;font-size:12px">No ${_wPosts()} match this filter.</div>`;
   const selCount=mSel.size;
   const allChecked=list.length>0&&list.every(m=>mSel.has(m.id));
   const someChecked=selCount>0&&!allChecked;
@@ -3248,7 +3395,7 @@ function confirmDeleteActivity(id){
   ov.style.display='flex';
   box.innerHTML=`<div>
     <div class="confirm-title"><i data-lucide="alert-triangle" style="width:14px;height:14px;color:#a32d2d"></i> Delete activity?</div>
-    <div class="confirm-body">Permanently delete <strong>${a.title}</strong> and all its matched articles.<br><br><span style="color:#a32d2d;font-weight:500">This cannot be undone.</span></div>
+    <div class="confirm-body">Permanently delete <strong>${a.title}</strong> and all its matched ${_wPosts()}.<br><br><span style="color:#a32d2d;font-weight:500">This cannot be undone.</span></div>
     <div class="confirm-actions">
       <button class="at-btn-outline" onclick="closeConfirm()">Cancel</button>
       <button style="font-size:12px;padding:7px 16px;background:#a32d2d;color:#fff;border:none;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-weight:500;font-family:inherit" onclick="doDeleteActivity(${id})"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete</button>
@@ -3340,7 +3487,7 @@ function renderDetailOnly(){
       detailEl.innerHTML=renderTrackerDetail();
     }
   } else {
-    detailEl.innerHTML=`<div class="at-empty-state"><i data-lucide="mouse-pointer-2"></i><p>Select an activity to view matched articles</p></div>`;
+    detailEl.innerHTML=`<div class="at-empty-state"><i data-lucide="mouse-pointer-2"></i><p>Select an activity to view matched ${_wPosts()}</p></div>`;
   }
   initIcons();
   wireKpiTooltips();
@@ -3355,9 +3502,9 @@ function renderDetailOnly(){
 function wireKpiTooltips(){}// no-op — delegation handled at document level below
 (function(){
   const kpiInfo=[
-    ['Total AVE','Advertising Value Equivalent — estimated media value of all matched articles for this activity.'],
+    ['Total AVE','Advertising Value Equivalent — estimated media value of all matched '+_wPosts()+' for this activity.'],
     ['AI Matches','Articles automatically matched by the AI similarity engine based on your activity content.'],
-    ['Avg Similarity','Average confidence score across all AI-matched articles — higher means a closer match.'],
+    ['Avg Similarity','Average confidence score across all AI-matched '+_wPosts()+' — higher means a closer match.'],
     ['Manually Added','Articles added manually outside of AI matching — useful for coverage the engine may have missed.']
   ];
   function getKpiPop(){let p=document.getElementById('ss-pop');if(!p){p=document.createElement('div');p.id='ss-pop';document.body.appendChild(p);}return p;}
@@ -3435,7 +3582,7 @@ function runScan(id){
   const steps=[
     {pct:8,  lbl:'Initializing scan...',        sub:'Loading similarity engine',               ctr:0},
     {pct:22, lbl:'Tokenizing your content...',   sub:'Breaking down key phrases and entities',  ctr:312},
-    {pct:40, lbl:'Scanning article database...', sub:'Comparing against 3,437 verified articles',ctr:1204},
+    {pct:40, lbl:'Scanning '+_wPost()+' database...', sub:'Comparing against 3,437 verified '+_wPosts(),ctr:1204},
     {pct:60, lbl:'Calculating similarity scores...',sub:'Running vector comparisons',           ctr:2318},
     {pct:78, lbl:'Ranking results...',           sub:'Sorting by relevance score',              ctr:3062},
     {pct:92, lbl:'Finalising matches...',        sub:'Preparing your results',                  ctr:3437},
@@ -3643,7 +3790,7 @@ function confirmDelete(id){
   ov.style.display='flex';
   box.innerHTML=`<div>
     <div class="confirm-title"><i data-lucide="alert-triangle" style="width:14px;height:14px;color:#a32d2d"></i> Delete activity?</div>
-    <div class="confirm-body">Permanently delete <strong>"${a.title}"</strong> and all ${a.matches.length} matched article${a.matches.length!==1?'s':''}?<br><br><span style="color:#a32d2d;font-weight:500">This cannot be undone.</span></div>
+    <div class="confirm-body">Permanently delete <strong>"${a.title}"</strong> and all ${a.matches.length} matched ${_wPost()}${a.matches.length!==1?'s':''}?<br><br><span style="color:#a32d2d;font-weight:500">This cannot be undone.</span></div>
     <div class="confirm-actions">
       <button class="at-btn-outline" onclick="closeConfirm()">Cancel</button>
       <button style="font-size:12px;padding:7px 16px;background:#a32d2d;color:#fff;border:none;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-weight:500;font-family:inherit" onclick="doDelete(${id})"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Yes, delete</button>
@@ -3729,7 +3876,7 @@ function confirmBulkDelete(){
   ov.style.display='flex';
   box.innerHTML=`<div>
     <div class="confirm-title"><i data-lucide="alert-triangle" style="width:14px;height:14px;color:#a32d2d"></i> Delete ${atSelected.size} activit${atSelected.size===1?'y':'ies'}?</div>
-    <div class="confirm-body">Permanently delete <strong>${atSelected.size} selected activit${atSelected.size===1?'y':'ies'}</strong> and all their matched articles.<br><br><span style="color:#a32d2d;font-weight:500">This cannot be undone.</span></div>
+    <div class="confirm-body">Permanently delete <strong>${atSelected.size} selected activit${atSelected.size===1?'y':'ies'}</strong> and all their matched ${_wPosts()}.<br><br><span style="color:#a32d2d;font-weight:500">This cannot be undone.</span></div>
     <div class="confirm-actions">
       <button class="at-btn-outline" onclick="closeConfirm()">Cancel</button>
       <button style="font-size:12px;padding:7px 16px;background:#a32d2d;color:#fff;border:none;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-weight:500;font-family:inherit" onclick="doBulkDelete()"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Yes, delete all</button>
@@ -3791,7 +3938,7 @@ function showCreate(){
         <div style="grid-column:1/-1"><label class="form-label">Content <span style="color:var(--s-coral)">*</span></label><textarea class="form-textarea" id="f-content" placeholder="Paste your press release or activity summary here..." style="min-height:160px"></textarea></div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px">
-        <span style="font-size:12px;color:var(--muted)"><i data-lucide="database" style="width:12px;height:12px;margin-right:3px"></i>Will scan across 3,437 articles</span>
+        <span style="font-size:12px;color:var(--muted)"><i data-lucide="database" style="width:12px;height:12px;margin-right:3px"></i>Will scan across 3,437 ${_wPosts()}</span>
         <div style="display:flex;gap:8px;align-items:center">
           <button class="btn-ghost" onclick="renderDetailOnly()"><i data-lucide="x" style="width:12px;height:12px"></i> Cancel</button>
           <button class="at-btn-scan" onclick="startScan()"><i data-lucide="search" style="width:14px;height:14px"></i> Scan for matches</button>
@@ -3831,7 +3978,7 @@ function startScan(){
   const steps=[
     {pct:8,  lbl:'Initializing scan...',        sub:'Loading similarity engine',               ctr:0},
     {pct:22, lbl:'Tokenizing your content...',   sub:'Breaking down key phrases and entities',  ctr:312},
-    {pct:40, lbl:'Scanning article database...', sub:'Comparing against 3,437 verified articles',ctr:1204},
+    {pct:40, lbl:'Scanning '+_wPost()+' database...', sub:'Comparing against 3,437 verified '+_wPosts(),ctr:1204},
     {pct:60, lbl:'Calculating similarity scores...',sub:'Running vector comparisons',           ctr:2318},
     {pct:78, lbl:'Ranking results...',           sub:'Sorting by relevance score',              ctr:3062},
     {pct:92, lbl:'Finalising matches...',        sub:'Preparing your results',                  ctr:3437},
@@ -4072,7 +4219,7 @@ if(document.getElementById('page-mentions')){
     0:['Mentions today','Total media mentions captured today across all monitored sources (<span style="color:#4ade80;font-weight:600">↑22%</span> vs yesterday).'],
     1:['Combined AVE','Advertising Value Equivalent — estimated ad-spend value of today\'s coverage: <span style="color:#4ade80;font-weight:600">PHP 2.78M</span>.'],
     2:['Sentiment today','Overall tone of today\'s coverage — <span style="color:#4ade80;font-weight:600">22% positive</span> · <span style="color:#9ca3af;font-weight:600">68% neutral</span> · <span style="color:#f87171;font-weight:600">10% negative</span>.'],
-    3:['Tier 1 articles','Mentions from Tier 1 (top-priority) publications flagged today: <span style="color:#a78bfa;font-weight:600">3 articles</span>.']
+    3:['Tier 1 '+_wPosts(),'Mentions from Tier 1 (top-priority) publications flagged today: <span style="color:#a78bfa;font-weight:600">3 '+_wPosts()+'</span>.']
   };
   let pop;
   function showPop(card,i){
@@ -4183,14 +4330,28 @@ function refreshKPIs(){
 }
 // ── Brief scan intro animation (replayable via the regenerate button) ──
 function runBriefScan(){
-  const phases=[
+  const _soc=typeof _SOC==='function'&&_SOC();
+  const phases=_soc?[
+    {pct:15, label:'Scanning posts...',     sub:'Fetching latest social mentions',   count:12},
+    {pct:38, label:'Analysing accounts...', sub:'Cross-referencing influencers',      count:28},
+    {pct:62, label:'Scoring sentiment...',  sub:'Running tone analysis',              count:39},
+    {pct:84, label:'Ranking posts...',      sub:'Sorting by engagement',              count:43},
+    {pct:100,label:'3 stories found',       sub:'Brief ready',                        count:44},
+  ]:[
     {pct:15, label:'Scanning coverage...',  sub:'Fetching latest mentions',       count:12},
     {pct:38, label:'Analysing sources...',  sub:'Cross-referencing publications', count:28},
     {pct:62, label:'Scoring sentiment...',  sub:'Running tone analysis',          count:39},
     {pct:84, label:'Ranking stories...',    sub:'Sorting by relevance score',     count:43},
     {pct:100,label:'3 Tier 1 stories found',sub:'Brief ready',                   count:44},
   ];
-  const sources=[
+  const sources=_soc?[
+    {src:'@DITOphofficial', status:'found',    tier:'', time:'14h ago'},
+    {src:'@jmccautosupply', status:'found',    tier:'', time:'15h ago'},
+    {src:'@iamsuperbianca', status:'found',    tier:'', time:'15h ago'},
+    {src:'@bilyonaryo_ph',  status:'found',    tier:'', time:'19h ago'},
+    {src:'@OfficialiWant',  status:'found',    tier:'', time:'20h ago'},
+    {src:'@ofc_iwant',      status:'scanning', tier:'', time:''},
+  ]:[
     {src:'Philippine Daily Inquirer', status:'found',    tier:'T1', time:'14h ago'},
     {src:'ABS-CBN News',              status:'found',    tier:'T1', time:'15h ago'},
     {src:'Philstar Online',           status:'found',    tier:'T2', time:'15h ago'},
@@ -4347,7 +4508,7 @@ function dbMount(id,el){
   }
   // Sentiment filter + sort state for the Insights article table
   let insSentFilter='all',insSort='newest',_artMode='open',insSelArt=null,_artSelFn='selectInsArticle',_artVar=null;
-  const _artSorts=[['sv-high','Highest Story Value'],['sv-low','Lowest Story Value'],['newest','Newest Articles'],['oldest','Oldest Article'],['ave-high','Highest AVE'],['ave-low','Lowest AVE']];
+  const _artSorts=[['sv-high','Highest Story Value'],['sv-low','Lowest Story Value'],['newest','Newest '+_wPosts(true)],['oldest','Oldest '+_wPost(true)],['ave-high','Highest AVE'],['ave-low','Lowest AVE']];
   // Comparable date value: absolute "Mon DD, YYYY" → timestamp; relative "N days ago" → negative offset; else 0 (keeps order)
   function _artDateVal(d){
     const s=String(d.date||''),t=Date.parse(s);
@@ -4848,7 +5009,7 @@ function initDashboard(){
           <span class="ti-rank-bar"><span class="ti-rank-bar-fill" style="width:${Math.round(c/srcMax*100)}%;background:#7c3aed"></span></span>
           <span class="ti-rank-val">${c}</span></div>`).join('')}
       </div>
-      <div class="ti-foot"><i data-lucide="sparkles"></i><span>AI-generated summary derived from the current filter and date range. Click any bar in the chart for that day's articles.</span></div>`;
+      <div class="ti-foot"><i data-lucide="sparkles"></i><span>AI-generated summary derived from the current filter and date range. Click any bar in the chart for that day's ${_wPosts()}.</span></div>`;
   }
   function tiDetailHTML(){
     const data=tlData();
@@ -5050,7 +5211,7 @@ function initDashboard(){
   function expOverviewHTML(){
     const a=expAnalysis(),max=a.rows[0].pct,last=a.rows[a.rows.length-1];
     return `
-      <div class="ti-narrative"><b>${a.top.label}</b> dominates exposure at <b>${a.top.pct}%</b> (${a.top.count} articles)${a.mult>=1.5?`, over <b>${a.mult.toFixed(1)}×</b> the next channel (${a.second.label}, ${a.second.pct}%)`:''}. The top 3 channels carry <b>${a.top3}%</b> of all coverage.</div>
+      <div class="ti-narrative"><b>${a.top.label}</b> dominates exposure at <b>${a.top.pct}%</b> (${a.top.count} ${_wPosts()})${a.mult>=1.5?`, over <b>${a.mult.toFixed(1)}×</b> the next channel (${a.second.label}, ${a.second.pct}%)`:''}. The top 3 channels carry <b>${a.top3}%</b> of all coverage.</div>
       <div class="ti-stats">
         <div class="ti-stat"><div class="ti-stat-lbl">Top channel</div><div class="ti-stat-val">${a.top.pct}%</div><div class="ti-stat-sub">${a.top.label}</div></div>
         <div class="ti-stat"><div class="ti-stat-lbl">Top-3 concentration</div><div class="ti-stat-val">${a.top3}%</div><div class="ti-stat-sub">of all coverage</div></div>
@@ -5059,7 +5220,7 @@ function initDashboard(){
       </div>
       <div>
         <div class="ti-sec-title"><i data-lucide="lightbulb"></i> Key insights</div>
-        <div class="ti-insight"><i data-lucide="crown"></i><div><b>${a.top.label}</b> leads with <b>${a.top.pct}%</b> (${a.top.count} articles)${a.mult>=1.5?` — ${a.mult.toFixed(1)}× the next channel`:''}.</div></div>
+        <div class="ti-insight"><i data-lucide="crown"></i><div><b>${a.top.label}</b> leads with <b>${a.top.pct}%</b> (${a.top.count} ${_wPosts()})${a.mult>=1.5?` — ${a.mult.toFixed(1)}× the next channel`:''}.</div></div>
         <div class="ti-insight"><i data-lucide="pie-chart"></i><div>Coverage is <b>${a.top3>=70?'highly concentrated':'fairly spread'}</b> — the top 3 channels hold <b>${a.top3}%</b>.</div></div>
         <div class="ti-insight"><i data-lucide="trending-down"></i><div>Smallest channel is <b>${last.label}</b> at just <b>${last.pct}%</b>.</div></div>
       </div>
@@ -5070,7 +5231,7 @@ function initDashboard(){
           <span class="ti-rank-bar"><span class="ti-rank-bar-fill" style="width:${Math.round(r.pct/max*100)}%;background:${r.color}"></span></span>
           <span class="ti-rank-val">${r.pct}%</span></div>`).join('')}
       </div>
-      <div class="ti-foot"><i data-lucide="sparkles"></i><span>AI-generated summary of channel share. Click any segment in the bar for that channel's articles.</span></div>`;
+      <div class="ti-foot"><i data-lucide="sparkles"></i><span>AI-generated summary of channel share. Click any segment in the bar for that channel's ${_wPosts()}.</span></div>`;
   }
   function expDetailHTML(){
     const a=expAnalysis(),rows=a.rows,idx=rows.findIndex(r=>r.key===tiKey);
@@ -5196,8 +5357,8 @@ function initDashboard(){
       <div class="ti-narrative">Just <b>${a.main.pct}%</b> of coverage features the brand as the <b>main subject</b> — the other <b>${a.mention.pct}%</b> are passing mentions.</div>
       <div class="ti-stats">
         <div class="ti-stat"><div class="ti-stat-lbl">Main subject</div><div class="ti-stat-val">${a.main.pct}%</div><div class="ti-stat-sub">${a.main.count} article${a.main.count===1?'':'s'}</div></div>
-        <div class="ti-stat"><div class="ti-stat-lbl">Mention</div><div class="ti-stat-val">${a.mention.pct}%</div><div class="ti-stat-sub">${a.mention.count} articles</div></div>
-        <div class="ti-stat"><div class="ti-stat-lbl">Total articles</div><div class="ti-stat-val">${a.total}</div><div class="ti-stat-sub">in scope</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Mention</div><div class="ti-stat-val">${a.mention.pct}%</div><div class="ti-stat-sub">${a.mention.count} ${_wPosts()}</div></div>
+        <div class="ti-stat"><div class="ti-stat-lbl">Total ${_wPosts()}</div><div class="ti-stat-val">${a.total}</div><div class="ti-stat-sub">in scope</div></div>
         <div class="ti-stat"><div class="ti-stat-lbl">Mention : Main</div><div class="ti-stat-val">${a.ratio?a.ratio.toFixed(0)+':1':'—'}</div><div class="ti-stat-sub">prominence ratio</div></div>
       </div>
       <div>
@@ -5213,7 +5374,7 @@ function initDashboard(){
           <span class="ti-rank-bar"><span class="ti-rank-bar-fill" style="width:${Math.round(r.pct/max*100)}%;background:${r.color}"></span></span>
           <span class="ti-rank-val">${r.pct}%</span></div>`).join('')}
       </div>
-      <div class="ti-foot"><i data-lucide="sparkles"></i><span>AI-generated summary of subject prominence. Click a segment in the bar for that category's articles.</span></div>`;
+      <div class="ti-foot"><i data-lucide="sparkles"></i><span>AI-generated summary of subject prominence. Click a segment in the bar for that category's ${_wPosts()}.</span></div>`;
   }
   function empDetailHTML(){
     const a=empAnalysis(),rows=a.rows,idx=rows.findIndex(r=>r.key===tiKey);
@@ -5303,7 +5464,7 @@ function initDashboard(){
   const freqDistData=[0,1,2,3,4,5,6,7,8,9,10].map(v=>({value:v.toFixed(2),count:freqCounts[v]||0}));
   function FreqTip(o){
     if(!o||!o.active||!o.payload||!o.payload.length)return null;
-    return tipBox(tlRow('#b9a4f7','Article Count',o.payload[0].value));
+    return tipBox(tlRow('#b9a4f7',_wPost(true)+' Count',o.payload[0].value));
   }
   function FrequencyChart(){
     const [hov,setHov]=React.useState(null);
@@ -5311,7 +5472,7 @@ function initDashboard(){
       RC(BarChart,{data:freqDistData,margin:{top:24,right:14,bottom:18,left:6},onMouseLeave:()=>setHov(null)},
         RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
         RC(XAxis,{dataKey:'value',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Story Value',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
-        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:36,label:{value:'Article Count',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
+        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:36,label:{value:_wPost(true)+' Count',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
         RC(Tooltip,{content:FreqTip,cursor:false}),
         RC(Bar,{dataKey:'count',maxBarSize:24,radius:[3,3,0,0],isAnimationActive:false,cursor:'pointer',onMouseEnter:(d,i)=>setHov(i),onClick:(d)=>openInsCard(_insSample('freq-'+d.value,Math.max(4,d.count||0)),'Story Value '+d.value,'Frequency Distribution','db-frequency-card')},
           ...freqDistData.map((d,i)=>RC(Cell,{key:i,fill:(hov===null||hov===i)?'#b9a4f7':'#e8e1fb'})),
@@ -5609,11 +5770,59 @@ function initDashboard(){
   };
   window.openTonalityExplore=function(){
     const wrap=_showExplore('db-tonality-explore');if(!wrap)return;
+    if(_SOC()){renderTonalityExplore();_bindExploreScroll(wrap);initIcons();return;}   // SharedView → social layout
     dbMount('db-ton-timeline',RC(TonTimeline));
     window.renderMentionsTable('db-ton-table',0,'Tonality','All articles');
     _bindExploreScroll(wrap);
     initIcons();
   };
+  // SharedView Tonality explore: per-sentiment platform donuts + timeline + per-sentiment influencer lists + posts table
+  const TON_PLAT_COLORS={Facebook:'#3d7fd6',Twitter:'#29b6d8',Instagram:'#d6337f',Youtube:'#e0245e'};
+  const TON_PLAT={
+    Neutral:[['Facebook',69.14,56],['Twitter',23.46,19],['Instagram',7.41,6],['Youtube',0,0]],
+    Positive:[['Facebook',100.00,23],['Twitter',0,0],['Instagram',0,0],['Youtube',0,0]],
+    Negative:[['Facebook',75.00,3],['Twitter',25.00,1],['Instagram',0,0],['Youtube',0,0]]
+  };
+  const TON_INF={
+    Neutral:[['(Facebook)',11],['DITOphofficial (Facebook)',7],['jmccautosupply (Facebook)',7],['OfficialWant (Facebook)',6],['ofc_iwant (Twitter)',6],['iwantofficial (Instagram)',5],['BilyonaryoPh (Facebook)',4],['bilyonaryo_ph (Twitter)',4],['ConvergeICT (Facebook)',3],['ABSCBNnetwork (Facebook)',3]],
+    Positive:[['DITOphofficial (Facebook)',4],['(Facebook)',3],['M360PR (Facebook)',2],['pldt (Facebook)',1],['SMCityLucenaOfficial (Facebook)',1],['map.org.ph (Facebook)',1],['SHAYLIBAND5 (Facebook)',1],['RodrigoDennisUy (Facebook)',1],['ThVoiceNewsweekly (Facebook)',1],['TPCIvinRonaldCabugGatdula (Facebook)',1]],
+    Negative:[['BilyonaryoPh (Facebook)',2],['bilyonaryo_ph (Twitter)',1],['(Facebook)',1]]
+  };
+  const TON_SENT_META=[['Neutral','#6b7280'],['Positive','#16a34a'],['Negative','#e11d48']];
+  const _tonBarColor=n=>/\(Twitter\)/.test(n)?TON_PLAT_COLORS.Twitter:/\(Instagram\)/.test(n)?TON_PLAT_COLORS.Instagram:/\(Youtube\)/i.test(n)?TON_PLAT_COLORS.Youtube:TON_PLAT_COLORS.Facebook;
+  function TonPlatDonut(props){
+    const sent=(props&&props.sent)||'Neutral';
+    const data=TON_PLAT[sent].filter(d=>d[2]>0).map(([nm,pct,cnt])=>({name:nm,value:cnt,pct,color:TON_PLAT_COLORS[nm]}));
+    const [hov,setHov]=React.useState(null);
+    if(!data.length)return RC('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'#9ca3af',fontSize:13}},'No data');
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(PieChart,{},RC(Pie,{data,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none',cursor:'pointer',
+        activeIndex:hov==null?-1:hov,activeShape:TonActiveShape,onMouseEnter:(d,i)=>setHov(i),onMouseLeave:()=>setHov(null),
+        onClick:(d,idx,e)=>{const nm=d&&(d.name||(d.payload&&d.payload.name));if(!nm)return;const t=e&&(e.target||e.currentTarget);const card=t&&t.closest?t.closest('.db-card'):null;window.openInsListPanel(_insSample('ton-'+sent+'-'+nm,6),nm,sent+' · platform share',card);}},
+        ...data.map((d,i)=>RC(Cell,{key:i,fill:d.color,fillOpacity:(hov==null||hov===i)?1:0.35}))),RC(Tooltip,{content:DarkTip})));
+  }
+  function renderTonalityExplore(){
+    const dg=document.getElementById('db-ton-donuts');
+    if(dg){
+      dg.style.gridTemplateColumns='repeat(3,1fr)';
+      dg.innerHTML=TON_SENT_META.map(([sent])=>{
+        const leg=TON_PLAT[sent].map(([nm,pct,cnt])=>`<div class="cmp-leg-item"><span class="cmp-leg-dot" style="background:${TON_PLAT_COLORS[nm]}"></span>${nm} ${pct.toFixed(2)}% (${cnt})</div>`).join('');
+        return `<div class="db-card"><div class="db-card-hd db-tl-hd"><span class="db-card-title">${sent}</span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div><div class="cmp-donut-legend">${leg}</div><div class="db-chart-wrap" id="db-ton-donut-${sent}" style="height:240px"></div></div>`;
+      }).join('');
+      TON_SENT_META.forEach(([sent])=>dbMount('db-ton-donut-'+sent,RC(TonPlatDonut,{sent})));
+    }
+    dbMount('db-ton-timeline',RC(TonTimeline));
+    const ig=document.getElementById('db-ton-inf');
+    if(ig){
+      ig.style.gridTemplateColumns='repeat(3,1fr)';
+      ig.innerHTML=TON_SENT_META.map(([sent,col])=>{
+        const rows=TON_INF[sent],max=Math.max(...rows.map(r=>r[1]),1);
+        const list=rows.map(([n,c])=>`<div class="ps-media-pub" style="cursor:pointer" onclick="openTpInfluencer('${String(n).replace(/'/g,"\\'")}',this.closest('.db-card'))"><div class="ps-media-pub-name">${n}</div><div class="ps-media-bar"><div class="ps-media-bar-fill" style="width:${Math.round(c/max*100)}%;background:${_tonBarColor(n)}"></div><span class="ps-media-bar-lbl${c===max?' over-fill':''}">${c} Post/s</span></div></div>`).join('');
+        return `<div class="db-card"><div class="db-card-hd db-tl-hd"><span class="db-card-title" style="color:${col}">${sent}</span></div><div class="ps-media-pubs">${list}</div></div>`;
+      }).join('');
+    }
+    window.renderTiPosts('db-ton-social-table',0);
+  }
   window.closeTimelineExplore=function(){
     const page=document.getElementById('page-dashboard');if(page)page.classList.remove('explore-open');
     document.querySelectorAll('.db-explore-wrap.on').forEach(e=>e.classList.remove('on'));
@@ -5865,8 +6074,41 @@ function initDashboard(){
     const leg=document.getElementById('db-entities-legend');
     if(leg)leg.innerHTML=data.map(e=>`<span class="db-ent-leg-item"><span class="sq" style="background:${e.color}"></span>${e.name}</span>`).join('');
   }
+  // SharedView Top Entities explore: post-count bar + per-platform entity cards + Entities Map
+  const SOC_TOP_ENTITIES=[['Chi Atienza',1],['NPDC',1]];
+  const ENT_PLATFORMS={facebook:[['Chi Atienza',1],['NPDC',1]],twitter:[],instagram:[],youtube:[]};
+  function SocTopEntitiesBar(){
+    const data=SOC_TOP_ENTITIES.map(([n,c])=>({name:n,count:c,pub:n}));
+    const max=Math.max(...data.map(d=>d.count),1);
+    return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+      RC(BarChart,{data,layout:'vertical',margin:{top:8,right:40,bottom:24,left:8}},
+        RC(CartesianGrid,{horizontal:false,stroke:'#eef0f2'}),
+        RC(XAxis,{type:'number',domain:[0,max],allowDecimals:false,tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'POSTS COUNT',position:'insideBottom',offset:-10,fontSize:10,fill:'#9ca3af'}}),
+        RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#4b5563'},width:120,axisLine:false,tickLine:false}),
+        RC(Tooltip,{content:DarkTip,cursor:{fill:'rgba(0,0,0,0.03)'}}),
+        RC(Bar,{dataKey:'count',radius:[0,4,4,0],maxBarSize:40,isAnimationActive:false,fill:'#3d7fd6',cursor:'pointer',onClick:(d)=>{if(d&&d.pub)window.openInsListPanel(_insSample('ent-'+d.pub,6),d.pub,'Top Entities',document.querySelector('.db-explore-wrap.on .db-card'));}})
+      ));
+  }
+  function renderEntPlatforms(hostId){
+    const grid=document.getElementById(hostId);if(!grid)return;
+    grid.style.gridTemplateColumns='repeat(4,1fr)';
+    const plats=[['facebook','Facebook','fa-facebook','#1877f2'],['twitter','Twitter','fa-twitter','#1da1f2'],['instagram','Instagram','fa-instagram','#e4405f'],['youtube','Youtube','fa-youtube','#ff0000']];
+    grid.innerHTML=plats.map(([pk,label,icon,color])=>{
+      const list=ENT_PLATFORMS[pk]||[];
+      let body;
+      if(list.length){const max=Math.max(...list.map(i=>i[1]),1);body='<div class="ps-media-pubs">'+list.map(([n,c])=>`<div class="ps-media-pub" style="cursor:pointer" onclick="openInsEntity('${String(n).replace(/'/g,"\\'")}')"><div class="ps-media-pub-name">${n}</div><div class="ps-media-bar"><div class="ps-media-bar-fill" style="width:${Math.round(c/max*100)}%;background:${color}"></div><span class="ps-media-bar-lbl${c===max?' over-fill':''}">${c} Post/s</span></div></div>`).join('')+'</div>';}
+      else body=`<div class="tp-plat-nodata"><div class="tp-plat-nodata-t">No Data Found</div><i class="fa-brands ${icon}" style="color:${color}"></i></div>`;
+      return `<div class="db-card tp-plat-card"><div class="db-card-hd db-tl-hd"><span class="db-card-title"><i class="fa-brands ${icon}" style="color:${color};margin-right:7px"></i>${label}</span></div>${body}</div>`;
+    }).join('');
+  }
   window.openTopEntitiesExplore=function(){
     const wrap=_showExplore('db-entities-explore');if(!wrap)return;
+    if(_SOC()){   // SharedView → post-count bar + per-platform entity cards + Entities Map
+      dbMount('db-entities-bar',RC(SocTopEntitiesBar));
+      renderEntPlatforms('db-ent-platforms');
+      renderEntMap('db-entities-map',entityData);
+      _bindExploreScroll(wrap);initIcons();return;
+    }
     dbMount('db-entities-bar',RC(TopEntitiesBar));
     renderEntKeywords();
     renderEntMap('db-entities-map',entMapFull);
@@ -5919,9 +6161,9 @@ function initDashboard(){
     }).join('');
   }
   window.openTpInfluencer=function(name,el){window.openInsListPanel(_insSample('tpinf-'+name,8),name,'Top Influencers',el);};
-  function renderTpInfCards(hostId){
+  function renderTpInfCards(hostId,infData){
     const grid=document.getElementById(hostId||'db-tp-cards');if(!grid)return;
-    grid.innerHTML=TP_INF.map((x)=>{const [ic,col]=ONE_SOC_SET[({facebook:0,twitter:1,instagram:2,youtube:3,reddit:4,tiktok:5})[x.platform]||0];
+    grid.innerHTML=(infData||TP_INF).map((x)=>{const [ic,col]=ONE_SOC_SET[({facebook:0,twitter:1,instagram:2,youtube:3,reddit:4,tiktok:5})[x.platform]||0];
       const soc=`<div class="md-socials"><span class="md-soc" style="background:${col}">${ic==='fa-x-twitter'?X_SVG:`<i class="fa-brands ${ic}"></i>`}</span></div>`;
       return `<div class="ex-pub-card" onclick="openTpInfluencer('${x.name.replace(/'/g,"\\'")}',this)">
       <div class="ex-pub-hd">
@@ -6364,14 +6606,16 @@ function initDashboard(){
     document.querySelectorAll('#db-dom-inf-tabs .db-tab2').forEach(el=>el.classList.toggle('on',el.dataset.t===t));
   };
   // Posts table for the Top Influencers explore — reuses the social row renderer + opens the post preview
-  window.renderTiPosts=function(hostId,page){
+  window.renderTiPosts=function(hostId,page,platform){
     const host=document.getElementById(hostId);if(!host)return;
-    const data=(window.WS_DATA&&window.WS_DATA.socialMentions)||[];
+    let data=(window.WS_DATA&&window.WS_DATA.socialMentions)||[];
+    if(platform)data=data.filter(d=>(d.platform||'').toLowerCase()===platform.toLowerCase());
+    const _pf=platform?String(platform).replace(/'/g,"\\'"):'';
     const per=10,total=data.length,pages=Math.max(1,Math.ceil(total/per));
     page=Math.max(0,Math.min(page||0,pages-1));
     const start=page*per,end=Math.min(start+per,total);
-    const rows=data.slice(start,end).map((d,k)=>renderSocialRow(d,start+k)).join('');
-    let btns='';for(let p=0;p<pages;p++)btns+=`<button class="pgb${p===page?' on':''}" onclick="renderTiPosts('${hostId}',${p})">${p+1}</button>`;
+    const rows=data.slice(start,end).map((d,k)=>renderSocialRow(d,start+k)).join('')||`<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--muted);font-size:13px">No posts for this platform</td></tr>`;
+    let btns='';for(let p=0;p<pages;p++)btns+=`<button class="pgb${p===page?' on':''}" onclick="renderTiPosts('${hostId}',${p},'${_pf}')">${p+1}</button>`;
     host.innerHTML=`<div class="tbl-scroll"><table class="tbl"><thead><tr>
         <th style="width:46px"><span class="tcb"></span></th>
         <th style="width:120px">Estimated Reach</th>
@@ -6385,7 +6629,7 @@ function initDashboard(){
       </tr></thead><tbody>${rows}</tbody></table></div>
       <div class="tbl-footer" style="display:flex;justify-content:space-between;align-items:center">
         <div class="tbl-pg-info">${total?`${start+1}–${end} of ${total} results`:'0 results'}</div>
-        <div class="tbl-pg-btns">${pages>1?`<button class="pgb arrow" onclick="renderTiPosts('${hostId}',${page-1})"${page<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>${btns}<button class="pgb arrow" onclick="renderTiPosts('${hostId}',${page+1})"${page>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`:''}</div>
+        <div class="tbl-pg-btns">${pages>1?`<button class="pgb arrow" onclick="renderTiPosts('${hostId}',${page-1},'${_pf}')"${page<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>${btns}<button class="pgb arrow" onclick="renderTiPosts('${hostId}',${page+1},'${_pf}')"${page>=pages-1?' disabled':''}><i data-lucide="chevron-right"></i></button>`:''}</div>
       </div>`;
     host.querySelectorAll('tbody tr[data-idx]').forEach(tr=>{tr.style.cursor='pointer';tr.onclick=()=>{insArts=data;openInsSocial(+tr.dataset.idx);};});
     initIcons();
@@ -6407,14 +6651,28 @@ function initDashboard(){
     const host=document.getElementById('db-compare-chips');if(!host)return;
     host.innerHTML=_cmpCats.map(c=>`<span class="cmp-chip" style="border-color:${c.color};color:${c.color}"><span class="cmp-chip-dot" style="background:${c.color}"></span>${c.name}</span>`).join('')+`<button class="cmp-chip-clear" onclick="closeTimelineExplore()">Clear All</button>`;
   }
+  // SharedView Overview: social metrics (post/s, never "article"); values map to compared topics by index (wraps for 3–4)
+  const CMP_OVERVIEW_SOCIAL=[
+    ['Total Results',['147','100%'],['955','100%'],['','']],
+    ['Top Influencer',['iyavillania','0%'],['radyopilipinas1','0%'],['1 post/s','7 post/s']],
+    ['Most Engaging Posts',['SunStarPhilippines','100%'],['lalatalinomendoza','48%'],['11.6K post/s','24.3K post/s']],
+    ['Top Entity',['Bankers Village','0%'],['Baliuag City','0%'],['1 post/s','1 post/s']],
+    ['Most Dominant - Facebook',['sunstardavaonews','100%'],['','100%'],['135 post/s','935 post/s']],
+    ['Most Dominant - Twitter',['BBCWorld','0%'],['radyopilipinas1','0%'],['7 post/s','7 post/s']],
+    ['Most Dominant - Instagram',['iyavillania','0%'],['doh.philippines','100%'],['1 post/s','12 post/s']],
+    ['Most Dominant - Youtube',['PTV','0%'],['No Data',''],['3 post/s','']]
+  ];
   function renderCompareOverview(){
     const host=document.getElementById('db-compare-overview');if(!host)return;
-    const rows=CMP_OVERVIEW.map(r=>{
+    const social=!!(window.WS_DATA&&window.WS_DATA.socialMentions);
+    const src=social?CMP_OVERVIEW_SOCIAL:CMP_OVERVIEW;
+    const rows=src.map(r=>{
       const cells=_cmpCats.map((c,ci)=>{
         const v=r[1+(ci%2)]||['',''],sub=(r[3]||[])[ci%2]||'';
-        return `<td class="cmp-ov-cell"><div class="cmp-ov-top"><span class="cmp-ov-val">${v[0]}</span>${v[1]?`<span class="cmp-ov-pct">${v[1]}</span>`:''}</div>${sub?`<div class="cmp-ov-sub">${sub}</div>`:''}</td>`;
+        const nodata=v[0]==='No Data';
+        return `<td class="cmp-ov-cell"><div class="cmp-ov-top"><span class="cmp-ov-val${nodata?' cmp-ov-nodata':''}">${v[0]}</span>${v[1]?`<span class="cmp-ov-pct">${v[1]}</span>`:''}</div>${sub?`<div class="cmp-ov-sub">${sub}</div>`:''}</td>`;
       }).join('');
-      return `<tr class="cmp-ov-row" onclick="openCompareDetail('${r[0].replace(/'/g,"\\'")}',this)"><td class="cmp-ov-lbl">${r[0]}</td>${cells}</tr>`;
+      return `<tr class="cmp-ov-row" onclick="openCompareDetail('${r[0].replace(/'/g,"\\'")}',this)"><td class="cmp-ov-lbl${social?' cmp-ov-lbl-link':''}">${r[0]}</td>${cells}</tr>`;
     }).join('');
     const metricW=_cmpCats.length>=4?'22%':_cmpCats.length===3?'28%':'38%';   // narrow the Metric column as topics grow
     host.innerHTML=`<table class="cmp-ov-tbl"><thead><tr><th style="width:${metricW}">Metric</th>${_cmpCats.map(c=>`<th style="color:${c.color}">${c.name}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
@@ -6437,21 +6695,30 @@ function initDashboard(){
     [['Online News',65.43,53],['Blogs',16.05,13],['Broadsheet',9.88,8],['Tabloid',2.47,2],['Provincial',1.23,1],['TV',1.23,3],['Radio',1.23,1]],
     [['Online News',56.30,295],['Blogs',15.46,81],['Broadsheet',10.11,53],['Tabloid',2.10,11],['Provincial',0.57,3],['TV',3.05,64],['Radio',0.57,17]]
   ].map(cat=>cat.map(([name,value,count])=>({name,value,count,color:CMP_MEDIA_COLORS[name]})));
+  // SharedView: platform exposure per topic (Facebook/Twitter/Instagram/Reddit)
+  const CMP_PLATFORM_COLORS={Facebook:'#3d7fd6',Twitter:'#29b6d8',Instagram:'#d6337f',Reddit:'#f0a6c4',Youtube:'#e0245e'};
+  const CMP_PLATFORM_DIST=[
+    [['Facebook',75.00,81],['Twitter',18.52,20],['Instagram',5.56,6],['Reddit',0.93,1]],
+    [['Facebook',62.69,42],['Twitter',29.85,20],['Instagram',7.46,5]]
+  ].map(cat=>cat.map(([name,value,count])=>({name,value,count,color:CMP_PLATFORM_COLORS[name]})));
+  const _cmpMediaDist=()=>(window.WS_DATA&&window.WS_DATA.socialMentions)?CMP_PLATFORM_DIST:CMP_MEDIA_DIST;
   function CmpMediaDonut(props){
     const ci=(props&&props.ci)||0;
-    const data=CMP_MEDIA_DIST[ci%CMP_MEDIA_DIST.length];
+    const _dist=_cmpMediaDist();
+    const data=_dist[ci%_dist.length];
     const [hov,setHov]=React.useState(null);
     return RC(ResponsiveContainer,{width:'99%',height:'100%'},
       RC(PieChart,{},RC(Pie,{data,cx:'50%',cy:'50%',innerRadius:'55%',outerRadius:'82%',dataKey:'value',paddingAngle:1,stroke:'none',cursor:'pointer',
         activeIndex:hov==null?-1:hov,activeShape:TonActiveShape,onMouseEnter:(d,i)=>setHov(i),onMouseLeave:()=>setHov(null),
-        onClick:(d,idx,e)=>{const nm=d&&(d.name||(d.payload&&d.payload.name));if(!nm)return;const t=e&&(e.target||e.currentTarget);const card=t&&t.closest?t.closest('.db-card'):null;window.openInsListPanel(_insSample('med-'+nm,8),nm,'Media Exposure',card);}},
+        onClick:(d,idx,e)=>{const nm=d&&(d.name||(d.payload&&d.payload.name));if(!nm)return;const t=e&&(e.target||e.currentTarget);const card=t&&t.closest?t.closest('.db-card'):null;window.openInsListPanel(_insSample('med-'+nm,8),nm,(window.WS_DATA&&window.WS_DATA.socialMentions)?'Platform Exposure':'Media Exposure',card);}},
         ...data.map((d,i)=>RC(Cell,{key:i,fill:d.color,fillOpacity:(hov==null||hov===i)?1:0.35}))),RC(Tooltip,{content:DarkTip})));
   }
   function renderCompareMedia(){
     const wrap=document.getElementById('db-compare-media-wrap');if(!wrap)return;
     wrap.style.gridTemplateColumns='repeat('+(_cmpCats.length<=3?_cmpCats.length:2)+',1fr)';   // 2→2, 3→3, 4→2×2
+    const _dist=_cmpMediaDist();
     wrap.innerHTML=_cmpCats.map((cat,ci)=>{
-      const data=CMP_MEDIA_DIST[ci%CMP_MEDIA_DIST.length];
+      const data=_dist[ci%_dist.length];
       const leg=data.map(d=>`<div class="cmp-leg-item"><span class="cmp-leg-dot" style="background:${d.color}"></span>${d.name}: ${d.value.toFixed(2)}% (${d.count})</div>`).join('');
       return `<div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" style="color:${cat.color}">${cat.name}</span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div><div class="cmp-donut-body"><div class="cmp-donut-legend">${leg}</div><div class="db-chart-wrap" id="db-compare-media-${ci}" style="height:280px"></div></div></div>`;
     }).join('');
@@ -6468,10 +6735,38 @@ function initDashboard(){
     {name:'TV',c0:{ps:'0.98',ave:'1.1M',sv:'4',wc:'916',art:'3'},c1:{ps:'7.8',ave:'173.4M',sv:'0',wc:'1.4K',art:'56'}},
     {name:'Radio',c0:{ps:'0.05',ave:'854.7K',sv:'2',wc:'1.7K',art:'1'},c1:{ps:'0',ave:'15.1M',sv:'0',wc:'4.9K',art:'14'}}
   ];
+  // SharedView: per-platform breakdown as a matrix (platform rows × metric groups × topic cols); missing metric → N/A. Values map to the compared topics by index (wraps for 2–3 topics).
+  const CMP_MT_SOCIAL_METRICS=['Avg. Inf. Score','Total SValue','Total Posts','Total Videos','Total Tweets','Total Comments','Total Likes'];
+  const CMP_MT_SOCIAL=[
+    {name:'Facebook',vals:{'Avg. Inf. Score':['2.14','3.68','1.92','2.75'],'Total SValue':['48','176','62','90'],'Total Posts':['125','53','88','140'],'Total Videos':['41','18','30','52']}},
+    {name:'Instagram',vals:{'Avg. Inf. Score':['1.86','2.42','1.55','2.10'],'Total SValue':['22','64','30','45'],'Total Posts':['34','5','69','65'],'Total Comments':['112','340','204','176'],'Total Likes':['1.2K','3.4K','2.6K','1.9K']}},
+    {name:'Twitter',vals:{'Avg. Inf. Score':['1.32','2.08','1.10','1.65'],'Total SValue':['18','52','24','33'],'Total Tweets':['14','4','23','19'],'Total Likes':['320','1.5K','680','540']}},
+    {name:'Youtube',vals:{'Avg. Inf. Score':['2.56','3.95','2.20','3.10'],'Total SValue':['30','88','40','58'],'Total Videos':['3','12','7','5'],'Total Comments':['46','210','88','120'],'Total Likes':['380','1.8K','720','540']}},
+    {name:'Reddit',vals:{'Avg. Inf. Score':['0.92','1.44','0.80','1.15'],'Total SValue':['12','28','16','22'],'Total Posts':['9','21','14','18'],'Total Comments':['64','180','96','130'],'Total Likes':['210','540','300','420']}}
+  ];
   function renderCompareMediaTypeStats(){
     const host=document.getElementById('db-compare-mediatype');if(!host)return;
     const cats=_cmpCats,n=cats.length;
     const short=c=>(c.name.split(' - ').pop()||c.name).split(' ')[0]||c.name;
+    if(window.WS_DATA&&window.WS_DATA.socialMentions){   // SharedView → single matrix, platform rows, N/A where a metric doesn't apply
+      const metricsS=CMP_MT_SOCIAL_METRICS;
+      const shead1=metricsS.map(m=>`<th colspan="${n}" class="cmp-mt-grp">${m}</th>`).join('');
+      const shead2=metricsS.map(()=>cats.map((c,ci)=>`<th class="${ci===0?'cmp-mt-gstart':''}" style="color:${c.color}">${short(c)}</th>`).join('')).join('');
+      const sbody=CMP_MT_SOCIAL.map(p=>`<tr><td class="cmp-mt-type">${p.name}</td>${metricsS.map(m=>{const vals=p.vals[m];return cats.map((c,ci)=>`<td class="cmp-mt-num ${ci===0?'cmp-mt-gstart':''}" style="color:${vals?c.color:'var(--muted)'}">${vals?vals[ci%vals.length]:'N/A'}</td>`).join('');}).join('')}</tr>`).join('');
+      host.innerHTML=`<div class="db-card">
+        <div class="db-card-hd db-tl-hd"><span class="db-card-title">Media Type Breakdown <i data-lucide="info" class="icon-sm" style="color:var(--muted)"></i></span></div>
+        <div class="cmp-mt-legend">${cats.map(c=>`<span class="cmp-leg-item"><span class="cmp-leg-dot" style="background:${c.color}"></span>${c.name}</span>`).join('')}</div>
+        <div class="tbl-scroll"><table class="tbl cmp-mt-matrix cmp-mt-matrix-social">
+          <thead>
+            <tr><th rowspan="2" class="cmp-mt-th-type">Platform</th>${shead1}</tr>
+            <tr>${shead2}</tr>
+          </thead>
+          <tbody>${sbody}</tbody>
+        </table></div>
+      </div>`;
+      initIcons();
+      return;
+    }
     const metrics=[['PUB SCORE','ps'],['TOTAL AVE','ave'],['TOTAL STORY VALUE','sv'],['AVG. WORD COUNT','wc'],['TOTAL ARTICLES','art']];
     // Labeled matrix: each category gets its own labeled, color-coded column under each metric group (scrolls horizontally at 3–4 categories)
     const head1=metrics.map(m=>`<th colspan="${n}" class="cmp-mt-grp">${m[0]}</th>`).join('');
@@ -6584,14 +6879,14 @@ function initDashboard(){
   // Frequency Distribution (story-value histogram) per category — reuses the dashboard FrequencyChart pattern
   const CMP_FREQ=[{0:11,1:38,2:17,3:5,4:6,5:6,6:2},{0:45,1:110,2:60,3:30,4:20,5:15,6:8,7:3},{0:8,1:34,2:17,3:12,4:9,5:7,6:3},{0:20,1:52,2:30,3:15,4:11,5:8,6:4}];
   function CmpFreqChart(props){
-    const ci=(props&&props.ci)||0,counts=CMP_FREQ[ci]||CMP_FREQ[0];
+    const ci=(props&&props.ci)||0,counts=(props&&props.counts)||CMP_FREQ[ci]||CMP_FREQ[0];
     const data=[0,1,2,3,4,5,6,7,8,9,10].map(v=>({value:v.toFixed(2),count:counts[v]||0}));
     const [hov,setHov]=React.useState(null);
     return RC(ResponsiveContainer,{width:'99%',height:'100%'},
       RC(BarChart,{data,margin:{top:24,right:14,bottom:18,left:6},onMouseLeave:()=>setHov(null)},
         RC(CartesianGrid,{vertical:false,stroke:'#f0f1f3'}),
         RC(XAxis,{dataKey:'value',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Story Value',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
-        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:36,label:{value:'Article Count',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
+        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:36,label:{value:_wPost(true)+' Count',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
         RC(Tooltip,{content:FreqTip,cursor:false}),
         RC(Bar,{dataKey:'count',maxBarSize:24,radius:[3,3,0,0],isAnimationActive:false,cursor:'pointer',onMouseEnter:(d,i)=>setHov(i),onClick:(d,idx,e)=>{const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;const cat=_cmpCats[ci]||{name:''};window.openInsListPanel(_insSample('cmpfreq-'+ci+'-'+d.value,8),cat.name,'Story Value '+d.value,card);}},
           ...data.map((d,i)=>RC(Cell,{key:i,fill:(hov===null||hov===i)?'#b9a4f7':'#e8e1fb'})),
@@ -6629,6 +6924,58 @@ function initDashboard(){
         ...['Positive','Neutral','Negative'].map(k=>RC(Line,{key:k,type:'linear',dataKey:k,stroke:tonColors[k],strokeWidth:2,dot:{r:4,fill:tonColors[k],strokeWidth:0},activeDot:{r:5}}))
       ));
   }
+  // SharedView Compare: Influencer Story Value Distribution — one bubble per compared topic (reuses InflDot/InflTip)
+  const CMP_INFLUENCER=[
+    [
+      {name:'OfficialiWant',        posts:5, sv:2.0,   score:0.40, color:'#93c5fd'},
+      {name:'DITOphofficial',       posts:6, sv:17.0,  score:6.50, color:'#9ca3af'},
+      {name:'ofc_iwant',            posts:6, sv:3.0,   score:0.80, color:'#0f172a'},
+      {name:'BilyonaryoPh',         posts:5, sv:11.0,  score:2.20, color:'#bfdbfe'},
+      {name:'iwantofficial',        posts:5, sv:40.83, score:8.17, color:'#374151'}
+    ],
+    [
+      {name:'jmccautosupply',       posts:8,  sv:17.0, score:3.20, color:'#6b7280'},
+      {name:'DITOphofficial',       posts:6,  sv:38.0, score:8.00, color:'#0f766e'},
+      {name:'dylanburton02',        posts:2,  sv:8.0,  score:2.40, color:'#93c5fd'},
+      {name:'SMCityLucenaOfficial', posts:11, sv:11.0, score:2.00, color:'#0f172a'}
+    ]
+  ];
+  function CmpInfluencerBubble(props){
+    const ci=(props&&props.ci)||0;
+    const data=(props&&props.data)||CMP_INFLUENCER[ci%CMP_INFLUENCER.length];
+    const asc=[...data].sort((a,b)=>a.posts-b.posts);
+    const maxX=Math.max(...data.map(a=>a.posts))+1;
+    const maxY=Math.max(20,Math.ceil(Math.max(...data.map(a=>a.sv))/10)*10);
+    const n=asc.length;
+    const [rng,setRng]=React.useState([0,n-1]);
+    const shown=asc.slice(rng[0],rng[1]+1);
+    return RC('div',{style:{display:'flex',flexDirection:'column',height:'100%'}},
+      RC('div',{style:{flex:1,minHeight:0}},
+        RC(ResponsiveContainer,{width:'99%',height:'100%'},
+          RC(ScatterChart,{margin:{top:16,right:20,bottom:24,left:8}},
+            RC(CartesianGrid,{stroke:'#f0f1f3'}),
+            RC(XAxis,{type:'number',dataKey:'posts',name:'Post Count',domain:[0,maxX],tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Post Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
+            RC(YAxis,{type:'number',dataKey:'sv',name:'Story Value',domain:[0,maxY],tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:40,label:{value:'Story Value',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
+            RC(Tooltip,{content:InflTip,cursor:{strokeDasharray:'3 3',stroke:'rgba(0,0,0,0.12)'}}),
+            RC(Scatter,{data:shown,shape:InflDot,cursor:'pointer',onClick:(d)=>{const nm=d&&(d.name||(d.payload&&d.payload.name));openInsCard(window.WS_DATA.socialMentions,nm||'Influencer Story Value','Influencer Story Value Distribution','db-compare-influencer-card');}})
+          ))),
+      RC('div',{className:'db-pub-legend'},data.map(a=>RC('span',{key:a.name,className:'db-pub-leg-item'},RC('span',{className:'dot',style:{background:a.color}}),a.name))),
+      RC('div',{style:{height:30,flexShrink:0}},
+        RC(ResponsiveContainer,{width:'99%',height:'100%'},
+          RC(ComposedChart,{data:asc,margin:{top:2,right:20,bottom:2,left:8}},
+            RC(XAxis,{dataKey:'posts',hide:true}),RC(YAxis,{hide:true}),
+            RC(Area,{dataKey:'sv',stroke:'transparent',fill:'transparent',isAnimationActive:false}),
+            RC(Brush,{dataKey:'name',height:24,stroke:'#b9a4f7',fill:'#f3eefc',travellerWidth:8,tickFormatter:()=>'',startIndex:rng[0],endIndex:rng[1],onChange:e=>{if(e&&e.startIndex!=null)setRng([e.startIndex,e.endIndex]);}})
+          )))
+    );
+  }
+  function renderCompareInfluencer(){
+    const wrap=document.getElementById('db-compare-influencer');if(!wrap)return;
+    wrap.style.gridTemplateColumns='repeat('+(_cmpCats.length<=3?_cmpCats.length:2)+',1fr)';   // 2→2, 3→3, 4→2×2
+    wrap.innerHTML=_cmpCats.map((cat,ci)=>`<div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" style="color:${cat.color}">${cat.name}</span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div><div class="db-chart-wrap" id="db-compare-influencer-${ci}" style="height:420px"></div></div>`).join('');
+    _cmpCats.forEach((cat,ci)=>dbMount('db-compare-influencer-'+ci,RC(CmpInfluencerBubble,{ci})));
+    initIcons();
+  }
   window.openCompareView=function(cats){
     if(!cats||cats.length<2)cats=['Company News - DITO Telecommunity','Competitor News - Globe Telecom'];
     _cmpCats=cats.slice(0,4).map((n,i)=>({name:n,color:CMP_COLORS[i%CMP_COLORS.length]}));
@@ -6641,6 +6988,7 @@ function initDashboard(){
     renderCompareEmphasis();
     renderCompareTonality();
     renderCompareFrequency();
+    renderCompareInfluencer();
     renderCompareSoV();
     renderCompareEntities();
     _bindExploreScroll(wrap);
@@ -6688,12 +7036,13 @@ function initDashboard(){
     {name:'ABS-CBN News Online',articles:2,score:'1.81',ave:'167.7K',svalue:'3.09',exposure:'3.09'},
     {name:'Context.PH',articles:2,score:'1.12',ave:'182.1K',svalue:'3.28',exposure:'3.28'}
   ];
-  function renderCmpBarList(hostId,items,color,sub){
+  function renderCmpBarList(hostId,items,color,sub,unit){
     const host=document.getElementById(hostId);if(!host)return;
+    const _u=unit||(_SOC()?'Post/s':'Article/s');
     const max=Math.max(...items.map(i=>i[1]),1);
     host.innerHTML=items.map(([n,c])=>`<div class="ps-media-pub" style="cursor:pointer" onclick="cmpOpenList('${String(n).replace(/'/g,"\\'")}','${sub||''}',this)">
         <div class="ps-media-pub-name">${n}</div>
-        <div class="ps-media-bar"><div class="ps-media-bar-fill" style="width:${Math.round(c/max*100)}%;background:${color}"></div><span class="ps-media-bar-lbl${c===max?' over-fill':''}">${c} Article/s</span></div>
+        <div class="ps-media-bar"><div class="ps-media-bar-fill" style="width:${Math.round(c/max*100)}%;background:${color}"></div><span class="ps-media-bar-lbl${c===max?' over-fill':''}">${c} ${_u}</span></div>
       </div>`).join('');
   }
   // Top Entity view data + helpers
@@ -6731,8 +7080,202 @@ function initDashboard(){
     const arts=getEntityArticles('pub',name);
     window.openInsListPanel(arts&&arts.length?arts:_insSample((sub||'')+'-'+name,6),name,sub||'Compare',el||null);
   };
+  // SharedView Compare → "Total Results" → per-topic Total Post Count page (Platform Exposure + Top Influencers + Timeline + influencer cards)
+  const CMP_TOP_INFLUENCERS=[
+    [['BilyonaryoPh',7],['OfficialiWant',6],['DITOphofficial',6],['ofc_iwant',6],['iwantofficial',5],['bilyonaryo_ph',5],['negosyantenews',4],['ABSCBNnetwork',3],['ABSCBN',3],['M360PR',2],['RodrigoDennisUy',2],['pldt',1],['iconicmnl',1],['ShopeePayPH',1],['map.org.ph',1],['LAdventurerPH',1],['ThVoiceNewsweekly',1],['DRPSPHCAOfficial',1],['TPCIvinRonaldCabugGatdula',1],['bncdotph',1],['ABSCBNNews',1],['contextdotph',1],['technobaboy',1]],
+    [['ConvergeICT',3],['DITOphofficial',2],['GlobePH',2],['bilyonaryo_ph',1],['pldt',1]]
+  ];
+  function renderCmpTotalPosts(){
+    const chips=document.getElementById('db-cmptp-chips');
+    if(chips)chips.innerHTML=_cmpCats.map(c=>`<span class="cmp-chip" style="border-color:${c.color};color:${c.color}"><span class="cmp-chip-dot" style="background:${c.color}"></span>${c.name}</span>`).join('');
+    // Platform Exposure donuts (per topic)
+    const dg=document.getElementById('db-cmptp-media');
+    if(dg){
+      dg.style.gridTemplateColumns='repeat('+(_cmpCats.length<=3?_cmpCats.length:2)+',1fr)';
+      const dist=_cmpMediaDist();
+      dg.innerHTML=_cmpCats.map((cat,ci)=>{
+        const data=dist[ci%dist.length];
+        const leg=data.map(d=>`<div class="cmp-leg-item"><span class="cmp-leg-dot" style="background:${d.color}"></span>${d.name}: ${d.value.toFixed(2)}% (${d.count})</div>`).join('');
+        return `<div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" style="color:${cat.color}">${cat.name}</span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div><div class="cmp-donut-body"><div class="cmp-donut-legend">${leg}</div><div class="db-chart-wrap" id="db-cmptp-donut-${ci}" style="height:280px"></div></div></div>`;
+      }).join('');
+      _cmpCats.forEach((cat,ci)=>dbMount('db-cmptp-donut-'+ci,RC(CmpMediaDonut,{ci})));
+    }
+    // Top Influencers bar-lists (per topic)
+    const ig=document.getElementById('db-cmptp-inf');
+    if(ig){
+      ig.style.gridTemplateColumns='repeat('+(_cmpCats.length<=3?_cmpCats.length:2)+',1fr)';
+      ig.innerHTML=_cmpCats.map((cat,ci)=>`<div class="cmp-list-block"><div class="cmp-col-hd" style="color:${cat.color}">${cat.name}</div><div class="ps-media-pubs" id="db-cmptp-inf-${ci}"></div></div>`).join('');
+      _cmpCats.forEach((cat,ci)=>renderCmpBarList('db-cmptp-inf-'+ci,CMP_TOP_INFLUENCERS[ci]||CMP_TOP_INFLUENCERS[0],cat.color,'Top Influencer'));
+    }
+    // Timeline
+    dbMount('db-cmptp-timeline',CompareTimeline());
+    // Influencer cards (first topic)
+    const ch=document.getElementById('db-cmptp-cards-hd');if(ch&&_cmpCats[0])ch.textContent='Top Influencers for '+_cmpCats[0].name;
+    renderTpInfCards('db-cmptp-cards');
+  }
+  window.openCmpTotalPosts=function(){
+    if(!_cmpCats||_cmpCats.length<2)_cmpCats=['Company News - DITO Telecommunity','Competitor News - Globe Telecom'].map((n,i)=>({name:n,color:CMP_COLORS[i%CMP_COLORS.length]}));
+    const wrap=_showExplore('db-cmpd-totalposts');if(!wrap)return;
+    renderCmpTotalPosts();
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  // SharedView Compare → "Top Influencer" → per-topic Top Influencers page (bar-lists + Influencer Story Value + cards + posts)
+  function renderCmpTopInf(){
+    const chips=document.getElementById('db-cmpti-chips');
+    if(chips)chips.innerHTML=_cmpCats.map(c=>`<span class="cmp-chip" style="border-color:${c.color};color:${c.color}"><span class="cmp-chip-dot" style="background:${c.color}"></span>${c.name}</span>`).join('');
+    // Top Influencers bar-lists (per topic)
+    const ig=document.getElementById('db-cmpti-inf');
+    if(ig){
+      ig.style.gridTemplateColumns='repeat('+(_cmpCats.length<=3?_cmpCats.length:2)+',1fr)';
+      ig.innerHTML=_cmpCats.map((cat,ci)=>`<div class="cmp-list-block"><div class="cmp-col-hd" style="color:${cat.color}">${cat.name}</div><div class="ps-media-pubs" id="db-cmpti-inf-${ci}"></div></div>`).join('');
+      _cmpCats.forEach((cat,ci)=>renderCmpBarList('db-cmpti-inf-'+ci,CMP_TOP_INFLUENCERS[ci]||CMP_TOP_INFLUENCERS[0],cat.color,'Top Influencer'));
+    }
+    // Influencer Story Value Distribution (per-topic bubbles)
+    const bg=document.getElementById('db-cmpti-bubbles');
+    if(bg){
+      bg.style.gridTemplateColumns='repeat('+(_cmpCats.length<=3?_cmpCats.length:2)+',1fr)';
+      bg.innerHTML=_cmpCats.map((cat,ci)=>`<div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" style="color:${cat.color}">${cat.name}</span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div><div class="db-chart-wrap" id="db-cmpti-bubble-${ci}" style="height:420px"></div></div>`).join('');
+      _cmpCats.forEach((cat,ci)=>dbMount('db-cmpti-bubble-'+ci,RC(CmpInfluencerBubble,{ci})));
+    }
+    // Influencer cards (first topic)
+    const ch=document.getElementById('db-cmpti-cards-hd');if(ch&&_cmpCats[0])ch.textContent='Top Influencers for '+_cmpCats[0].name;
+    renderTpInfCards('db-cmpti-cards');
+    // Posts table
+    window.renderTiPosts('db-cmpti-table',0);
+  }
+  window.openCmpTopInf=function(){
+    if(!_cmpCats||_cmpCats.length<2)_cmpCats=['Company News - DITO Telecommunity','Competitor News - Globe Telecom'].map((n,i)=>({name:n,color:CMP_COLORS[i%CMP_COLORS.length]}));
+    const wrap=_showExplore('db-cmpd-topinf');if(!wrap)return;
+    renderCmpTopInf();
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  // SharedView Compare → "Most Engaging Posts" → per-topic page (Influencer Story Value + Frequency + Top Profiles by Eng. Score + cards + posts)
+  const CMP_ENGAGEMENT=[
+    [['BilyonaryoPh',843],['DITOphofficial',404],['RodrigoDennisUy',154],['ABSCBNnetwork',78],['OfficialiWant',62],['pldt',48],['elisa.garrote.artasuba',31],['aida.sansan.3',22],['negosyantenews',17],['TPCIvinRonaldCabugGatdula',15],['shopeepayph',8],['ShopeePayPH',4],['bncdotph',2],['M360PR',1],['map.org.ph',1],['LAdventurerPH',1],['DRPSPHCAOfficial',1],['iconicmnl',1],['ThVoiceNewsweekly',1]],
+    [['ConvergeICT',74],['DITOphofficial',18],['GlobePH',9],['pldt',4],['bilyonaryo_ph',1]]
+  ];
+  function renderCmpMostEngaging(){
+    const chips=document.getElementById('db-cmpme-chips');
+    if(chips)chips.innerHTML=_cmpCats.map(c=>`<span class="cmp-chip" style="border-color:${c.color};color:${c.color}"><span class="cmp-chip-dot" style="background:${c.color}"></span>${c.name}</span>`).join('');
+    const cols='repeat('+(_cmpCats.length<=3?_cmpCats.length:2)+',1fr)';
+    // Influencer Story Value bubbles (per topic)
+    const bg=document.getElementById('db-cmpme-bubbles');
+    if(bg){
+      bg.style.gridTemplateColumns=cols;
+      bg.innerHTML=_cmpCats.map((cat,ci)=>`<div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" style="color:${cat.color}">${cat.name}</span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div><div class="db-chart-wrap" id="db-cmpme-bubble-${ci}" style="height:420px"></div></div>`).join('');
+      _cmpCats.forEach((cat,ci)=>dbMount('db-cmpme-bubble-'+ci,RC(CmpInfluencerBubble,{ci})));
+    }
+    // Frequency Distribution histograms (per topic)
+    const fg=document.getElementById('db-cmpme-freq');
+    if(fg){
+      fg.style.gridTemplateColumns=cols;
+      fg.innerHTML=_cmpCats.map((cat,ci)=>`<div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" style="color:${cat.color}">${cat.name}</span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div><div class="db-chart-wrap" id="db-cmpme-freq-${ci}" style="height:340px"></div></div>`).join('');
+      _cmpCats.forEach((cat,ci)=>dbMount('db-cmpme-freq-'+ci,RC(CmpFreqChart,{ci})));
+    }
+    // Top Profiles by Engagement Score (per topic)
+    const eg=document.getElementById('db-cmpme-eng');
+    if(eg){
+      eg.style.gridTemplateColumns=cols;
+      eg.innerHTML=_cmpCats.map((cat,ci)=>`<div class="cmp-list-block"><div class="cmp-col-hd" style="color:${cat.color}">${cat.name}</div><div class="ps-media-pubs" id="db-cmpme-eng-${ci}"></div></div>`).join('');
+      _cmpCats.forEach((cat,ci)=>renderCmpBarList('db-cmpme-eng-'+ci,CMP_ENGAGEMENT[ci]||CMP_ENGAGEMENT[0],cat.color,'Top Profile','Eng. Score'));
+    }
+    // Influencer cards (first topic)
+    const ch=document.getElementById('db-cmpme-cards-hd');if(ch&&_cmpCats[0])ch.textContent='Top Influencers for '+_cmpCats[0].name;
+    renderTpInfCards('db-cmpme-cards');
+    // Posts table
+    window.renderTiPosts('db-cmpme-table',0);
+  }
+  window.openCmpMostEngaging=function(){
+    if(!_cmpCats||_cmpCats.length<2)_cmpCats=['Company News - DITO Telecommunity','Competitor News - Globe Telecom'].map((n,i)=>({name:n,color:CMP_COLORS[i%CMP_COLORS.length]}));
+    const wrap=_showExplore('db-cmpd-mep');if(!wrap)return;
+    renderCmpMostEngaging();
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  // SharedView Compare → "Most Dominant - <Platform>" → per-topic page (Frequency + Influencer Story Value + cards + posts)
+  function renderCmpMostDominant(platform){
+    const pk=(platform||'facebook').toLowerCase();
+    const d=DOM_DATA[pk]||DOM_DATA.facebook;
+    const crumb=document.getElementById('db-cmpdom-crumb');if(crumb)crumb.textContent='Most Dominant - '+d.label;
+    const chips=document.getElementById('db-cmpdom-chips');
+    if(chips)chips.innerHTML=_cmpCats.map(c=>`<span class="cmp-chip" style="border-color:${c.color};color:${c.color}"><span class="cmp-chip-dot" style="background:${c.color}"></span>${c.name}</span>`).join('');
+    const cols='repeat('+(_cmpCats.length<=3?_cmpCats.length:2)+',1fr)';
+    // Per-topic, platform-scoped data: topic 0 = full platform set; topic 1+ = a smaller slice (YouTube's 2nd topic is No Data, per the Overview)
+    const topicData=_cmpCats.map((cat,ci)=>{
+      if(ci===0)return {bubble:d.bubble,counts:Object.fromEntries(d.freq)};
+      if(pk==='youtube')return null;
+      const half=Math.max(2,Math.ceil(d.bubble.length/2));
+      return {bubble:d.bubble.slice(0,half),counts:Object.fromEntries(d.freq.map(([v,c])=>[v,Math.round(c*0.4)]))};
+    });
+    const _noData='<div class="cmp-emp-nodata"><i data-lucide="inbox"></i><div>No Data</div></div>';
+    const fg=document.getElementById('db-cmpdom-freq');
+    if(fg){
+      fg.style.gridTemplateColumns=cols;
+      fg.innerHTML=_cmpCats.map((cat,ci)=>`<div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" style="color:${cat.color}">${cat.name}</span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div>${topicData[ci]?`<div class="db-chart-wrap" id="db-cmpdom-freq-${ci}" style="height:340px"></div>`:_noData}</div>`).join('');
+      _cmpCats.forEach((cat,ci)=>{if(topicData[ci])dbMount('db-cmpdom-freq-'+ci,RC(CmpFreqChart,{counts:topicData[ci].counts}));});
+    }
+    const bg=document.getElementById('db-cmpdom-bubbles');
+    if(bg){
+      bg.style.gridTemplateColumns=cols;
+      bg.innerHTML=_cmpCats.map((cat,ci)=>`<div class="cmp-donut-block"><div class="cmp-donut-hd"><span class="cmp-donut-name" style="color:${cat.color}">${cat.name}</span><button class="db-tl-more" title="More"><i data-lucide="more-horizontal"></i></button></div>${topicData[ci]?`<div class="db-chart-wrap" id="db-cmpdom-bubble-${ci}" style="height:420px"></div>`:_noData}</div>`).join('');
+      _cmpCats.forEach((cat,ci)=>{if(topicData[ci])dbMount('db-cmpdom-bubble-'+ci,RC(CmpInfluencerBubble,{data:topicData[ci].bubble}));});
+    }
+    const ch=document.getElementById('db-cmpdom-cards-hd');if(ch)ch.textContent='Top Influencers for '+d.label;
+    renderTpInfCards('db-cmpdom-cards',d.inf);
+    window.renderTiPosts('db-cmpdom-table',0,pk);
+  }
+  window.openCmpMostDominant=function(platform){
+    if(!_cmpCats||_cmpCats.length<2)_cmpCats=['Company News - DITO Telecommunity','Competitor News - Globe Telecom'].map((n,i)=>({name:n,color:CMP_COLORS[i%CMP_COLORS.length]}));
+    const wrap=_showExplore('db-cmpd-dom');if(!wrap)return;
+    renderCmpMostDominant(platform);
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
+  // SharedView Compare → "Top Entity" → per-topic Top Entities page (entity bar-lists + entity treemaps)
+  function renderCmpTopEntity(){
+    const chips=document.getElementById('db-cmpent-chips');
+    if(chips)chips.innerHTML=_cmpCats.map(c=>`<span class="cmp-chip" style="border-color:${c.color};color:${c.color}"><span class="cmp-chip-dot" style="background:${c.color}"></span>${c.name}</span>`).join('');
+    const cols='repeat('+(_cmpCats.length<=3?_cmpCats.length:2)+',1fr)';
+    const tg=document.getElementById('db-cmpent-top');
+    if(tg){
+      tg.style.gridTemplateColumns=cols;
+      tg.innerHTML=_cmpCats.map((cat,ci)=>`<div class="cmp-list-block"><div class="cmp-col-hd" style="color:${cat.color}">${cat.name}</div><div class="ps-media-pubs" id="db-cmpent-top-${ci}"></div></div>`).join('');
+      _cmpCats.forEach((cat,ci)=>renderCmpBarList('db-cmpent-top-'+ci,CMP_TOP_ENTITIES[ci]||CMP_TOP_ENTITIES[0],cat.color,'Top Entity'));
+    }
+    const mg=document.getElementById('db-cmpent-maps');
+    if(mg){
+      mg.style.gridTemplateColumns='1fr';   // treemaps stack full-width, one topic per row
+      mg.innerHTML=_cmpCats.map((cat,ci)=>`<div class="cmp-ent-block"><div class="cmp-col-hd" style="color:${cat.color}">${cat.name}</div><div class="db-entmap" id="db-cmpent-map-${ci}"></div><div class="db-ent-legend" id="db-cmpent-leg-${ci}"></div></div>`).join('');
+      _cmpCats.forEach((cat,ci)=>{
+        const data=CMP_ENTMAP[ci]||CMP_ENTMAP[0];
+        renderEntMap('db-cmpent-map-'+ci,data);
+        const leg=document.getElementById('db-cmpent-leg-'+ci);
+        if(leg)leg.innerHTML=data.map(e=>`<span class="db-ent-leg-item"><span class="sq" style="background:${e.color}"></span>${e.name}</span>`).join('');
+      });
+    }
+  }
+  window.openCmpTopEntity=function(){
+    if(!_cmpCats||_cmpCats.length<2)_cmpCats=['Company News - DITO Telecommunity','Competitor News - Globe Telecom'].map((n,i)=>({name:n,color:CMP_COLORS[i%CMP_COLORS.length]}));
+    const wrap=_showExplore('db-cmpd-ent');if(!wrap)return;
+    renderCmpTopEntity();
+    _bindExploreScroll(wrap);
+    initIcons();
+  };
   window.openCompareDetail=function(metric,el){
     if(!_cmpCats||_cmpCats.length<2)_cmpCats=['Company News - DITO Telecommunity','Competitor News - Globe Telecom'].map((n,i)=>({name:n,color:CMP_COLORS[i%CMP_COLORS.length]}));
+    // SharedView: "Total Results" opens the per-topic Total Post Count page; other metrics open the social posts side-panel
+    if(window.WS_DATA&&window.WS_DATA.socialMentions){
+      if(/total results/i.test(metric||'')){window.openCmpTotalPosts();return;}
+      if(/most engaging posts/i.test(metric||'')){window.openCmpMostEngaging();return;}
+      const _dom=/most dominant\s*-\s*(\w+)/i.exec(metric||'');
+      if(_dom){window.openCmpMostDominant(_dom[1]);return;}
+      if(/top entity/i.test(metric||'')){window.openCmpTopEntity();return;}
+      if(/top influencer/i.test(metric||'')){window.openCmpTopInf();return;}
+      window.openInsListPanel(_insSample('cmp-'+(metric||''),8),metric||'Compare Topics','Compare Topics',el||null);
+      return;
+    }
     // "Most Articles in a day" is a single peak-day figure — show the article list in the side panel, don't navigate to a page
     if(/most articles in a day/i.test(metric||'')){
       window.openInsListPanel(_insSample('mostarticles',8),'Most Articles in a day','Peak coverage day',el||null);
@@ -7053,16 +7596,16 @@ function initDashboard(){
     const loB=Math.min(...vals),hiB=Math.max(...vals),midEmpty=[];for(let v=loB+1;v<hiB;v++)if(!freqCounts[v])midEmpty.push(v);
     const bimodal=byCount.length>=2&&Math.abs(byCount[0][0]-byCount[1][0])>=3,maxC=byCount[0][1];
     const lo=entries.filter(e=>e[0]<=1).reduce((s,e)=>s+e[1],0),hi=entries.filter(e=>e[0]>=4).reduce((s,e)=>s+e[1],0);
-    return _iNarr(`${tot} articles span story values <b>${loB}–${hiB}</b>, ${bimodal?'clustering at <b>both ends</b>':'concentrated'} with a weighted mean of <b>${mean.toFixed(2)}</b>. ${lo} low-value (≤1) vs ${hi} high-value (≥4) articles.`)
+    return _iNarr(`${tot} ${_wPosts()} span story values <b>${loB}–${hiB}</b>, ${bimodal?'clustering at <b>both ends</b>':'concentrated'} with a weighted mean of <b>${mean.toFixed(2)}</b>. ${lo} low-value (≤1) vs ${hi} high-value (≥4) ${_wPosts()}.`)
       +_iStats(
-        _iStat('Total articles',tot,'in distribution'),
-        _iStat('Most common','SV '+byCount[0][0],byCount[0][1]+' articles'),
+        _iStat('Total '+_wPosts(true),tot,'in distribution'),
+        _iStat('Most common','SV '+byCount[0][0],byCount[0][1]+' '+_wPosts()),
         _iStat('Mean story value',mean.toFixed(2),'weighted'),
         _iStat('Spread','SV '+loB+'–'+hiB,entries.length+' active buckets')
       )
       +_iSec('trending-up','Key trends')
       +_iIns('bar-chart-2',`Distribution is <b>${bimodal?'bimodal':'concentrated'}</b> — peaks at SV ${byCount[0][0]} (${byCount[0][1]})${byCount[1]?' and SV '+byCount[1][0]+' ('+byCount[1][1]+')':''}.`)
-      +_iIns('minus-circle',`Mid-range is empty${midEmpty.length?' — no articles at SV '+midEmpty.join(', '):''}, so there's little "moderate" coverage.`)
+      +_iIns('minus-circle',`Mid-range is empty${midEmpty.length?' — no '+_wPosts()+' at SV '+midEmpty.join(', '):''}, so there's little "moderate" coverage.`)
       +_iIns('gauge',`Mean SV of <b>${mean.toFixed(2)}</b> ${mean<2?'sits low':'is moderate'} — overall value is pulled up by the high-SV cluster.`)
       +_iSec('award','Story-value buckets')
       +_iRank(entries.map(e=>({name:'Story value '+e[0].toFixed(2),val:e[1],pct:Math.round(e[1]/maxC*100)})),'#b9a4f7')
@@ -7082,7 +7625,7 @@ function initDashboard(){
         _iStat('Publishers',n,'tracked'),
         _iStat('Top score',top.score.toFixed(2),top.name),
         _iStat('Avg score',avg.toFixed(2),'across publishers'),
-        _iStat('Total articles',arts,'combined')
+        _iStat('Total '+_wPosts(true),arts,'combined')
       )
       +_iSec('trending-up','Key trends')
       +_iIns(corr?'arrow-up-right':'shuffle',`Volume ${corr?'correlates with':'is decoupled from'} score — top-half-by-volume average <b>${hiVolAvg.toFixed(2)}</b> vs ${loVolAvg.toFixed(2)} for the rest.`)
@@ -7104,7 +7647,7 @@ function initDashboard(){
         _iStat('Authors',n,'tracked'),
         _iStat('Top story value',top.sv.toFixed(2),top.name),
         _iStat('Avg story value',avg.toFixed(2),'across authors'),
-        _iStat('Total articles',arts,'combined')
+        _iStat('Total '+_wPosts(true),arts,'combined')
       )
       +_iSec('trending-up','Key trends')
       +_iIns('user-check',`<b>${top.name}</b>${bySv[1]?' and <b>'+bySv[1].name+'</b>':''} drive the highest-value coverage (SV ${top.sv.toFixed(2)}${bySv[1]?', '+bySv[1].sv.toFixed(2):''}).`)
@@ -7165,12 +7708,90 @@ function initDashboard(){
       +_iIns('globe',`Expand <b>geographic (GPE)</b> tracking if regional spread matters — it's currently just ${gpe.toFixed(1)}%.`)
       +_iFoot('AI-generated summary derived from the entity-type distribution.');
   }};
+  // SharedView charts — social-framed insight sources (Top Media Sources, Influencer, Media Source Distribution)
+  SRC.mediasources={card:'db-mediasources-card',sub:()=>TMS_SRC.length+' platforms',detailTitle:()=>'Top media sources',clear:()=>{},detail:()=>SRC.mediasources.overview(),overview:()=>{
+    const n=TMS_SRC.length,total=TMS_SRC.reduce((s,p)=>s+p.count,0);
+    const byCount=[...TMS_SRC].sort((a,b)=>b.count-a.count),top=byCount[0],second=byCount[1];
+    const topPct=Math.round(top.count/total*100),top2Pct=Math.round(((top.count+(second?second.count:0))/total)*100);
+    const mult=second&&second.count?(top.count/second.count).toFixed(1):null;
+    const dayMap={};tmsData.forEach(p=>{const d=new Date(p.x);dayMap[(d.getMonth()+1)+'/'+d.getDate()]=(dayMap[(d.getMonth()+1)+'/'+d.getDate()]||0)+1;});
+    const busiest=Object.entries(dayMap).sort((a,b)=>b[1]-a[1])[0];
+    const infMap={};tmsData.forEach(p=>{if(p.infl)infMap[p.infl]=(infMap[p.infl]||0)+1;});
+    const topInf=Object.entries(infMap).sort((a,b)=>b[1]-a[1]).slice(0,4);
+    return _iNarr(`<b>${top.name}</b> dominates the platform mix — <b>${top.count}</b> of ${total} posts (<b>${topPct}%</b>). The top two platforms carry <b>${top2Pct}%</b> of all volume, so distribution is ${top2Pct>=80?'highly concentrated':'moderately spread'}.`)
+      +_iStats(
+        _iStat('Total posts',total,'across '+n+' platforms'),
+        _iStat('Top platform',top.name,topPct+'% share'),
+        _iStat('Top-2 share',top2Pct+'%',top.name+' + '+(second?second.name:'—')),
+        _iStat('Busiest day',busiest?busiest[0]:'—',busiest?busiest[1]+' posts':'')
+      )
+      +_iSec('trending-up','Key trends')
+      +_iIns('crown',`<b>${top.name}</b> leads with <b>${top.count}</b> posts${mult&&second?` — about <b>${mult}×</b> the next platform (${second.name}, ${second.count})`:''}.`)
+      +_iIns('layers',`Platform concentration is <b>${top2Pct>=80?'high':'moderate'}</b> — the top two account for ${top2Pct}% while ${n-2} other${n-2!==1?'s':''} split the rest.`)
+      +(busiest?_iIns('calendar',`Posting peaks on <b>${busiest[0]}</b> (${busiest[1]} posts) — the busiest day in the window.`):'')
+      +_iSec('award','Platforms by post count')
+      +_iRank(byCount.map(p=>({name:p.name,val:p.count,pct:Math.round(p.count/top.count*100),color:p.color})),null)
+      +(topInf.length?_iSec('users','Top influencers by volume')+_iRank(topInf.map(([nm,c])=>({name:nm,val:c,pct:Math.round(c/topInf[0][1]*100)})),'#7c3aed'):'')
+      +_iSec('lightbulb','Takeaways')
+      +_iIns('target',`Focus monitoring and engagement on <b>${top.name}</b> — it carries the bulk of conversation volume.`)
+      +_iIns('eye',`Watch the smaller platforms (${byCount.slice(-2).map(p=>p.name).join(', ')}) for emerging shifts before they scale.`)
+      +_iFoot('AI-generated summary derived from platform post counts and posting activity.');
+  }};
+  SRC.influencer={card:'db-influencer-card',sub:()=>influencerData.length+' influencers',detailTitle:()=>'Influencer story value',clear:()=>{},detail:()=>SRC.influencer.overview(),overview:()=>{
+    const n=influencerData.length,bySv=[...influencerData].sort((a,b)=>b.sv-a.sv),byPosts=[...influencerData].sort((a,b)=>b.posts-a.posts),byScore=[...influencerData].sort((a,b)=>b.score-a.score);
+    const totPosts=influencerData.reduce((s,a)=>s+a.posts,0),avgSv=influencerData.reduce((s,a)=>s+a.sv,0)/n;
+    const top=bySv[0],prolific=byPosts[0],topScore=byScore[0];
+    const efficient=[...influencerData].sort((a,b)=>(b.sv/b.posts)-(a.sv/a.posts))[0];
+    return _iNarr(`<b>${top.name}</b> drives the highest story value at <b>${top.sv.toFixed(2)}</b> from just ${top.posts} post${top.posts!==1?'s':''}. Most prolific is <b>${prolific.name}</b> (${prolific.posts} posts); influence spans <b>${n}</b> accounts.`)
+      +_iStats(
+        _iStat('Influencers',n,'tracked'),
+        _iStat('Top story value',top.sv.toFixed(2),top.name),
+        _iStat('Most posts',prolific.posts,prolific.name),
+        _iStat('Top influencer score',topScore.score.toFixed(2),topScore.name)
+      )
+      +_iSec('trending-up','Key trends')
+      +_iIns('star',`<b>${top.name}</b>${bySv[1]?' and <b>'+bySv[1].name+'</b>':''} generate the most story value (${top.sv.toFixed(2)}${bySv[1]?', '+bySv[1].sv.toFixed(2):''}).`)
+      +_iIns('zap',`Most efficient is <b>${efficient.name}</b> — <b>${(efficient.sv/efficient.posts).toFixed(2)}</b> story value per post.`)
+      +_iIns('bar-chart-2',`${totPosts} posts across ${n} influencers, averaging <b>${avgSv.toFixed(2)}</b> story value each.`)
+      +_iSec('award','Top influencers by story value')
+      +_iRank(bySv.slice(0,5).map(a=>({name:a.name,val:a.sv.toFixed(2),pct:Math.round(a.sv/top.sv*100),color:a.color})),'#7c3aed')
+      +_iSec('lightbulb','Takeaways')
+      +_iIns('handshake',`Prioritize <b>${top.name}</b> and <b>${prolific.name}</b> — highest value and highest volume respectively.`)
+      +_iIns('eye',`Track <b>${efficient.name}</b> — a high value-per-post rate signals concentrated influence worth amplifying.`)
+      +_iFoot('AI-generated summary derived from influencer post counts, story value, and influence scores.');
+  }};
+  SRC.mediasource={card:'db-mediasource-card',sub:()=>mediaSourceData.length+' platforms',detailTitle:()=>'Media source distribution',clear:()=>{},detail:()=>SRC.mediasource.overview(),overview:()=>{
+    const n=mediaSourceData.length,total=mediaSourceData.reduce((s,p)=>s+p.postCount,0);
+    const byPost=[...mediaSourceData].sort((a,b)=>b.postCount-a.postCount),bySv=[...mediaSourceData].sort((a,b)=>b.storyValue-a.storyValue);
+    const domV=byPost[0],domVpct=Math.round(domV.postCount/total*100),topSv=bySv[0];
+    const decoupled=domV.name!==topSv.name,avgSv=mediaSourceData.reduce((s,p)=>s+p.storyValue,0)/n;
+    return _iNarr(`<b>${domV.name}</b> carries the most volume — <b>${domV.postCount}</b> of ${total} posts (<b>${domVpct}%</b>) — but <b>${topSv.name}</b> posts the highest story value (<b>${topSv.storyValue.toFixed(2)}</b>). Volume and value ${decoupled?'are <b>decoupled</b>':'align'}.`)
+      +_iStats(
+        _iStat('Total posts',total,'across '+n+' platforms'),
+        _iStat('Top volume',domV.name,domVpct+'% of posts'),
+        _iStat('Top story value',topSv.storyValue.toFixed(2),topSv.name),
+        _iStat('Avg story value',avgSv.toFixed(2),'per platform')
+      )
+      +_iSec('trending-up','Key trends')
+      +_iIns('bar-chart-2',`<b>${domV.name}</b> dominates volume at ${domVpct}% — the primary channel for reach.`)
+      +_iIns(decoupled?'shuffle':'arrow-up-right',`Volume ${decoupled?'is decoupled from':'aligns with'} value — <b>${topSv.name}</b> (${topSv.storyValue.toFixed(2)} SV) ${decoupled?'punches above its post count':'leads on both'}.`)
+      +_iIns('gauge',`Story value averages <b>${avgSv.toFixed(2)}</b> per platform — ${topSv.storyValue>avgSv*1.5?'skewed by '+topSv.name:'fairly even'}.`)
+      +_iSec('award','Platforms by post count')
+      +_iRank(byPost.map(p=>({name:p.name,val:p.postCount,pct:Math.round(p.postCount/domV.postCount*100),color:p.color})),null)
+      +_iSec('lightbulb','Takeaways')
+      +_iIns('target',`Use <b>${domV.name}</b> for reach and <b>${topSv.name}</b> for high-value, quotable posts.`)
+      +_iIns('search',`Investigate why <b>${topSv.name}</b> over-indexes on story value despite lower volume.`)
+      +_iFoot('AI-generated summary derived from per-platform post counts and story values.');
+  }};
   window.openTonalityInsights=()=>tiOpenSource('tonality');
   window.openFrequencyInsights=()=>tiOpenSource('frequency');
   window.openPubScoreInsights=()=>tiOpenSource('pubscore');
   window.openAuthorInsights=()=>tiOpenSource('author');
   window.openTopPubInsights=()=>tiOpenSource('toppub');
   window.openEntitiesInsights=()=>tiOpenSource('entities');
+  window.openMediaSourcesInsights=()=>tiOpenSource('mediasources');
+  window.openInfluencerInsights=()=>tiOpenSource('influencer');
+  window.openMediaSourceInsights=()=>tiOpenSource('mediasource');
 }
 (function(){function c(){document.querySelectorAll(".brief-stats .ss").forEach(function(card){var tr=card.querySelector(".ss-trend:not(.neu)");if(!tr)return;var neg=/[↓−-]/.test(tr.textContent);tr.classList.remove("pos","neg");tr.classList.add(neg?"neg":"pos");var v=card.querySelector(".ss-val");if(v){v.classList.remove("tcol-pos","tcol-neg");v.classList.add(neg?"tcol-neg":"tcol-pos");}});}if(document.readyState!=="loading")c();else document.addEventListener("DOMContentLoaded",c);})();
 
@@ -7383,7 +8004,7 @@ function renderPublishers(){
 function renderEntityDetail(kind,name,animate){
   const panelId=kind==='pub'?'pub-detail-panel':'author-detail-panel';
   const panel=document.getElementById(panelId);if(!panel)return;
-  if(!name){panel.innerHTML=`<div class="ent-empty"><i data-lucide="${kind==='pub'?'building-2':'user'}" style="width:24px;height:24px;color:#ddd"></i><div>Select ${kind==='pub'?'a publisher':'an author'} to view its articles</div></div>`;initIcons();return;}
+  if(!name){panel.innerHTML=`<div class="ent-empty"><i data-lucide="${kind==='pub'?'building-2':'user'}" style="width:24px;height:24px;color:#ddd"></i><div>Select ${kind==='pub'?'a publisher':'an author'} to view its ${_wPosts()}</div></div>`;initIcons();return;}
   const articles=getEntityArticles(kind,name);
   const totalAve=articles.reduce((s,d)=>{const m=String(d.ave||'').match(/[\d.]+/);return s+(m?parseFloat(m[0]):0);},0);
   const avgSv=articles.length?(articles.reduce((s,d)=>s+(d.sv||0),0)/articles.length):0;
