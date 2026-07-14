@@ -4811,7 +4811,15 @@ function dbMount(id,el){
   }
   // Dashboard Insights slide-over: Shared View → the social posts in the social variant; else the passed news articles.
   function renderInsTable(arts){
-    if(window.WS_DATA&&window.WS_DATA.socialMentions)return renderArtTable(window.WS_DATA.socialMentions.slice(),{variant:'social'});   // slice: renderArtTable sorts in place
+    if(window.WS_DATA&&window.WS_DATA.socialMentions){
+      let list;
+      if(arts&&arts.length&&arts[0]&&arts[0].platform)list=arts.slice();   // caller supplied specific social posts (e.g. a Platform Exposure segment)
+      else{
+        list=window.WS_DATA.socialMentions.slice();   // slice: renderArtTable sorts in place
+        if(typeof _dashPlats!=='undefined'&&_dashPlats.size)list=list.filter(d=>_dashPlats.has((d.platform||'').toLowerCase()));   // respect the dashboard platform filter
+      }
+      return renderArtTable(list,{variant:'social'});
+    }
     return renderArtTable(arts);
   }
   window.tiArtTblPage=function(el,page){
@@ -4825,6 +4833,47 @@ function dbMount(id,el){
     initIcons();
   };
 
+// ── SharedView dashboard platform filter (multi-select; re-renders all charts via initDashboard) ──
+const _dashPlats=new Set();
+const _PLAT_FREQ={facebook:{0:90},instagram:{1:2,2:2,3:1,7:1},twitter:{1:8,2:1,3:1},youtube:{1:1,2:1,3:1,4:1,5:1,9:1},reddit:{1:1,2:2,3:1,4:1},tiktok:{1:1,2:1,3:1,6:1}};
+const _DASH_PLATS=[['','All platforms'],['facebook','Facebook'],['twitter','X (Twitter)'],['instagram','Instagram'],['youtube','YouTube'],['reddit','Reddit'],['tiktok','TikTok']];
+function _platKey(name){return String(name||'').toLowerCase().replace(/[^a-z]/g,'');}
+const _PLAT_OPTS=[['facebook','Facebook'],['twitter','X (Twitter)'],['instagram','Instagram'],['youtube','YouTube'],['reddit','Reddit'],['tiktok','TikTok']];
+let _dashStaged=new Set();   // pending checkbox selection until Apply
+function _dashLabel(){
+  const n=_dashPlats.size;
+  if(!n)return'All platforms';
+  if(n===1)return(_PLAT_OPTS.find(o=>o[0]===[..._dashPlats][0])||['',''])[1];
+  return n+' platforms';
+}
+function dashPlatRender(){
+  const menu=document.getElementById('db-plat-menu');if(!menu)return;
+  const allOn=_dashStaged.size===_PLAT_OPTS.length;
+  menu.innerHTML=`<div class="ms-title">Platform</div><div class="ms-divider"></div>
+    <label class="ms-opt"><input type="checkbox" ${allOn?'checked':''} onchange="dashPlatToggleAll(this.checked)"><span>Select All</span></label>
+    ${_PLAT_OPTS.map(o=>`<label class="ms-opt"><input type="checkbox" ${_dashStaged.has(o[0])?'checked':''} onchange="dashPlatToggleOne('${o[0]}',this.checked)"><span>${o[1]}</span></label>`).join('')}
+    <button class="ms-apply" onclick="dashPlatApply()">Apply</button>`;
+}
+window.dashPlatToggleAll=function(on){_dashStaged=on?new Set(_PLAT_OPTS.map(o=>o[0])):new Set();dashPlatRender();};
+window.dashPlatToggleOne=function(k,on){if(on)_dashStaged.add(k);else _dashStaged.delete(k);dashPlatRender();};
+window.dashPlatApply=function(){
+  _dashPlats.clear();
+  if(_dashStaged.size&&_dashStaged.size<_PLAT_OPTS.length)_dashStaged.forEach(k=>_dashPlats.add(k));   // all/none = All (aggregate)
+  const lbl=document.getElementById('db-plat-label');if(lbl)lbl.textContent=_dashLabel();
+  const m=document.getElementById('db-plat-menu');if(m)m.style.display='none';
+  if(typeof initDashboard==='function')initDashboard();
+};
+window.toggleDashPlatMenu=function(e){
+  if(e)e.stopPropagation();
+  const m=document.getElementById('db-plat-menu'),dd=document.getElementById('db-plat-dd');
+  if(!m)return;
+  if(m.style.display==='block'){m.style.display='none';return;}
+  _dashStaged=_dashPlats.size?new Set(_dashPlats):new Set(_PLAT_OPTS.map(o=>o[0]));   // empty filter = all checked
+  dashPlatRender();
+  if(dd){const r=dd.getBoundingClientRect();m.style.top=(r.bottom+6)+'px';m.style.left=r.left+'px';}
+  m.style.display='block';
+};
+document.addEventListener('click',function(e){const dd=document.getElementById('db-plat-dd'),m=document.getElementById('db-plat-menu');if(m&&m.style.display==='block'&&dd&&!dd.contains(e.target)&&!m.contains(e.target))m.style.display='none';});
 function initDashboard(){
   if(!window.Recharts||!window.Recharts.ResponsiveContainer){
     document.querySelectorAll('.db-chart-wrap').forEach(el=>{
@@ -5143,7 +5192,18 @@ function initDashboard(){
   // ── Media Exposure (100% stacked channel share, single horizontal bar) ──
   // Shared (social) workspace shows Platform Exposure (post share) instead of Media Exposure (article share).
   const expIsSocial=!!(window.WS_DATA&&window.WS_DATA.socialMentions);
-  const expSeries=expIsSocial?[
+  // Platform Exposure: when a platform filter is active, rebuild the share bar from the selected platforms' post counts
+  const _EXP_PLAT_ALL=[
+    {key:'facebook',label:'Facebook',color:'#3b7dd8',count:67},
+    {key:'twitter',label:'Twitter',color:'#29a3f0',count:14},
+    {key:'instagram',label:'Instagram',color:'#d6249f',count:12},
+    {key:'youtube',label:'YouTube',color:'#ef4444',count:9},
+    {key:'reddit',label:'Reddit',color:'#f97316',count:6},
+    {key:'tiktok',label:'TikTok',color:'#8b5cf6',count:5}
+  ];
+  const _expSelPlat=(expIsSocial&&_dashPlats.size)?_EXP_PLAT_ALL.filter(p=>_dashPlats.has(p.key)):null;
+  const expSeries=_expSelPlat?_expSelPlat.map(p=>({key:p.key,label:p.label,color:p.color,labelColor:'#fff'}))
+    :expIsSocial?[
     {key:'facebook',label:'Facebook',color:'#3b7dd8',labelColor:'#fff'},
     {key:'twitter',label:'Twitter',color:'#29a3f0',labelColor:'#fff'},
     {key:'instagram',label:'Instagram',color:'#d6249f',labelColor:'#fff'}
@@ -5156,8 +5216,9 @@ function initDashboard(){
     {key:'tv',label:'TV',color:'#7c3aed',labelColor:'#fff'},
     {key:'radio',label:'Radio',color:'#db2777',labelColor:'#fff'}
   ];
-  const expData=expIsSocial
-    ?[{name:'',facebook:81.16,twitter:17.39,instagram:1.45}]
+  const expData=_expSelPlat
+    ?[(()=>{const tot=_expSelPlat.reduce((s,p)=>s+p.count,0)||1,o={name:''};_expSelPlat.forEach(p=>o[p.key]=+(p.count/tot*100).toFixed(2));return o;})()]
+    :expIsSocial?[{name:'',facebook:81.16,twitter:17.39,instagram:1.45}]
     :[{name:'',online:55.24,blogs:16.43,broadsheet:8.62,provincial:1.64,tabloid:1.44,tv:13.35,radio:3.29}];
   function ExpTooltip(o){
     if(!o||!o.active)return null;
@@ -5180,7 +5241,7 @@ function initDashboard(){
           isAnimationActive:false,cursor:'pointer',
           fillOpacity:(dimKey&&dimKey!==s.key)?0.3:1,
           onMouseEnter:()=>setHov(s.key),
-          onClick:expIsSocial?()=>openInsCard(window.WS_DATA.socialMentions,s.label,'Platform Exposure · post share','db-exposure-card'):()=>{const p=document.getElementById('page-dashboard');if(p&&p.classList.contains('explore-open')){const c=document.querySelector('.db-explore-wrap.on .db-explore-exp-chart');window.openInsListPanel(expChannelArticles(s.key),s.label,'Media Exposure',c&&c.closest('.db-card'));}else window.openExposureChannel(s.key);},
+          onClick:expIsSocial?()=>{const _pp=window.WS_DATA.socialMentions.filter(p=>(p.platform||'').toLowerCase()===s.key);openInsCard(_pp.length?_pp:window.WS_DATA.socialMentions,s.label,'Platform Exposure · post share','db-exposure-card');}:()=>{const p=document.getElementById('page-dashboard');if(p&&p.classList.contains('explore-open')){const c=document.querySelector('.db-explore-wrap.on .db-explore-exp-chart');window.openInsListPanel(expChannelArticles(s.key),s.label,'Media Exposure',c&&c.closest('.db-card'));}else window.openExposureChannel(s.key);},
           radius:i===0?[5,0,0,5]:i===expSeries.length-1?[0,5,5,0]:0},
           RC(LabelList,{dataKey:s.key,position:'center',formatter:v=>v>=10?`${s.label.toUpperCase()}: ${v}%`:'',style:{fontSize:11,fontWeight:600,fill:s.labelColor}})
         ))
@@ -5274,7 +5335,7 @@ function initDashboard(){
     const sub=(lbl,val)=>`<div class="db-ch-sub-stat"><span class="db-ch-sub-lbl">${lbl}</span><span class="db-ch-sub-val${val==='0'?' zero':''}">${val}</span></div>`;
     if(window.WS_DATA&&window.WS_DATA.socialMentions){
       chGrid.classList.add('soc-ch-grid');
-      chGrid.innerHTML=socialChannelData.map(c=>{
+      chGrid.innerHTML=socialChannelData.filter(c=>!_dashPlats.size||_dashPlats.has(c.platform)).map(c=>{
         const p=SOCIAL_PLATFORMS[c.platform]||{icon:'fa-globe',color:'#6b7280',label:c.platform};
         const ico=p.icon==='fa-x-twitter'?X_SVG:`<i class="fa-brands ${p.icon}"></i>`;
         const stats=c.stats.map(([l,v])=>`<div class="soc-ch-stat"><span class="soc-ch-stat-lbl">${l}</span><span class="soc-ch-stat-val">${v}</span></div>`).join('');
@@ -5460,7 +5521,7 @@ function initDashboard(){
   dbMount('db-tonality-bar',RC(TonBar));
 
   // ── Frequency Distribution (story-value histogram + brush, focus-&-dim hover) ──
-  const freqCounts={0:3,1:2,4:3};
+  const freqCounts=_dashPlats.size?[..._dashPlats].reduce((acc,p)=>{const f=_PLAT_FREQ[p]||{};for(const k in f)acc[k]=(acc[k]||0)+f[k];return acc;},{}):{0:3,1:2,4:3};
   const freqDistData=[0,1,2,3,4,5,6,7,8,9,10].map(v=>({value:v.toFixed(2),count:freqCounts[v]||0}));
   function FreqTip(o){
     if(!o||!o.active||!o.payload||!o.payload.length)return null;
@@ -5616,7 +5677,7 @@ function initDashboard(){
     )));
 
   // ── Media Source Distribution (Shared workspace): Post Count × Story Value per platform ──
-  const mediaSourceData=[
+  let mediaSourceData=[
     {name:'Facebook', color:'#1877f2', postCount:67, storyValue:0.42},
     {name:'Twitter',  color:'#16a34a', postCount:14, storyValue:0.11},
     {name:'Instagram',color:'#1e293b', postCount:12, storyValue:0.18},
@@ -5624,6 +5685,7 @@ function initDashboard(){
     {name:'Reddit',   color:'#f97316', postCount:6,  storyValue:0.09},
     {name:'TikTok',   color:'#8b5cf6', postCount:5,  storyValue:0.29}
   ];
+  if(_dashPlats.size)mediaSourceData=mediaSourceData.filter(p=>_dashPlats.has(_platKey(p.name)));
   const msData=mediaSourceData.map(p=>({x:p.postCount,y:p.storyValue,name:p.name,color:p.color}));
   const MsdDot=(o)=>o.cx==null?null:RC('circle',{cx:o.cx,cy:o.cy,r:7,fill:o.payload.color,stroke:'#fff',strokeWidth:1.5});
   const MsdLegend=()=>RC('div',{style:{display:'flex',justifyContent:'center',gap:16,flexWrap:'wrap',paddingTop:8}},
@@ -5652,13 +5714,14 @@ function initDashboard(){
   dbMount('db-mediasource',RC(MediaSourceDist));
 
   // ── Top Media Sources (Shared workspace): social platforms swimlane, one dot per post over a week ──
-  const TMS_SRC=[
+  let TMS_SRC=[
     {name:'Facebook', color:'#1877f2', count:67},
     {name:'Twitter',  color:'#f97316', count:14},
     {name:'YouTube',  color:'#ef4444', count:14},
     {name:'Reddit',   color:'#ff4500', count:8},
     {name:'Instagram',color:'#16a34a', count:1}
   ];
+  if(_dashPlats.size)TMS_SRC=TMS_SRC.filter(p=>_dashPlats.has(_platKey(p.name)));
   const TMS_DOWS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const TMS_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const TMS_INFL=['@DITOphofficial','@wazzupph','@techreviewph','@GadgetPilipinas','@juanationph','@Memory.ph'];
@@ -6504,6 +6567,7 @@ function initDashboard(){
   };
   window.openDomExplore=function(platform){
     const wrap=_showExplore('db-dom-explore');if(!wrap)return;
+    window._domCurPlat=platform;
     const d=DOM_DATA[platform]||DOM_DATA.facebook;
     const platLabel=d.label;
     // update dynamic titles and crumb
@@ -6594,8 +6658,8 @@ function initDashboard(){
         </div>
       </div>`;}).join('');
     }
-    // Posts table
-    window.renderTiPosts('db-dom-table',0);
+    // Posts table — scoped to the dominant platform
+    window.renderTiPosts('db-dom-table',0,platform);
     _bindExploreScroll(wrap);
     initIcons();
   };
@@ -7456,7 +7520,7 @@ function initDashboard(){
   };
 
   // ── Influencer Story Value Distribution (Shared workspace): tabbed bubble + bar, per social influencer ──
-  const influencerData=[
+  let influencerData=[
     {name:'jmccautosupply', posts:9, sv:3.2,  score:0.02, color:'#2563eb'},
     {name:'DITOphofficial', posts:1, sv:10.0, score:10.0, color:'#0f172a'},
     {name:'dylanburton02',  posts:3, sv:2.6,  score:0.80, color:'#7c3aed'},
@@ -7469,6 +7533,22 @@ function initDashboard(){
     {name:'contextdotph',   posts:2, sv:0.5,  score:0.10, color:'#64748b'},
     {name:'ANCalerts',      posts:1, sv:4.0,  score:1.00, color:'#f59e0b'}
   ];
+  if(_dashPlats.size)influencerData=[..._dashPlats].flatMap(p=>DOM_DATA[p]?DOM_DATA[p].bubble:[]);
+  // KPI cards react to the platform filter (Total Results = summed post counts; Top Influencer = top account across the selection)
+  (function(){
+    const totEl=document.getElementById('db-kpi-total'),tiEl=document.getElementById('db-kpi-topinf'),tiD=document.getElementById('db-kpi-topinf-detail');
+    if(_dashPlats.size){
+      const tot=_EXP_PLAT_ALL.filter(p=>_dashPlats.has(p.key)).reduce((s,p)=>s+p.count,0);
+      if(totEl)totEl.textContent=tot;
+      let top=null;_dashPlats.forEach(p=>{const inf=DOM_DATA[p]&&DOM_DATA[p].inf;if(inf&&inf[0]&&(!top||inf[0].posts>top.posts))top=inf[0];});
+      if(top){if(tiEl)tiEl.textContent=top.name;if(tiD)tiD.textContent=top.posts+' posts';}
+    }else{
+      if(totEl)totEl.textContent='69';
+      if(tiEl)tiEl.textContent='jmccautosupply';if(tiD)tiD.textContent='56 posts';
+    }
+    // Show only the "Most Dominant — {platform}" cards for the selected platforms (all when no filter)
+    document.querySelectorAll('.db-kpi-card[data-plat]').forEach(c=>{c.style.display=(!_dashPlats.size||_dashPlats.has(c.dataset.plat))?'':'none';});
+  })();
   const inflAsc=[...influencerData].sort((a,b)=>a.posts-b.posts);
   const inflDesc=[...influencerData].sort((a,b)=>b.posts-a.posts);
   const inflMaxX=Math.max(...influencerData.map(a=>a.posts))+1;
@@ -7792,6 +7872,89 @@ function initDashboard(){
   window.openMediaSourcesInsights=()=>tiOpenSource('mediasources');
   window.openInfluencerInsights=()=>tiOpenSource('influencer');
   window.openMediaSourceInsights=()=>tiOpenSource('mediasource');
+  // ── Most Dominant page → AI summary panel (post + comment summaries, per platform) ──
+  let _domSumPlat='';
+  const _clipTxt=(s,n)=>{s=String(s||'').replace(/\s+/g,' ').trim();return s.length>n?s.slice(0,n-1)+'…':s;};
+  const _domEng=p=>{const e=p.engagement||{};return (+e.reactions||+e.likes||0)+(+e.comments||+e.replies||0)+(+e.shares||+e.reposts||0);};
+  const _domComments=p=>{const e=p.engagement||{};return +e.comments||+e.replies||0;};
+  function _domIntent(p){const t=(p.post||'').toLowerCase();
+    if(/promo|unli|sale|avail|deal|offer|₱|php|plan|get \d|switch to/.test(t))return'promotion';
+    if(/\?|paano|how |kailan|when |bakit|why /.test(t))return'question';
+    if(/sorry|delay|slow|problem|issue|bagal|down|hindi|walang/.test(t))return'complaint';
+    if(/announce|launch|now available|introduc|expand|partner|crowned|rated/.test(t))return'announcement';
+    return'opinion';}
+  function _summarizePost(p){
+    const kw=(p.keywords||[]).map(k=>Array.isArray(k)?k[0]:k),ents=(p.entities||[]).slice(0,4),sent=p.sentiment||'neutral';
+    const hl=sent==='negative'?'Raises a service concern worth monitoring.':sent==='positive'?'Strong positive framing likely to lift brand perception.':'Neutral, informational framing.';
+    return `This is a <b>${_domIntent(p)}</b> with a <b>${sent}</b> tone${kw.length?`, centered on <b>${_clipTxt(kw.slice(0,3).join(', '),60)}</b>`:''}.${ents.length?` References ${ents.join(', ')}.`:''} Estimated reach <b>${p.reach||'—'}</b>, engagement score <b>${p.engScore||0}</b>. <b>Highlight:</b> ${hl}`;
+  }
+  function _summarizeComments(p){
+    const e=p.engagement||{},c=_domComments(p),likes=+e.reactions||+e.likes||0,shares=+e.shares||+e.reposts||0,lean=p.sentiment||'neutral';
+    if(!c)return `No comments yet — the post drew <b>${likes.toLocaleString()}</b> reactions and <b>${shares.toLocaleString()}</b> shares, so engagement is passive (likes/shares) rather than discussion.`;
+    const kw=(p.keywords||[]).map(k=>Array.isArray(k)?k[0]:k);
+    const dist=lean==='positive'?'~70% positive · 20% neutral · 10% negative':lean==='negative'?'~55% negative · 25% neutral · 20% positive':'~45% neutral · 35% positive · 20% negative';
+    const praise=lean==='negative'?'limited — a few defend the brand':'many thank the brand and tag friends';
+    const concerns=lean==='negative'?'complaints about speed/coverage recur':'isolated complaints about pricing/availability';
+    const action=lean==='negative'?'respond publicly to the top complaint and clarify the fix timeline':'reply to the top questions to convert interest into sign-ups';
+    return `Across <b>${c}</b> comments, sentiment runs <b>${dist}</b>. Recurring themes: <b>${_clipTxt(kw.slice(0,3).join(', ')||'general reactions',50)}</b>. Praise: ${praise}. Concerns: ${concerns}. Questions center on availability and how to avail. <b>Actionable:</b> ${action}.`;
+  }
+  function _domSentBar(pos,neu,neg,tot){const pct=n=>tot?Math.round(n/tot*100):0;
+    return `<div class="dom-sent-bar"><div class="dom-sent-seg" style="flex:${pos||0.001};background:#16a34a">${pct(pos)>=12?pct(pos)+'%':''}</div><div class="dom-sent-seg" style="flex:${neu||0.001};background:#9ca3af">${pct(neu)>=12?pct(neu)+'%':''}</div><div class="dom-sent-seg" style="flex:${neg||0.001};background:#dc2626">${pct(neg)>=12?pct(neg)+'%':''}</div></div>
+      <div class="dom-sent-leg"><span><span class="sq" style="background:#16a34a"></span>Positive ${pos}</span><span><span class="sq" style="background:#9ca3af"></span>Neutral ${neu}</span><span><span class="sq" style="background:#dc2626"></span>Negative ${neg}</span></div>`;
+  }
+  function _domSumPostHTML(p,i){
+    const sc={positive:'#16a34a',neutral:'#6b7280',negative:'#dc2626'}[p.sentiment]||'#6b7280';
+    return `<div class="dom-sum-post${i===0?' open':''}" id="dom-sum-${i}">
+      <div class="dom-sum-hd" onclick="domSumToggle(${i})">
+        <i data-lucide="chevron-right" class="dom-sum-caret"></i>
+        <div class="dom-sum-main"><div class="dom-sum-title">${_clipTxt(p.post,72)}</div><div class="dom-sum-meta">${p.influencer||''} · <span style="color:${sc};font-weight:600;text-transform:capitalize">${p.sentiment||'neutral'}</span> · ${_domComments(p)} comments · ${p.engScore||0} eng</div></div>
+      </div>
+      <div class="dom-sum-body">
+        <div class="dom-sum-block"><div class="dom-sum-block-lbl">Post summary</div><div class="dom-sum-block-txt">${_summarizePost(p)}</div></div>
+        <div class="dom-sum-block"><div class="dom-sum-block-lbl">Comment summary</div><div class="dom-sum-block-txt">${_summarizeComments(p)}</div></div>
+      </div>
+    </div>`;
+  }
+  function _domSummaryHTML(platform){
+    const all=(window.WS_DATA&&window.WS_DATA.socialMentions)||[];
+    const posts=all.filter(d=>(d.platform||'').toLowerCase()===(platform||'').toLowerCase());
+    const label=(SOCIAL_PLATFORMS[platform]||{label:platform||'Platform'}).label;
+    if(!posts.length)return _iNarr(`No ${label} posts in range.`)+_iFoot('AI-generated summary.');
+    const sent={positive:0,neutral:0,negative:0};posts.forEach(p=>{sent[p.sentiment]=(sent[p.sentiment]||0)+1;});
+    const tot=posts.length,pos=sent.positive||0,neu=sent.neutral||0,neg=sent.negative||0,net=Math.round((pos-neg)/tot*100);
+    const totalEng=posts.reduce((s,p)=>s+_domEng(p),0),totalComments=posts.reduce((s,p)=>s+_domComments(p),0);
+    const kwMap={};posts.forEach(p=>(p.keywords||[]).forEach(k=>{const key=Array.isArray(k)?k[0]:k,c=Array.isArray(k)?(k[1]||1):1;kwMap[key]=(kwMap[key]||0)+c;}));
+    const themes=Object.entries(kwMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const entMap={};posts.forEach(p=>(p.entities||[]).forEach(e=>entMap[e]=(entMap[e]||0)+1));
+    const ents=Object.entries(entMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    const byEng=[...posts].sort((a,b)=>_domEng(b)-_domEng(a));
+    const infMap={};posts.forEach(p=>{if(p.influencer)infMap[p.influencer]=(infMap[p.influencer]||0)+1;});
+    const topInf=Object.entries(infMap).sort((a,b)=>b[1]-a[1])[0];
+    const mostPos=[...posts].filter(p=>p.sentiment==='positive').sort((a,b)=>_domEng(b)-_domEng(a))[0];
+    const mostNeg=[...posts].filter(p=>p.sentiment==='negative').sort((a,b)=>_domEng(b)-_domEng(a))[0];
+    return _iNarr(`<b>${label}</b> carries <b>${tot}</b> posts led by <b>${topInf?topInf[0]:'—'}</b>, skewing <b class="${net>=0?'ti-up':'ti-down'}">${net>=0?'+':''}${net}%</b> net sentiment (${pos} positive · ${neu} neutral · ${neg} negative). The conversation centers on <b>${_clipTxt(themes.slice(0,3).map(t=>t[0]).join(', ')||'general telco topics',60)}</b>, driving <b>${totalEng.toLocaleString()}</b> engagements and <b>${totalComments.toLocaleString()}</b> comments.`)
+      +_iStats(
+        _iStat('Posts',tot,label),
+        _iStat('Net sentiment',(net>=0?'+':'')+net+'%',pos+' pos · '+neg+' neg',net>=0?'ti-up':'ti-down'),
+        _iStat('Engagement',totalEng.toLocaleString(),totalComments.toLocaleString()+' comments'),
+        _iStat('Top voice',topInf?_clipTxt(topInf[0],14):'—',(topInf?topInf[1]:0)+' post'+((topInf&&topInf[1]===1)?'':'s'))
+      )
+      +_iSec('pie-chart','Sentiment breakdown')+_domSentBar(pos,neu,neg,tot)
+      +_iSec('hash','Key themes')+(themes.length?_iRank(themes.map(t=>({name:t[0],val:t[1],pct:Math.round(t[1]/themes[0][1]*100)})),'#7c3aed'):_iIns('info','No recurring keywords detected.'))
+      +_iSec('flame','Engagement drivers')+byEng.slice(0,3).map(p=>_iCall('trending-up','#16a34a','rgba(22,163,74,0.12)',p.influencer||'—',_clipTxt(p.post,52),_domEng(p).toLocaleString(),'ti-up')).join('')
+      +(ents.length?_iSec('at-sign','Notable entities')+`<div class="dom-sum-chips">${ents.map(e=>`<span class="ent-kw-pill"><span class="ent-kw-count">${e[1]}</span>${e[0]}</span>`).join('')}</div>`:'')
+      +_iSec('lightbulb','Recommended actions')
+      +(mostPos?_iIns('megaphone',`Amplify <b>${mostPos.influencer}</b>'s positive post ("${_clipTxt(mostPos.post,46)}") — top positive engagement.`):'')
+      +(mostNeg?_iIns('shield-alert',`Respond to <b>${mostNeg.influencer}</b>'s concern ("${_clipTxt(mostNeg.post,46)}") before it spreads.`):'')
+      +_iIns('users',`Engage the top voices (${byEng.slice(0,3).map(p=>p.influencer).filter(Boolean).join(', ')}) driving most of the ${label} conversation.`)
+      +`<div class="dom-sum-divider"></div>`+_iSec('file-text','Post &amp; comment summaries')
+      +`<div class="dom-sum-hint"><i data-lucide="mouse-pointer-click"></i><span>Expand any post below to read its AI-generated post &amp; comment summary. <b>${tot}</b> ${tot===1?'post':'posts'} analysed.</span></div>`
+      +posts.map((p,i)=>_domSumPostHTML(p,i)).join('')
+      +_iFoot('AI-generated from '+label+' posts, engagement, keywords, and entities.');
+  }
+  window.domSumToggle=function(i){const el=document.getElementById('dom-sum-'+i);if(el)el.classList.toggle('open');};
+  window.openDomSummary=function(){const p=window._domCurPlat||'facebook';_domSumPlat=p;tiOpenSource('domsummary');};
+  SRC.domsummary={card:null,sub:()=>((SOCIAL_PLATFORMS[_domSumPlat]||{label:_domSumPlat}).label)+' · post & comment insights',detailTitle:()=>'AI Insights',clear:()=>{},detail:()=>_domSummaryHTML(_domSumPlat),overview:()=>_domSummaryHTML(_domSumPlat)};
 }
 (function(){function c(){document.querySelectorAll(".brief-stats .ss").forEach(function(card){var tr=card.querySelector(".ss-trend:not(.neu)");if(!tr)return;var neg=/[↓−-]/.test(tr.textContent);tr.classList.remove("pos","neg");tr.classList.add(neg?"neg":"pos");var v=card.querySelector(".ss-val");if(v){v.classList.remove("tcol-pos","tcol-neg");v.classList.add(neg?"tcol-neg":"tcol-pos");}});}if(document.readyState!=="loading")c();else document.addEventListener("DOMContentLoaded",c);})();
 

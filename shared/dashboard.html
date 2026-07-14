@@ -92,8 +92,11 @@
           <span>June 14, 2026</span>
           <i data-lucide="calendar" class="icon-sm" style="color:var(--muted)"></i>
         </div>
-        <div class="db-fb-pill db-fb-dropdown">
-          <span>Online News, Bl...</span>
+        <div class="db-fb-plat-wrap" style="position:relative">
+          <div class="db-fb-pill db-fb-dropdown" id="db-plat-dd" onclick="toggleDashPlatMenu(event)">
+            <span id="db-plat-label">All platforms</span><i data-lucide="chevron-down" class="icon-sm"></i>
+          </div>
+          <div class="ms-menu" id="db-plat-menu" style="display:none"></div>
         </div>
         <div class="db-fb-pill db-fb-tag">
           <span>PHILIPPINES</span><i data-lucide="x" class="icon-sm" style="cursor:pointer"></i>
@@ -122,14 +125,14 @@
         <!-- Row 1 -->
         <div class="db-kpi-card db-kpi-clickable" onclick="openTotalPostsExplore()">
           <div class="db-kpi-label">Total Results</div>
-          <div class="db-kpi-val">69</div>
+          <div class="db-kpi-val" id="db-kpi-total">69</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-down">-24% <span class="db-kpi-arrow">▼</span></div>
         </div>
         <div class="db-kpi-card db-kpi-clickable" onclick="openTopInfExplore()">
           <div class="db-kpi-label">Top Influencer</div>
-          <div class="db-kpi-val db-kpi-val--md">jmccautosupply</div>
-          <div class="db-kpi-detail">56 posts</div>
+          <div class="db-kpi-val db-kpi-val--md" id="db-kpi-topinf">jmccautosupply</div>
+          <div class="db-kpi-detail" id="db-kpi-topinf-detail">56 posts</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-down">-2% <span class="db-kpi-arrow">▼</span></div>
         </div>
@@ -148,28 +151,28 @@
           <div class="db-kpi-delta db-kpi-up">8% <span class="db-kpi-arrow">▲</span></div>
         </div>
         <!-- Row 2 -->
-        <div class="db-kpi-card db-kpi-clickable" onclick="openDomExplore('instagram')">
+        <div class="db-kpi-card db-kpi-clickable" data-plat="instagram" onclick="openDomExplore('instagram')">
           <div class="db-kpi-label">Most Dominant - Instagram</div>
           <div class="db-kpi-val db-kpi-val--md">ditophofficial</div>
           <div class="db-kpi-detail">1 posts</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-down">-90% <span class="db-kpi-arrow">▼</span></div>
         </div>
-        <div class="db-kpi-card db-kpi-clickable" onclick="openDomExplore('facebook')">
+        <div class="db-kpi-card db-kpi-clickable" data-plat="facebook" onclick="openDomExplore('facebook')">
           <div class="db-kpi-label">Most Dominant - Facebook</div>
           <div class="db-kpi-val db-kpi-val--md">jmccautosupply</div>
           <div class="db-kpi-detail">56 posts</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-down">-2% <span class="db-kpi-arrow">▼</span></div>
         </div>
-        <div class="db-kpi-card db-kpi-clickable" onclick="openDomExplore('twitter')">
+        <div class="db-kpi-card db-kpi-clickable" data-plat="twitter" onclick="openDomExplore('twitter')">
           <div class="db-kpi-label">Most Dominant - Twitter</div>
           <div class="db-kpi-val db-kpi-val--md">bilyonaryo_ph</div>
           <div class="db-kpi-detail">12 posts</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-down">-50% <span class="db-kpi-arrow">▼</span></div>
         </div>
-        <div class="db-kpi-card db-kpi-clickable" onclick="openDomExplore('youtube')">
+        <div class="db-kpi-card db-kpi-clickable" data-plat="youtube" onclick="openDomExplore('youtube')">
           <div class="db-kpi-label">Most Dominant - Youtube</div>
           <div class="db-kpi-val db-kpi-val--md">DITOTelecomPH</div>
           <div class="db-kpi-detail">9 posts</div>
@@ -177,14 +180,14 @@
           <div class="db-kpi-delta db-kpi-down">-12% <span class="db-kpi-arrow">▼</span></div>
         </div>
         <!-- Row 3 -->
-        <div class="db-kpi-card db-kpi-clickable" onclick="openDomExplore('tiktok')">
+        <div class="db-kpi-card db-kpi-clickable" data-plat="tiktok" onclick="openDomExplore('tiktok')">
           <div class="db-kpi-label">Most Dominant - Tiktok</div>
           <div class="db-kpi-val db-kpi-val--md">dito.ph</div>
           <div class="db-kpi-detail">6 posts</div>
           <div class="db-kpi-divider"></div>
           <div class="db-kpi-delta db-kpi-up">5% <span class="db-kpi-arrow">▲</span></div>
         </div>
-        <div class="db-kpi-card db-kpi-clickable" onclick="openDomExplore('reddit')">
+        <div class="db-kpi-card db-kpi-clickable" data-plat="reddit" onclick="openDomExplore('reddit')">
           <div class="db-kpi-label">Most Dominant - Reddit</div>
           <div class="db-kpi-val db-kpi-val--md">r/Philippines</div>
           <div class="db-kpi-detail">4 posts</div>
@@ -493,10 +496,13 @@
       <!-- Most Dominant platform explore (shared panel, driven by openDomExplore(platform)) -->
       <div class="db-explore-wrap" id="db-dom-explore">
         <div class="db-explore-crumb">
-          <div class="db-explore-crumb-in">
-            <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
-            <span class="db-crumb-sep">/</span>
-            <span class="db-crumb-cur" id="db-dom-crumb">Most Dominant</span>
+          <div class="db-explore-crumb-in dom-crumb-in">
+            <span class="db-crumb-group">
+              <span class="db-crumb-link" onclick="closeTimelineExplore()">Overview</span>
+              <span class="db-crumb-sep">/</span>
+              <span class="db-crumb-cur" id="db-dom-crumb">Most Dominant</span>
+            </span>
+            <button class="db-tl-explore db-tl-insights" onclick="openDomSummary()"><i data-lucide="sparkles"></i> AI Insights</button>
           </div>
         </div>
         <div class="db-explore-inner">
