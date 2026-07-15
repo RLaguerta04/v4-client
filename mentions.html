@@ -360,13 +360,13 @@
           </div>
           <div class="tbl-header-right">
             <div class="tbl-view-toggle">
-              <button class="tbl-view-btn on" id="tvb-table" onclick="setMentionsView('table')" title="Table view"><i data-lucide="table-2"></i></button>
-              <button class="tbl-view-btn" id="tvb-cards" onclick="setMentionsView('cards')" title="Card view"><i data-lucide="layout-grid"></i></button>
+              <button class="tbl-view-btn on" id="tvb-table" onclick="setMentionsView('table')" data-tip="Table view"><i data-lucide="table-2"></i></button>
+              <button class="tbl-view-btn" id="tvb-cards" onclick="setMentionsView('cards')" data-tip="Card view"><i data-lucide="layout-grid"></i></button>
             </div>
-            <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
-            <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
-            <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
-            <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+            <button class="icon-action view-filter-btn" data-tip="Filter by read status" onclick="openViewFilterMenu(this,event)"><i data-lucide="eye" class="icon-lg"></i></button>
+            <button class="icon-action bookmark-filter-btn" data-tip="Bookmarked posts" onclick="toggleBookmarkFilter(this)"><i data-lucide="bookmark" class="icon-lg"></i></button>
+            <button class="icon-action tone-filter-btn" data-tip="Filter by tone source" onclick="openToneFilterMenu(this,event)"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+            <button class="icon-action col-settings-btn" data-tip="Columns" onclick="openColMenu(this,event)"><i data-lucide="settings" class="icon-lg"></i></button>
             <button class="btn-export" onclick="openExport()">Export</button>
           </div>
         </div>

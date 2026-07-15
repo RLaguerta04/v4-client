@@ -345,27 +345,18 @@
         <!-- toolbar: actions + export only -->
         <div class="tbl-header">
           <div class="tbl-header-left">
-            <div class="tbl-select"><select>
-              <option>Newest Posts</option>
-              <option>Oldest Posts</option>
-              <option>Highest Value</option>
-              <option>Lowest Value</option>
-            </select></div>
-            <div class="tbl-select"><select>
-              <option>Saved Posts</option>
-              <option>All Posts</option>
-              <option>Unsaved Posts</option>
-            </select></div>
+            <div class="tbl-select"><button class="tbl-sort-btn" onclick="openSortMenu(this,event)"><span class="ment-sort-lbl">Newest Post</span></button></div>
+            <div class="tbl-select"><button class="tbl-saved-btn" onclick="openSavedMenu(this,event)"><span class="ment-saved-lbl">All</span></button></div>
           </div>
           <div class="tbl-header-right">
             <div class="tbl-view-toggle">
-              <button class="tbl-view-btn on" id="tvb-table" onclick="setMentionsView('table')" title="Table view"><i data-lucide="table-2"></i></button>
-              <button class="tbl-view-btn" id="tvb-cards" onclick="setMentionsView('cards')" title="Card view"><i data-lucide="layout-grid"></i></button>
+              <button class="tbl-view-btn on" id="tvb-table" onclick="setMentionsView('table')" data-tip="Table view"><i data-lucide="table-2"></i></button>
+              <button class="tbl-view-btn" id="tvb-cards" onclick="setMentionsView('cards')" data-tip="Card view"><i data-lucide="layout-grid"></i></button>
             </div>
-            <button class="icon-action" title="View"><i data-lucide="eye" class="icon-lg"></i></button>
-            <button class="icon-action" title="Save"><i data-lucide="bookmark" class="icon-lg"></i></button>
-            <button class="icon-action" title="Analytics"><i data-lucide="pie-chart" class="icon-lg"></i></button>
-            <button class="icon-action" title="Settings"><i data-lucide="settings" class="icon-lg"></i></button>
+            <button class="icon-action view-filter-btn" data-tip="Filter by read status" onclick="openViewFilterMenu(this,event)"><i data-lucide="eye" class="icon-lg"></i></button>
+            <button class="icon-action bookmark-filter-btn" data-tip="Bookmarked posts" onclick="toggleBookmarkFilter(this)"><i data-lucide="bookmark" class="icon-lg"></i></button>
+            <button class="icon-action tone-filter-btn" data-tip="Filter by tone source" onclick="openToneFilterMenu(this,event)"><i data-lucide="pie-chart" class="icon-lg"></i></button>
+            <button class="icon-action col-settings-btn" data-tip="Columns" onclick="openColMenu(this,event)"><i data-lucide="settings" class="icon-lg"></i></button>
             <button class="btn-export" onclick="openExport()">Export</button>
           </div>
         </div>

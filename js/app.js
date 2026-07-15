@@ -984,7 +984,163 @@ function highlightMentionRow(idx){
 }
 // Shared View supplies social posts; MediaWatch uses news mentions
 function mentTableData(){return (window.WS_DATA&&window.WS_DATA.socialMentions)||mentionData;}
-function tblTotalPages(){return Math.max(1,Math.ceil(mentTableData().length/tblPerPage()));}
+// ── "View" toolbar filter: read-status filter over the social post list ──
+let mentSort='newest';       // sort dropdown: newest|oldest|svHigh|svLow|engHigh|engLow
+let mentViewFilter='all';    // 'all' | 'unread' | 'read'  (read-status filter — eye icon)
+let mentBookmarkOnly=false;  // show only bookmarked posts (bookmark icon) — ANDed with the read filter
+let mentToneFilter='all';    // 'all' | 'manual' | 'automated'  (tone SOURCE filter — analytics icon)
+// ── Saved Posts groups (custom "Saved Posts" dropdown) ──
+// A group = {id, name, keys:[postUrlKey]}. 'all' = no group filter. Membership added via the row menu.
+let savedGroups=[],activeSavedGroup='all',lastSavedGroup=null,savedGroupNid=1,_savedEditId=null;
+(function _loadSavedGroups(){try{const r=JSON.parse(sessionStorage.getItem('saved-groups')||'null');if(r&&r.groups){savedGroups=r.groups;savedGroupNid=r.nid||1;activeSavedGroup=r.active||'all';lastSavedGroup=r.last||null;}}catch(_){}})();
+function _saveSavedGroups(){try{sessionStorage.setItem('saved-groups',JSON.stringify({groups:savedGroups,nid:savedGroupNid,active:activeSavedGroup,last:lastSavedGroup}));}catch(_){}}
+function _savedGroupName(id){if(id==='all')return'All';const g=savedGroups.find(x=>x.id===id);return g?g.name:'All';}
+function _savedActiveGroup(){return savedGroups.find(g=>g.id===activeSavedGroup)||null;}
+// Target group for the row menu's "Add to Saved" — the active group; when viewing All, the last-worked group
+// (so you can browse everything and still add into your group), else a default 'Saved' (created on demand).
+function _savedTargetGroup(create){
+  if(activeSavedGroup!=='all')return _savedActiveGroup();
+  if(lastSavedGroup){const g=savedGroups.find(x=>x.id===lastSavedGroup);if(g)return g;}
+  let g=savedGroups.find(x=>x.name==='Saved');
+  if(!g&&create){g={id:'g'+(savedGroupNid++),name:'Saved',keys:[]};savedGroups.push(g);lastSavedGroup=g.id;}
+  return g||null;
+}
+function _isSavedInTarget(k){const g=_savedTargetGroup(false);return !!(g&&g.keys.indexOf(k)>=0);}
+// Post tone is automated (derived from sentiment) but manually overridable via the detail's Post-Tone thumbs.
+// _postToneMD → the MD selector value ('positive'|'mixed'|'negative'); _postTone → normalized for filtering.
+function _deriveToneMD(sent){return {positive:'positive',neutral:'mixed',negative:'negative'}[sent]||'mixed';}
+function _postToneMD(d){return (d&&d.toneOverride)||_deriveToneMD(d&&d.sentiment);}
+function _postTone(d){const v=_postToneMD(d);return v==='positive'?'positive':v==='negative'?'negative':'neutral';}
+function _passesViewFilter(d,social){
+  if(!social)return true;
+  if(activeSavedGroup!=='all'){const g=_savedActiveGroup();if(!g||g.keys.indexOf(_rowKey(d))<0)return false;}
+  if(mentBookmarkOnly&&!(typeof _postBookmarks!=='undefined'&&_postBookmarks.has(_rowKey(d))))return false;
+  if(mentToneFilter==='manual'&&!(d&&d.toneOverride))return false;      // tone was manually set
+  if(mentToneFilter==='automated'&&(d&&d.toneOverride))return false;    // tone is derived (no override)
+  if(mentViewFilter==='all')return true;
+  const seen=(typeof _isSocViewed==='function')&&_isSocViewed(d);
+  return mentViewFilter==='read'?seen:!seen;
+}
+// Empty-state label reflecting the active filters (e.g. "No bookmarked positive unread posts to show.")
+function _mentEmptyLabel(){
+  const parts=[];
+  if(mentBookmarkOnly)parts.push('bookmarked');
+  if(mentToneFilter==='manual')parts.push('manually-toned');else if(mentToneFilter==='automated')parts.push('auto-toned');
+  if(mentViewFilter==='read')parts.push('read');else if(mentViewFilter==='unread')parts.push('unread');
+  return `No ${parts.join(' ')}${parts.length?' ':''}posts to show.`;
+}
+// Filtered rows with the ORIGINAL index preserved as `oi` — the row's data-idx / click target must stay
+// an index into the full mentTableData() list (openSocialPost/openMention index into it), not the filtered set.
+function mentRows(){
+  const raw=mentTableData(),social=raw!==mentionData,out=[];
+  for(let i=0;i<raw.length;i++)if(_passesViewFilter(raw[i],social))out.push({d:raw[i],oi:i});
+  if(social)_sortMentRows(out);   // social list only — news view keeps its data order + own dropdown. oi is preserved so click-through/data-idx stay correct.
+  return out;
+}
+// Parse a compact metric ("42.3k", "1.2M", "494", "-") to a number for sorting.
+function _reachNum(s){const m=String(s==null?'':s).replace(/,/g,'').match(/([\d.]+)\s*([km]?)/i);if(!m)return 0;let n=parseFloat(m[1])||0;const u=(m[2]||'').toLowerCase();if(u==='k')n*=1e3;else if(u==='m')n*=1e6;return n;}
+// Approx hours-since-posted from "18 hours ago" / "2 days ago" (bigger = older).
+function _agoHours(d){
+  const a=String((d&&(d.ago||d.date))||'').toLowerCase();
+  const m=a.match(/(\d+)\s*(min|hour|hr|day|week|month)/);
+  if(!m)return 0;
+  const mult={min:1/60,hour:1,hr:1,day:24,week:168,month:720}[m[2]]||1;
+  return (parseFloat(m[1])||0)*mult;
+}
+function _sortMentRows(arr){   // social list only
+  const eng=d=>parseFloat(d.engScore)||0;
+  const sv=d=>_reachNum(d.reach);   // Story Value → Estimated Reach for social posts
+  const cmp={
+    newest:(a,b)=>_agoHours(a.d)-_agoHours(b.d),
+    oldest:(a,b)=>_agoHours(b.d)-_agoHours(a.d),
+    svHigh:(a,b)=>sv(b.d)-sv(a.d),
+    svLow:(a,b)=>sv(a.d)-sv(b.d),
+    engHigh:(a,b)=>eng(b.d)-eng(a.d),
+    engLow:(a,b)=>eng(a.d)-eng(b.d),
+  }[mentSort];
+  if(cmp)arr.sort(cmp);
+}
+// Custom sort dropdown (replaces the native <select> so the open list matches the app's other menus)
+const _SORT_OPTS=[['svHigh','Highest Story Value'],['svLow','Lowest Story Value'],['newest','Newest Post'],['oldest','Oldest Post'],['engHigh','Highest Eng Score'],['engLow','Lowest Eng Score']];
+function _sortLabel(v){const o=_SORT_OPTS.find(x=>x[0]===v);return o?o[1]:'Sort';}
+function setMentSort(v){
+  mentSort=v;tblPage=0;mcPage=0;
+  document.querySelectorAll('.ment-sort-lbl').forEach(l=>l.textContent=_sortLabel(v));
+  closeSortMenu();
+  _refreshMentionList();
+}
+function openSortMenu(btn,e){
+  if(e)e.stopPropagation();
+  if(document.getElementById('sort-menu'))return closeSortMenu();
+  const menu=document.createElement('div');menu.className='vf-menu';menu.id='sort-menu';
+  menu.innerHTML=_SORT_OPTS.map(([v,lbl])=>`<button class="vf-opt${mentSort===v?' on':''}" onclick="setMentSort('${v}')"><span>${lbl}</span><i data-lucide="check" class="vf-check"></i></button>`).join('');
+  document.body.appendChild(menu);
+  const r=btn.getBoundingClientRect(),vw=window.innerWidth;
+  menu.style.minWidth=r.width+'px';
+  const mw=Math.max(menu.offsetWidth,r.width);
+  menu.style.top=(r.bottom+6)+'px';
+  menu.style.left=Math.max(8,Math.min(r.left,vw-mw-8))+'px';
+  initIcons();
+  setTimeout(()=>document.addEventListener('mousedown',_sortMenuOutside),0);
+}
+function _sortMenuOutside(e){const m=document.getElementById('sort-menu');if(m&&!m.contains(e.target)&&!e.target.closest('.tbl-sort-btn'))closeSortMenu();}
+function closeSortMenu(){const m=document.getElementById('sort-menu');if(m)m.remove();document.removeEventListener('mousedown',_sortMenuOutside);}
+// ── "Saved Posts" group dropdown (create / rename / delete / select groups) ──
+function _savedMenuHTML(){
+  const rows=savedGroups.map(g=>{
+    if(_savedEditId===g.id)return `<div class="saved-opt-row editing"><input class="saved-opt-input" value="${_atEsc(g.name)}" onkeydown="_savedInputKey(event,'${g.id}')" onblur="commitSavedGroup('${g.id}',this.value)"></div>`;
+    return `<div class="saved-opt-row${activeSavedGroup===g.id?' on':''}">
+      <button class="saved-opt" onclick="setSavedGroup('${g.id}')"><span>${_atEsc(g.name)}</span></button>
+      <button class="saved-opt-ic" title="Rename" onclick="startRenameSavedGroup('${g.id}',event)"><i data-lucide="pencil"></i></button>
+      <button class="saved-opt-ic" title="Delete" onclick="deleteSavedGroup('${g.id}',event)"><i data-lucide="trash-2"></i></button>
+    </div>`;}).join('');
+  const newRow=_savedEditId==='new'?`<div class="saved-opt-row editing"><input class="saved-opt-input" placeholder="Group name…" onkeydown="_savedInputKey(event,'new')" onblur="commitSavedGroup('new',this.value)"></div>`:'';
+  return `<div class="saved-menu-hd"><span class="saved-menu-title">Saved Posts</span><button class="saved-menu-new" onclick="startCreateSavedGroup(event)"><i data-lucide="plus"></i>Create new Group</button></div>
+    <div class="saved-menu-list">
+      <button class="saved-opt saved-opt-all${activeSavedGroup==='all'?' on':''}" onclick="setSavedGroup('all')"><span>All</span></button>
+      ${rows}${newRow}
+    </div>`;
+}
+function _renderSavedMenu(){const m=document.getElementById('saved-menu');if(!m)return;m.innerHTML=_savedMenuHTML();initIcons();const inp=m.querySelector('.saved-opt-input');if(inp){inp.focus();try{inp.select();}catch(_){}}}
+function openSavedMenu(btn,e){
+  if(e)e.stopPropagation();
+  if(document.getElementById('saved-menu'))return closeSavedMenu();
+  _savedEditId=null;
+  const menu=document.createElement('div');menu.className='saved-menu';menu.id='saved-menu';
+  menu.innerHTML=_savedMenuHTML();
+  document.body.appendChild(menu);
+  const r=btn.getBoundingClientRect(),vw=window.innerWidth,mw=Math.max(menu.offsetWidth,240);
+  menu.style.minWidth=Math.max(r.width,240)+'px';
+  menu.style.top=(r.bottom+6)+'px';
+  menu.style.left=Math.max(8,Math.min(r.left,vw-mw-8))+'px';
+  initIcons();
+  setTimeout(()=>document.addEventListener('mousedown',_savedMenuOutside),0);
+}
+function _savedMenuOutside(e){const m=document.getElementById('saved-menu');if(m&&!m.contains(e.target)&&!e.target.closest('.tbl-saved-btn'))closeSavedMenu();}
+function closeSavedMenu(){const m=document.getElementById('saved-menu');if(m)m.remove();_savedEditId=null;document.removeEventListener('mousedown',_savedMenuOutside);}
+function setSavedGroup(id){
+  activeSavedGroup=id;if(id!=='all')lastSavedGroup=id;_savedEditId=null;tblPage=0;mcPage=0;_saveSavedGroups();
+  document.querySelectorAll('.ment-saved-lbl').forEach(l=>l.textContent=_savedGroupName(id));
+  closeSavedMenu();_refreshMentionList();
+}
+function startCreateSavedGroup(e){if(e)e.stopPropagation();_savedEditId='new';_renderSavedMenu();}
+function startRenameSavedGroup(id,e){if(e)e.stopPropagation();_savedEditId=id;_renderSavedMenu();}
+function _savedInputKey(e,id){if(e.key==='Enter'){e.preventDefault();commitSavedGroup(id,e.target.value);}else if(e.key==='Escape'){_savedEditId=null;_renderSavedMenu();}}
+function commitSavedGroup(id,val){
+  if(_savedEditId!==id)return;                       // guards Enter→re-render→blur double-fire
+  _savedEditId=null;
+  const name=(val||'').trim();
+  if(id==='new'){if(name){const ng={id:'g'+(savedGroupNid++),name,keys:[]};savedGroups.push(ng);lastSavedGroup=ng.id;}}
+  else{const g=savedGroups.find(x=>x.id===id);if(g&&name){g.name=name;if(activeSavedGroup===id)document.querySelectorAll('.ment-saved-lbl').forEach(l=>l.textContent=name);}}
+  _saveSavedGroups();_renderSavedMenu();
+}
+function deleteSavedGroup(id,e){
+  if(e)e.stopPropagation();
+  savedGroups=savedGroups.filter(g=>g.id!==id);
+  if(activeSavedGroup===id){activeSavedGroup='all';document.querySelectorAll('.ment-saved-lbl').forEach(l=>l.textContent='All');}
+  _saveSavedGroups();_renderSavedMenu();_refreshMentionList();
+}
+function tblTotalPages(){return Math.max(1,Math.ceil(mentRows().length/tblPerPage()));}
 function renderTableRow(d,globalIdx){
   const sentClass={positive:'pos',negative:'neg',neutral:'neu'}[d.brand]||'none';
   const sentLabel={positive:'Positive',negative:'Negative',neutral:'Neutral'}[d.brand]||'Not set';
@@ -1015,14 +1171,27 @@ const SOCIAL_TYPES={
   Video:{icon:'video',cls:'type-tv'}
 };
 let mdSocialActive=-1;
+// ── Read/unread: which posts the user has already opened (session-only, keyed by permalink) ──
+// Keyed by the post's unique URL (not row index) so the state survives sorting/filtering/paging.
+const _socViewed=(()=>{try{return new Set(JSON.parse(sessionStorage.getItem('soc-viewed')||'[]'));}catch(_){return new Set();}})();
+function _socViewKey(d){return (d&&(d.url||((d.influencer||'')+'|'+(d.post||'').slice(0,24))))||'';}
+function _isSocViewed(d){return _socViewed.has(_socViewKey(d));}
+function markSocViewed(d){
+  const k=_socViewKey(d);if(!k||_socViewed.has(k))return false;
+  _socViewed.add(k);
+  try{sessionStorage.setItem('soc-viewed',JSON.stringify([..._socViewed]));}catch(_){}
+  return true;
+}
 function renderSocialRow(d,gIdx){
   const p=SOCIAL_PLATFORMS[d.platform]||{icon:'fa-globe',color:'#6b7280',label:d.platform||'—'};
   const t=SOCIAL_TYPES[d.type]||{icon:'message-square',cls:'type-online'};
-  return `<tr class="${gIdx===mdSocialActive?'row-selected':''}" data-idx="${gIdx}">
+  const seen=_isSocViewed(d);
+  const bm=(typeof _postBookmarks!=='undefined')&&_postBookmarks.has(_rowKey(d));
+  return `<tr class="${gIdx===mdSocialActive?'row-selected':''}${seen?' soc-viewed':''}" data-idx="${gIdx}">
     <td><span class="tcb"></span></td>
     <td><span class="sv-val">${d.reach}</span></td>
     <td><span class="eng-score">${d.engScore}</span></td>
-    <td><div class="hl-cell"><span class="hl-text soc-post" data-btip="${_makeTip({detail:d.post||''})}">${d.post||''}</span></div></td>
+    <td><div class="hl-cell"><span class="hl-text soc-post" data-btip="${_makeTip({detail:d.post||''})}">${d.post||''}</span>${seen?'<i data-lucide="eye" class="soc-seen-i" title="You\'ve viewed this post"></i>':''}${bm?'<i data-lucide="bookmark" class="soc-bm-i" title="Bookmarked"></i>':''}</div></td>
     <td><span class="soc-src" title="${p.label}">${socIcon(p)}</span></td>
     <td class="tbl-sent-cell">${sentimentCellHtml(d.sentiment)}</td>
     <td><span class="soc-influencer">${d.influencer||''}</span></td>
@@ -1032,20 +1201,23 @@ function renderSocialRow(d,gIdx){
 }
 function renderTableRows(){
   const isDetail=document.getElementById('page-mentions').classList.contains('detail-open');
-  const data=mentTableData(),social=data!==mentionData;
-  const total=data.length,pages=tblTotalPages();
+  const social=mentTableData()!==mentionData;
+  const rows=mentRows();                                     // index-preserving, read-status filtered
+  const total=rows.length,pages=tblTotalPages();
   tblPage=Math.max(0,Math.min(tblPage,pages-1));
   const pp=tblPerPage();                                     // 10 in list view, 15 in detail
   const start=tblPage*pp;
   const end=Math.min(start+pp,total);
   const tbody=document.getElementById('tbl-tbody');
   if(!tbody)return;
-  tbody.innerHTML=data.slice(start,end).map((d,k)=>social?renderSocialRow(d,start+k):renderTableRow(d,start+k)).join('');
+  tbody.innerHTML=total===0
+    ? `<tr class="tbl-empty-row"><td colspan="9">${_mentEmptyLabel()}</td></tr>`
+    : rows.slice(start,end).map(x=>social?renderSocialRow(x.d,x.oi):renderTableRow(x.d,x.oi)).join('');
   const footer=document.querySelector('.tbl-footer');
   if(footer)footer.style.display=(isDetail||mentionsView==='cards')?'none':'flex';
   if(isDetail){
     const infoEl=document.getElementById('tbl-pg-info');
-    if(infoEl)infoEl.textContent=`${start+1}–${end} of ${total}`;
+    if(infoEl)infoEl.textContent=total===0?'0 of 0':`${start+1}–${end} of ${total}`;
     const btnsEl=document.getElementById('tbl-detail-pg-btns');
     if(btnsEl){
       let h=`<button class="pgb arrow" onclick="goTblPage(tblPage-1)"${tblPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
@@ -1056,7 +1228,7 @@ function renderTableRows(){
   }else{
     const infoEl=document.getElementById('tbl-list-pg-info');
     const btnsEl=document.getElementById('tbl-list-pg-btns');
-    if(infoEl)infoEl.textContent=`${start+1}–${end} of ${total} results`;
+    if(infoEl)infoEl.textContent=total===0?'0 results':`${start+1}–${end} of ${total} results`;
     if(btnsEl){
       let h=`<button class="pgb arrow" onclick="goTblPage(tblPage-1)"${tblPage<=0?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
       for(let p=0;p<pages;p++){h+=`<button class="pgb${p===tblPage?' on':''}" onclick="goTblPage(${p})">${p+1}</button>`;}
@@ -1237,6 +1409,8 @@ function socialEmbedSrc(platform,url,width){
 }
 function renderSocialDetail(idx){
   const list=window.WS_DATA&&window.WS_DATA.socialMentions,s=list&&list[idx];if(!s)return;
+  // Opening a post marks it viewed; re-render the list so the row reflects the read state.
+  if(markSocViewed(s)&&typeof renderTableRows==='function')renderTableRows();
   const p=SOCIAL_PLATFORMS[s.platform]||{icon:'fa-globe',color:'#6b7280',label:s.platform||'—'};
   const framed=mdSpotCtx||mdActCtx;   // opened from a spotlight (mentions) or activity (tracker) → show the coverage panel
   const layout=document.getElementById('article-detail-panel');if(layout)layout.classList.toggle('social-detail',!framed);
@@ -1245,7 +1419,7 @@ function renderSocialDetail(idx){
   const mid=document.getElementById('adp-col-mid');
   if(mid){
     const av=(s.influencer||'?').replace(/^@/,'').charAt(0).toUpperCase();
-    const toneVal={positive:'positive',neutral:'mixed',negative:'negative'}[s.sentiment]||'mixed';
+    const toneVal=_postToneMD(s);   // manual override if set, else derived from sentiment
     const kw=(s.keywords||[]).map(([t,n])=>`<span class="md-kw-pill">${t}${n?' - '+n:''}</span>`).join('')||'<span class="soc-empty">No keywords</span>';
     // Typed entity pills (reuses entityPillHtml from the news detail). Capped to ≤5 in data so no "Show all" modal is needed.
     const ents=(s.entities||[]).slice(0,5).map(n=>entityPillHtml(n,entCountMap(s))).join('')||'<span class="soc-empty">No entities extracted for this post</span>';
@@ -1422,10 +1596,13 @@ function renderSocialRight(mode){
       </div>
     </div>
     <div class="qa-row">
+      <button class="qa-btn qa-summarize" onclick="toggleSocSummary(event)"><i data-lucide="sparkles"></i> Summarize</button>
       <button class="qa-btn" onclick="qaEmail(event)"><i data-lucide="mail"></i> Send via Email</button>
       <button class="qa-btn" onclick="qaPdf(event)"><i data-lucide="file-down"></i> Export as PDF</button>
       <a class="qa-btn soc-view-btn" href="${s.url||'#'}" target="_blank" rel="noopener"><i data-lucide="external-link"></i> View Post</a>
+      ${_atArtBtn({title:(s.post||('@'+handle+' — '+p.label+' post')),value:0,media:'Social',sub:(s.influencer||p.label),date:(s.date||s.ago||'')})}
     </div>
+    <div class="soc-summary" id="soc-summary" hidden></div>
     ${media}
     <p class="adp-excerpt">${s.post||''}</p>
     ${engHtml?`<div class="soc-card-engagement">${engHtml}</div>`:''}
@@ -1440,6 +1617,82 @@ function renderSocialRight(mode){
   </div>`;
   initIcons();
 }
+// ── On-demand AI summary of the social post + its comments (inline, all platforms) ──
+// Simulated (no backend): a deterministic gist + comment read computed from the post's own data,
+// matching the app's other AI features (sparkles, ~1s shimmer, per-item cache, regenerate).
+const _socSumCache={};
+function _socSummaryKey(s){return (s.influencer||'')+'|'+(s.platform||'')+'|'+(s.post||'').slice(0,24);}
+// Lightweight sentiment/theme read of a comment string.
+function _cmtSentiment(t){
+  const s=(t||'').toLowerCase();
+  if(/\b(need|needs work|slow|bagal|issue|problem|expensive|mahal|worse|hassle|down)\b|😤|😠|😡/.test(s))return 'concern';
+  if(/\?|available|how|when|does|paano|kailan|saan|promo code/.test(s))return 'question';
+  if(/finally|thanks|nice|solid|good|value|no regrets|love|🔥|🙌|💪|🙏|👏|❤️/.test(s))return 'positive';
+  return 'neutral';
+}
+function _socSummarize(s){
+  const cm=_socComments(s),eng=s.engagement||{};
+  const p=SOCIAL_PLATFORMS[s.platform]||{label:s.platform||'social'};
+  const tally={positive:0,question:0,concern:0,neutral:0};
+  cm.forEach(c=>{tally[_cmtSentiment(c.text)]++;});
+  const total=cm.length||1;
+  const top=cm.slice().sort((a,b)=>(b.likes||0)-(a.likes||0))[0];
+  // Dominant reader mood
+  const moods=[['positive','largely positive'],['question','driven by questions'],['concern','flagging concerns'],['neutral','mostly neutral']];
+  const dom=moods.sort((a,b)=>tally[b[0]]-tally[a[0]])[0];
+  const gist=`This ${p.label} post ${s.post?'promotes '+_firstClause(s.post):'shares an update'} and has drawn ${_engPhrase(eng)} since posting ${s.ago?s.ago.replace(/^~?/,''):'recently'}.`;
+  const parts=[];
+  if(tally.positive)parts.push(`${tally.positive} positive`);
+  if(tally.question)parts.push(`${tally.question} asking questions`);
+  if(tally.concern)parts.push(`${tally.concern} raising concerns`);
+  if(tally.neutral)parts.push(`${tally.neutral} neutral`);
+  const read=`Reader reaction across ${cm.length} comments is ${dom[1]} — ${parts.join(', ')}. ${top?`The most-liked reply, "${top.text}" (${top.likes} likes), sets the tone.`:''} ${tally.question?'Prospective customers are asking about availability, pricing, and coverage — a reply from the brand would help.':'Sentiment is favourable and worth amplifying.'}`;
+  return {gist,read};
+}
+function _firstClause(t){t=(t||'').replace(/https?:\/\/\S+/g,'').replace(/[@#]\w+/g,'').replace(/\s+/g,' ').trim();const m=t.split(/[.!?—-]/)[0].trim();return (m.length>90?m.slice(0,90)+'…':m).toLowerCase();}
+function _engPhrase(eng){const bits=[];if(eng.likes!=null)bits.push(fmtCount(eng.likes)+' likes');if(eng.reactions!=null)bits.push(fmtCount(eng.reactions)+' reactions');if(eng.comments!=null)bits.push(fmtCount(eng.comments)+' comments');if(eng.replies!=null)bits.push(fmtCount(eng.replies)+' replies');if(eng.reposts!=null)bits.push(fmtCount(eng.reposts)+' reposts');if(eng.shares!=null)bits.push(fmtCount(eng.shares)+' shares');if(eng.views!=null)bits.unshift(fmtCount(eng.views)+' views');return bits.length?bits.slice(0,3).join(', '):'steady engagement';}
+function _socSummaryPanel(sum){
+  return `<div class="ai-report-panel">
+    <div class="soc-summary-hd">
+      <div class="ai-report-lbl"><i data-lucide="sparkles" style="width:12px;height:12px"></i> AI summary</div>
+      <div class="soc-summary-acts">
+        <button class="soc-sum-icon" title="Regenerate" onclick="regenSocSummary(event)"><i data-lucide="refresh-cw"></i></button>
+        <button class="soc-sum-icon" title="Hide" onclick="toggleSocSummary(event)"><i data-lucide="x"></i></button>
+      </div>
+    </div>
+    <div class="soc-sum-sec"><div class="soc-sum-sub">Post</div><div class="ai-report-txt">${sum.gist}</div></div>
+    <div class="soc-sum-sec"><div class="soc-sum-sub">What commenters are saying</div><div class="ai-report-txt">${sum.read}</div></div>
+    <div class="soc-sum-note"><i data-lucide="alert-triangle" style="width:11px;height:11px"></i> Generated by AI from the captured post and comments — verify before use.</div>
+  </div>`;
+}
+function _renderSocSummary(box){
+  const list=window.WS_DATA&&window.WS_DATA.socialMentions,s=list&&list[mdSocialActive];if(!s)return;
+  const key=_socSummaryKey(s);
+  if(_socSumCache[key]){box.innerHTML=_socSummaryPanel(_socSumCache[key]);initIcons();return;}
+  box.innerHTML=`<div class="ai-report-panel"><div class="ai-report-lbl"><i data-lucide="sparkles" style="width:12px;height:12px"></i> AI summary</div><div class="ai-report-txt loading">Reading the post and ${_socComments(s).length} comments…</div></div>`;
+  initIcons();
+  setTimeout(()=>{
+    const cur=(window.WS_DATA&&window.WS_DATA.socialMentions||[])[mdSocialActive];
+    if(!cur||_socSummaryKey(cur)!==key||box.hidden)return;   // moved on before it finished
+    _socSumCache[key]=_socSummarize(cur);
+    box.innerHTML=_socSummaryPanel(_socSumCache[key]);
+    initIcons();
+  },1100);
+}
+window.toggleSocSummary=function(e){
+  if(e)e.stopPropagation();
+  const box=document.getElementById('soc-summary');if(!box)return;
+  const btn=document.querySelector('.qa-summarize');
+  if(box.hidden){box.hidden=false;if(btn)btn.classList.add('is-on');_renderSocSummary(box);}
+  else{box.hidden=true;if(btn)btn.classList.remove('is-on');}
+};
+window.regenSocSummary=function(e){
+  if(e)e.stopPropagation();
+  const box=document.getElementById('soc-summary');if(!box)return;
+  const list=window.WS_DATA&&window.WS_DATA.socialMentions,s=list&&list[mdSocialActive];if(!s)return;
+  delete _socSumCache[_socSummaryKey(s)];
+  _renderSocSummary(box);
+};
 // Contextual header-bar back button — label/handler swap based on whether the user is in
 // the spotlight preview flow (mdSpotCtx) or the plain article-detail flow.
 function _updateDetailReturnBtn(){
@@ -1889,6 +2142,17 @@ function mdSelector(field,val,opts){
   </div>`;
 }
 function setMdField(field,val){
+  // Social post context (a social post is open, mdActive<0): persist on the social mention so the
+  // manual Brand-Sentiment / Post-Tone selectors actually work and the tone filter respects overrides.
+  const socList=window.WS_DATA&&window.WS_DATA.socialMentions;
+  if((mdActive==null||mdActive<0)&&socList&&socList[mdSocialActive]){
+    const s=socList[mdSocialActive];
+    const key=(field==='tone')?'toneOverride':(field==='brand')?'sentiment':field;
+    s[key]=(s[key]===val)?'':val;
+    renderSocialDetail(mdSocialActive);
+    if(typeof _refreshMentionList==='function')_refreshMentionList();
+    return;
+  }
   if(!mentionData[mdActive])return;
   // toggle: clicking the active option clears it back to the unselected state
   mentionData[mdActive][field]=(mentionData[mdActive][field]===val)?'':val;
@@ -1928,10 +2192,36 @@ function initSentimentColumn(){
 let mentionsView='table';
 let mcPage=0; const MC_PER_PAGE=12;
 function renderMentionCards(){
-  const total=mentionData.length,pages=Math.max(1,Math.ceil(total/MC_PER_PAGE));
-  if(mcPage>=pages)mcPage=pages-1;
+  const social=mentTableData()!==mentionData;
+  const rows=mentRows();                                     // index-preserving, read-status filtered
+  const total=rows.length,pages=Math.max(1,Math.ceil(total/MC_PER_PAGE));
+  if(mcPage>=pages)mcPage=Math.max(0,pages-1);
   const start=mcPage*MC_PER_PAGE,end=Math.min(start+MC_PER_PAGE,total);
-  const cards=mentionData.slice(start,end).map((d,k)=>{const i=start+k;const hasImg=['online','blog','tv'].includes(articleType(d));return `<div class="mc-card" id="mention-card-${i}" style="animation-delay:${(k*0.03).toFixed(2)}s" onclick="openMention(${i})">
+  if(total===0)return `<div class="mc-empty">${_mentEmptyLabel()}</div>`;
+  const cards=rows.slice(start,end).map((x,k)=>{
+    const d=x.d,i=x.oi;
+    if(social){
+      const p=SOCIAL_PLATFORMS[d.platform]||{icon:'fa-globe',color:'#6b7280',label:d.platform||'—'};
+      const hasImg=!!d.thumb;
+      return `<div class="mc-card" id="mention-card-${i}" style="animation-delay:${(k*0.03).toFixed(2)}s" onclick="openSocialPost(${i})">
+    ${hasImg?`<div class="mc-thumb"><img src="${d.thumb}" alt=""></div>`:''}
+    <div class="mc-body">
+      <div class="mc-top">
+        <span class="mc-ico" style="background:${p.color}1f;color:${p.color}" data-btip="${_makeTip({label:p.label})}">${socIcon(p,p.color)}</span>
+        <div class="mc-pub"><div class="mc-pub-name">${d.influencer||''}</div><div class="mc-pub-cat">${p.label}</div></div>
+        ${sentimentCellHtml(d.sentiment)}
+      </div>
+      <div class="mc-hl">${d.post||''}</div>
+      <div class="mc-foot">
+        <span class="mc-metric"><span class="mc-metric-lbl">Reach</span> ${d.reach}</span><span class="mc-dot">·</span>
+        <span class="mc-metric"><span class="mc-metric-lbl">Eng</span> ${d.engScore}</span><span class="mc-dot">·</span>
+        <span>${d.ago||d.date}</span>
+      </div>
+    </div>
+  </div>`;
+    }
+    const hasImg=['online','blog','tv'].includes(articleType(d));
+    return `<div class="mc-card" id="mention-card-${i}" style="animation-delay:${(k*0.03).toFixed(2)}s" onclick="openMention(${i})">
     ${hasImg?`<div class="mc-thumb"><img src="https://picsum.photos/seed/${encodeURIComponent(d.outlet+d.sv)}/480/270" alt=""></div>`:''}
     <div class="mc-body">
       <div class="mc-top">
@@ -1959,12 +2249,152 @@ function renderMentionCards(){
   return `<div class="mc-grid">${cards}</div>${pager}`;
 }
 function gotoMcPage(p){
-  const pages=Math.max(1,Math.ceil(mentionData.length/MC_PER_PAGE));
+  const pages=Math.max(1,Math.ceil(mentRows().length/MC_PER_PAGE));
   mcPage=Math.max(0,Math.min(p,pages-1));
   document.getElementById('mentions-cards').innerHTML=renderMentionCards();
   initIcons();
 }
 function playViewAnim(el){if(!el)return;el.style.animation='none';void el.offsetWidth;el.style.animation='viewIn 0.28s cubic-bezier(0.22,1,0.36,1) both';}
+// ── "View" (eye) toolbar filter: read-status dropdown (All / Unread only / Read only) ──
+function _refreshMentionList(){
+  if(mentionsView==='cards'){const c=document.getElementById('mentions-cards');if(c){c.innerHTML=renderMentionCards();initIcons();}}
+  else renderTableRows();
+}
+function setMentViewFilter(v){
+  mentViewFilter=v;tblPage=0;mcPage=0;
+  document.querySelectorAll('.view-filter-btn').forEach(b=>b.classList.toggle('on',v!=='all'));
+  _refreshMentionList();
+  closeViewFilterMenu();
+}
+// Bookmark toolbar icon → toggle "show bookmarked only" (combines with the read-status filter)
+function toggleBookmarkFilter(btn){
+  mentBookmarkOnly=!mentBookmarkOnly;tblPage=0;mcPage=0;
+  document.querySelectorAll('.bookmark-filter-btn').forEach(b=>b.classList.toggle('on',mentBookmarkOnly));
+  _refreshMentionList();
+}
+// Analytics (tone) toolbar icon → filter posts by tone (All / Positive / Neutral / Negative)
+function setMentToneFilter(v){
+  mentToneFilter=v;tblPage=0;mcPage=0;
+  document.querySelectorAll('.tone-filter-btn').forEach(b=>b.classList.toggle('on',v!=='all'));
+  _refreshMentionList();
+  closeToneFilterMenu();
+}
+const _TONE_OPTS=[['all','All','layers'],['manual','Manual','pencil'],['automated','Automated','sparkles']];
+function openToneFilterMenu(btn,e){
+  if(e)e.stopPropagation();
+  if(document.getElementById('tone-filter-menu'))return closeToneFilterMenu();
+  const menu=document.createElement('div');menu.className='vf-menu';menu.id='tone-filter-menu';
+  menu.innerHTML=_TONE_OPTS.map(([v,lbl,ic])=>`<button class="vf-opt${mentToneFilter===v?' on':''}" onclick="setMentToneFilter('${v}')"><i data-lucide="${ic}" class="vf-lead"></i><span>${lbl}</span><i data-lucide="check" class="vf-check"></i></button>`).join('');
+  document.body.appendChild(menu);
+  const r=btn.getBoundingClientRect(),vw=window.innerWidth,mw=menu.offsetWidth;
+  menu.style.top=(r.bottom+8)+'px';
+  menu.style.left=Math.max(8,Math.min(r.right-mw,vw-mw-8))+'px';
+  initIcons();
+  setTimeout(()=>document.addEventListener('mousedown',_toneMenuOutside),0);
+}
+function _toneMenuOutside(e){const m=document.getElementById('tone-filter-menu');if(m&&!m.contains(e.target)&&!e.target.closest('.tone-filter-btn'))closeToneFilterMenu();}
+function closeToneFilterMenu(){const m=document.getElementById('tone-filter-menu');if(m)m.remove();document.removeEventListener('mousedown',_toneMenuOutside);}
+// ── Settings (gear) icon → column-visibility dropdown ──
+// Reads the LIVE <thead> so it matches whichever columns the current table shows (social or news),
+// incl. Sentiment. Hidden columns are tracked by their nth-child index; a `hide-cN` class on the
+// <table> (which persists across tbody re-renders) drives CSS that hides that th + every td.
+const mentHiddenCols=new Set();
+function _mentTable(){const tb=document.getElementById('tbl-tbody');return tb&&tb.closest('table');}
+function _applyMentCols(){
+  const table=_mentTable();if(!table)return;
+  for(let n=2;n<=9;n++)table.classList.toggle('hide-c'+n,mentHiddenCols.has(n));
+  document.querySelectorAll('.col-settings-btn').forEach(b=>b.classList.toggle('on',mentHiddenCols.size>0));
+}
+function toggleMentCol(n,show){if(show)mentHiddenCols.delete(n);else mentHiddenCols.add(n);_applyMentCols();}
+function mentColsSelectAll(){
+  mentHiddenCols.clear();_applyMentCols();
+  const m=document.getElementById('col-menu');if(m)m.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=true);
+}
+function openColMenu(btn,e){
+  if(e)e.stopPropagation();
+  if(document.getElementById('col-menu'))return closeColMenu();
+  const table=_mentTable();if(!table)return;
+  const cols=[];
+  [...table.querySelectorAll('thead th')].forEach((th,i)=>{const label=th.textContent.trim();if(label)cols.push({n:i+1,label});});
+  const rows=cols.map(c=>`<label class="ms-opt colmenu-opt"><input type="checkbox" ${mentHiddenCols.has(c.n)?'':'checked'} onchange="toggleMentCol(${c.n},this.checked)"><span>${c.label}</span></label>`).join('');
+  const menu=document.createElement('div');menu.className='colmenu';menu.id='col-menu';
+  menu.innerHTML=`<div class="colmenu-title">Show columns</div><div class="colmenu-list">${rows}</div><button class="colmenu-all" onclick="mentColsSelectAll()">Select All</button>`;
+  document.body.appendChild(menu);
+  const r=btn.getBoundingClientRect(),vw=window.innerWidth,mw=menu.offsetWidth;
+  menu.style.top=(r.bottom+8)+'px';
+  menu.style.left=Math.max(8,Math.min(r.right-mw,vw-mw-8))+'px';
+  initIcons();
+  setTimeout(()=>document.addEventListener('mousedown',_colMenuOutside),0);
+}
+function _colMenuOutside(e){const m=document.getElementById('col-menu');if(m&&!m.contains(e.target)&&!e.target.closest('.col-settings-btn'))closeColMenu();}
+function closeColMenu(){const m=document.getElementById('col-menu');if(m)m.remove();document.removeEventListener('mousedown',_colMenuOutside);}
+const _VF_OPTS=[['all','All posts','layers'],['unread','Unread only','mail'],['read','Read only','mail-open']];
+function openViewFilterMenu(btn,e){
+  if(e)e.stopPropagation();
+  if(document.getElementById('view-filter-menu'))return closeViewFilterMenu();
+  const menu=document.createElement('div');menu.className='vf-menu';menu.id='view-filter-menu';
+  menu.innerHTML=_VF_OPTS.map(([v,lbl,ic])=>`<button class="vf-opt${mentViewFilter===v?' on':''}" onclick="setMentViewFilter('${v}')"><i data-lucide="${ic}" class="vf-lead"></i><span>${lbl}</span><i data-lucide="check" class="vf-check"></i></button>`).join('');
+  document.body.appendChild(menu);
+  const r=btn.getBoundingClientRect();
+  menu.style.top=(r.bottom+8)+'px';
+  menu.style.left=Math.max(8,Math.min(r.left,window.innerWidth-menu.offsetWidth-8))+'px';
+  initIcons();
+  setTimeout(()=>document.addEventListener('mousedown',_vfMenuOutside),0);
+}
+function _vfMenuOutside(e){const m=document.getElementById('view-filter-menu');if(m&&!m.contains(e.target)&&!e.target.closest('.view-filter-btn'))closeViewFilterMenu();}
+function closeViewFilterMenu(){const m=document.getElementById('view-filter-menu');if(m)m.remove();document.removeEventListener('mousedown',_vfMenuOutside);}
+// ── Row "⋯" actions menu: Bookmarks / Saved Articles / Email / PDF / View Details ──
+// Bookmarked & saved are session sets keyed by a stable per-row key (URL, else title/post).
+const _postBookmarks=new Set(),_postSaved=new Set();
+function _rowKey(d){return (d&&(d.url||d.title||((d.influencer||'')+'|'+(d.post||'').slice(0,24))))||'';}
+function _rowData(idx){const raw=mentTableData();return raw&&raw[idx];}
+let _rowMenuIdx=null;
+function openRowMenu(dots,idx,e){
+  if(e)e.stopPropagation();
+  const wasOpen=!!document.getElementById('row-menu')&&_rowMenuIdx===idx;
+  closeRowMenu();
+  if(wasOpen)return;                                   // clicking the same ⋯ again closes it
+  const d=_rowData(idx);if(!d)return;
+  _rowMenuIdx=idx;
+  const k=_rowKey(d),bk=_postBookmarks.has(k),sv=_isSavedInTarget(k);
+  const _tg=_savedTargetGroup(false),_svLbl=_tg?_tg.name:'Saved Articles';
+  const items=[
+    [bk?'Remove from Bookmarks':'Add to Bookmarks', bk?'bookmark-minus':'bookmark', `toggleRowBookmark(${idx})`],
+    [(sv?'Remove from ':'Add to ')+_svLbl, sv?'folder-minus':'folder-plus', `toggleRowSaved(${idx})`],
+    ['Email Articles','mail',`rowEmail(${idx})`],
+    ['Download PDF','download',`rowPdf(${idx})`],
+    ['View Articles Details','file-text',`rowViewDetails(${idx})`],
+  ];
+  const menu=document.createElement('div');menu.className='rowmenu';menu.id='row-menu';
+  menu.innerHTML=items.map(([lbl,ic,fn])=>`<button class="rowmenu-item" onclick="${fn}"><i data-lucide="${ic}"></i><span>${lbl}</span></button>`).join('');
+  document.body.appendChild(menu);
+  const r=dots.getBoundingClientRect(),vw=window.innerWidth,mw=menu.offsetWidth;
+  menu.style.top=(r.bottom+6)+'px';
+  menu.style.left=Math.max(8,Math.min(r.right-mw,vw-mw-8))+'px';   // right-align to the ⋯
+  initIcons();
+  setTimeout(()=>document.addEventListener('mousedown',_rowMenuOutside),0);
+}
+function _rowMenuOutside(e){const m=document.getElementById('row-menu');if(m&&!m.contains(e.target)&&!e.target.closest('.row-dots'))closeRowMenu();}
+function closeRowMenu(){const m=document.getElementById('row-menu');if(m)m.remove();_rowMenuIdx=null;document.removeEventListener('mousedown',_rowMenuOutside);}
+function toggleRowBookmark(idx){const d=_rowData(idx);if(!d)return;const k=_rowKey(d),on=!_postBookmarks.has(k);on?_postBookmarks.add(k):_postBookmarks.delete(k);closeRowMenu();_refreshMentionList();showSimpleToast(on?'Added to bookmarks':'Removed from bookmarks',on?'bookmark':'bookmark-minus');}
+function toggleRowSaved(idx){
+  const d=_rowData(idx);if(!d)return;const k=_rowKey(d);
+  const g=_savedTargetGroup(true);                   // active group, or a default 'Saved' group
+  const i=g.keys.indexOf(k),on=i<0;
+  if(on)g.keys.push(k);else g.keys.splice(i,1);
+  _saveSavedGroups();closeRowMenu();_refreshMentionList();
+  showSimpleToast((on?'Added to ':'Removed from ')+_atEsc(g.name),on?'folder-plus':'folder-minus');
+}
+function rowEmail(idx){closeRowMenu();showSimpleToast('Article sent via email','mail');}
+function rowPdf(idx){closeRowMenu();showSimpleToast('Exported as PDF','download');}
+function rowViewDetails(idx){closeRowMenu();const social=mentTableData()!==mentionData;if(social)openSocialPost(idx);else if(typeof openMention==='function')openMention(idx);}
+// Delegated open — works for every rendered mentions row without per-row onclick.
+document.addEventListener('click',function(e){
+  const dots=e.target.closest('.row-dots');if(!dots)return;
+  const tr=dots.closest('#tbl-tbody tr');if(!tr)return;      // mentions post table only
+  const idx=tr.dataset.idx;if(idx==null||idx==='')return;
+  openRowMenu(dots,+idx,e);
+});
 function setMentionsView(v){
   mentionsView=v;
   const tableWrap=document.querySelector('.tbl-scroll'),cards=document.getElementById('mentions-cards'),footer=document.querySelector('.tbl-footer');
@@ -2304,11 +2734,28 @@ function _atArtBtn(d){
 }
 let _trackArtCur=null,_trackArtBtn=null,_trackArtQuery='';
 function _atEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+// Automated "Recommended" — score each activity by keyword overlap with the article/post being added,
+// tag the top few above a threshold. Post-dependent, so not every activity gets it (0 when nothing relates).
+const _AT_STOP=new Set(['the','and','for','with','from','this','that','are','was','has','new','you','your','all','not','but','now','out','off','over','into','iba','pang','ang','mga','naman','lang','yung','sang','nang','shows','coverage','launch','push','executive','response','rivalry']);
+function _atTokens(s){return String(s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>2&&!_AT_STOP.has(w));}
+function _recommendedActIds(art){
+  if(!art)return new Set();
+  const artToks=new Set(_atTokens((art.title||'')+' '+(art.media||'')));
+  if(!artToks.size)return new Set();
+  const scored=acts.map(a=>{
+    const seen=new Set();let overlap=0;
+    _atTokens(a.title+' '+(a.content||'')).forEach(w=>{if(artToks.has(w)&&!seen.has(w)){seen.add(w);overlap++;}});
+    return {id:a.id,overlap};
+  }).filter(x=>x.overlap>=2).sort((a,b)=>b.overlap-a.overlap).slice(0,3);
+  return new Set(scored.map(x=>x.id));
+}
 function _trackBodyHTML(){
   const q=(_trackArtQuery||'').trim(),ql=q.toLowerCase();
-  const filtered=acts.filter(a=>!ql||a.title.toLowerCase().includes(ql));
+  const rec=_recommendedActIds(_trackArtCur);
+  const filtered=acts.filter(a=>!ql||a.title.toLowerCase().includes(ql))
+    .sort((a,b)=>(rec.has(b.id)?1:0)-(rec.has(a.id)?1:0));   // recommended first (stable — rest keep order)
   const rows=filtered.map(a=>{const inIt=a.matches.some(m=>m.title===_trackArtCur.title);return `<div class="at-track-row${inIt?' on':''}">
-      <button class="at-track-item at-track-toggle" title="${_atEsc(a.title)}" onclick="atTrackToggle(${a.id})"><i data-lucide="${inIt?'check':'plus'}"></i><span>${_atEsc(a.title)}</span></button>
+      <button class="at-track-item at-track-toggle" data-btip="${_makeTip({detail:a.title})}" onclick="atTrackToggle(${a.id})"><i data-lucide="${inIt?'check':'plus'}"></i><span>${_atEsc(a.title)}</span>${rec.has(a.id)?'<span class="at-track-tag"><i data-lucide="sparkles"></i>Recommended</span>':''}</button>
       ${inIt?`<button class="at-track-open" title="Open in Activity Tracker" onclick="atTrackOpen(${a.id})"><i data-lucide="arrow-up-right"></i></button>`:''}
     </div>`;}).join('')||`<div class="at-track-empty">No matching activities</div>`;
   const newRow=`<button class="at-track-item at-track-new" onclick="atTrackNew()"><i data-lucide="folder-plus"></i><span>${q?'Create “'+_atEsc(q)+'”':'New activity from this article'}</span></button>`;
@@ -2858,9 +3305,18 @@ let acts=[
     {id:'m8',media:'Online',source:'Philstar Online',title:"PLDTs 'butcher COO publicly slices telco rivals",date:'May 25, 2026',value:631000,score:0.88,manual:false},
     {id:'m9',media:'TV',source:'ABS-CBN News',title:'Telco war escalates: Jimenez vs. Reyes feud explained',date:'May 25, 2026',value:890000,score:0.83,manual:false},
   ]},
+  // Placeholder activities — titles/content seed the automated "Recommended" relevance match against the current post.
+  {id:3,title:'iWantTFC Content Partnership — Kapamilya Bundle',type:'Product',date:'2026-06-20',content:'DITO bundles iWantTFC streaming access for subscribers. Enjoy ItsShowtime, BGYO, and other Kapamilya shows on iWantTFC as part of the content partnership.',matches:[]},
+  {id:4,title:'FLEXPlan 888 SIMOnly — Launch Coverage',type:'Product',date:'2026-06-19',content:'FLEXPlan 888 SIMOnly launch. UNLI 5G for the first 12 months, 40GB AllAccess data, unlimited calls and texts. Stream live sports including the Austrian Grand Prix.',matches:[]},
+  {id:5,title:'DITO Pocket WiFi — Reviewer Unboxing Push',type:'Trending',date:'2026-06-18',content:'Latest DITO pocket WiFi unboxing and speed test reviews from tech reviewers. Coverage of portable 5G device performance and full blog reviews.',matches:[]},
+  {id:6,title:'DITO vs Globe vs Smart — 5G Speed Test',type:'Trending',date:'2026-06-17',content:'Comparative 5G speed test across DITO, Globe, and Smart in Metro Manila. Which telco wins the fastest mobile network race.',matches:[]},
+  {id:7,title:'DITO Free Public WiFi — Cities Rollout',type:'Press Release',date:'2026-06-15',content:'DITO rolls out free public WiFi across 12 cities. Expanding connectivity access in public spaces nationwide.',matches:[]},
+  {id:8,title:'Visayas Data Hub — Faster Speeds Launch',type:'Press Release',date:'2026-06-14',content:'New Visayas data hub launch delivers faster DITO speeds across the region. Users report improved data performance after the hub goes live.',matches:[]},
+  {id:9,title:'DITO Fastest Network — Ookla Recognition',type:'Trending',date:'2026-06-12',content:'DITO recognized as the Philippines fastest mobile network by Ookla Speedtest. Award-driven coverage across online outlets.',matches:[]},
+  {id:10,title:'DITO SIM 5G Provincial Expansion',type:'Event',date:'2026-06-10',content:'DITO SIM finally gets 5G in the province. Expansion of 5G coverage to provincial areas driving social buzz and adoption.',matches:[]},
 ];
 acts=wsData('acts',acts);
-let atNid=3,trackerSel=null,trackerTabs={},msQ={},msF={},msR={},aiCache={},atTypeFilter='',atSearchFilter='',atAddOpen={},artFilter={},artSort={},artPage={},freshTrack={},scanKwOff={};
+let atNid=11,trackerSel=null,trackerTabs={},msQ={},msF={},msR={},aiCache={},atTypeFilter='',atSearchFilter='',atAddOpen={},artFilter={},artSort={},artPage={},freshTrack={},scanKwOff={};
 let trackerListPage=0;
 const TRACKER_PER_PAGE=15;
 function gotoTrackerListPage(n){trackerListPage=n;renderTracker();const sc=document.getElementById('at-list-scroll');if(sc)sc.scrollTop=0;}
@@ -2881,6 +3337,16 @@ function fv(v){return v>=1000000?'PHP '+(v/1000000).toFixed(1)+'M':v>=1000?'PHP 
 function fmtActDate(s){if(!s)return'';const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);if(!m)return s;const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m[2]-1];return`${mo} ${+m[3]}, ${m[1]}`;}
 function timeAgo(s){if(!s)return'';const then=new Date(s);if(isNaN(then))return'';const h=Math.round((Date.now()-then)/3600000);if(h<1)return'just now';if(h<24)return h+'h ago';const d=Math.round(h/24);if(d<7)return d+'d ago';return Math.round(d/7)+'w ago';}
 function tAve(m){const t=m.reduce((s,x)=>s+x.value,0);return fv(t);}
+// Adapt a tracker activity to the trending-story shape that showNewsletter()/showAIReport() expect,
+// so those existing slide-overs can be reused verbatim for an activity's coverage.
+function _actToStory(a){
+  const matches=a.matches||[];
+  const arts=matches.map(m=>({hl:m.title,source:m.source,media:m.media||'Online',date:m.date||fmtActDate(a.date),ave:fv(m.value||0)}));
+  const sc={positive:['c-pos','Positive'],negative:['c-neg','Negative'],neutral:['c-neu','Neutral']}[a.sentiment]||['c-neu','Neutral'];
+  return {id:a.id,hl:a.title,why:a.content||'',tier:'T1',ave:tAve(matches),chips:[{cls:sc[0],t:sc[1]}],articles:arts};
+}
+function actNewsletter(id){const a=acts.find(x=>x.id===id);if(a)showNewsletter(_actToStory(a));}
+function actAIReport(id){const a=acts.find(x=>x.id===id);if(a)showAIReport(_actToStory(a));}
 function scC(s){if(!s)return{b:'#e4e6ea',t:'#9097a3'};if(s>=0.85)return{b:'#41454d',t:'#9097a3'};if(s>=0.7)return{b:'#6b7280',t:'#9097a3'};return{b:'#9097a3',t:'#9097a3'};}
 
 const TBAR={'Press Release':'bar-pr','Event':'bar-ev','Crisis':'bar-cr','Trending':'bar-tr','Product':'bar-pd'};
@@ -3111,6 +3577,8 @@ function renderDetailInner(a){
         <span class="dpane-section-hd-label"><i data-lucide="newspaper" style="color:#181d26"></i> Matched ${_wPosts()}</span>
         <div style="display:flex;gap:6px;align-items:center">
           <button class="at-btn-outline" onclick="openAISummary(${a.id})"><i data-lucide="sparkles" style="width:12px;height:12px"></i> AI summary</button>
+          <button class="at-btn-outline" onclick="actNewsletter(${a.id})"><i data-lucide="mail" style="width:12px;height:12px"></i> Send as Newsletter</button>
+          <button class="at-btn-outline" onclick="actAIReport(${a.id})"><i data-lucide="file-text" style="width:12px;height:12px"></i> Generate AI Report</button>
           <button class="at-btn-outline" onclick="openAddArt(${a.id})"><i data-lucide="plus" style="width:12px;height:12px"></i> Add ${_wPost()}</button>
         </div>
       </div>
@@ -4167,7 +4635,10 @@ function initIcons(){
     });
   }
   function show(bar,x,y){
-    const t=_barTips.get(bar.dataset.btip);
+    // Plain-text `data-tip="…"` (usable from static HTML) renders through the anchored {label} path;
+    // `data-btip` keeps using the id→_barTips map for rich tooltips built in JS.
+    const raw=bar.dataset.tip;
+    const t=raw!=null?{label:raw}:_barTips.get(bar.dataset.btip);
     if(!t)return;
     el.classList.remove('anchored');
     let html='';
@@ -4204,13 +4675,14 @@ function initIcons(){
     el.style.top=(y-H/2<0?4:y+H/2>vh?vh-H-4:y-H/2)+'px';
   }
   function hide(){el.classList.remove('visible','anchored');}
-  document.addEventListener('mouseover',e=>{const b=e.target.closest('[data-btip]');if(b)show(b,e.clientX,e.clientY);else hide();});
+  document.addEventListener('mouseover',e=>{const b=e.target.closest('[data-btip],[data-tip]');if(b)show(b,e.clientX,e.clientY);else hide();});
   document.addEventListener('mousemove',e=>{if(el.classList.contains('visible'))move(e.clientX,e.clientY);});
-  document.addEventListener('mouseout',e=>{if(!e.target.closest('[data-btip]'))hide();});
+  document.addEventListener('mouseout',e=>{if(!e.target.closest('[data-btip],[data-tip]'))hide();});
 })();
 initIcons();
 if(document.getElementById('page-mentions')){
   renderTableRows();
+  document.querySelectorAll('.ment-saved-lbl').forEach(l=>l.textContent=_savedGroupName(activeSavedGroup));   // restore persisted group label
   document.querySelectorAll(".ss-trend:not(.neu)").forEach(function(t){ if(/[↓−-]/.test(t.textContent)) t.classList.add("neg"); });
 }
 // ── KPI card hover explainer popover (study 2) ──
@@ -4452,6 +4924,11 @@ const DB_PALETTE=['#181d26','#e94f37','#b9a4f7','#86d9a8','#fde2b6','#f9a8b9','#
 let dbRoots={};
 const RC=React.createElement;
 
+// Left-aligned Y-axis tick for horizontal influencer/engagement bar charts.
+// Anchors each category name at the band's left edge (w = the YAxis reserved width)
+// so short handles don't leave a ragged empty column on the left.
+function inflLeftTick(w){return function(p){return RC('text',{x:p.x-w+2,y:p.y,dy:4,textAnchor:'start',fontSize:11,fill:'#6b7280'},p.payload&&p.payload.value);};}
+
 function dbMount(id,el){
   const dom=document.getElementById(id);
   if(!dom)return;
@@ -4482,18 +4959,23 @@ function dbMount(id,el){
   function artTr(d,origI,pos,per){
     const sel=(_artMode==='select'&&origI===insPrevIdx)?' selected':'';
     const clickFn=_artMode==='select'?_artSelFn:'openInsArticle';
-    const rowOpen=`<tr class="ti-arttbl-row${sel}" data-i="${origI}"${pos>=per?' hidden':''} onclick="${clickFn}(${origI})">`;
+    // Read/unread carries over from the main list — same URL-keyed viewed set (social rail only).
+    const seen=(_artVar==='social')&&typeof _isSocViewed==='function'&&_isSocViewed(d);
+    const rowOpen=`<tr class="ti-arttbl-row${sel}${seen?' soc-viewed':''}" data-i="${origI}"${pos>=per?' hidden':''} onclick="${clickFn}(${origI})">`;
     const more=`<td class="ti-arttbl-act"><button class="ti-arttbl-more" title="More" onclick="event.stopPropagation()"><i data-lucide="more-horizontal"></i></button></td>`;
     if(_artVar==='social'){
       const st=(typeof SOCIAL_TYPES!=='undefined'&&SOCIAL_TYPES[d.type])||{icon:'message-square',cls:'type-online'};
       const p=(typeof SOCIAL_PLATFORMS!=='undefined'&&SOCIAL_PLATFORMS[d.platform])||{icon:'fa-globe',color:'#6b7280',label:d.platform||'—'};
       const[sc,slbl]=_sentInfo(d.sentiment);
       const pt=(d.post||'').replace(/"/g,'&quot;');
+      const bm=(typeof _postBookmarks!=='undefined')&&typeof _rowKey==='function'&&_postBookmarks.has(_rowKey(d));
+      // Wire the ⋯ to the shared row-actions menu only in the mentions rail (d._mi = socialMentions index).
+      const moreSoc=(d._mi!=null)?`<td class="ti-arttbl-act"><button class="ti-arttbl-more" title="More" onclick="event.stopPropagation();openRowMenu(this,${d._mi},event)"><i data-lucide="more-horizontal"></i></button></td>`:more;
       return `${rowOpen}
-      <td class="ti-arttbl-hl"><div class="ti-arttbl-hlwrap"><span class="soc-plat-ico" title="${p.label}">${socIcon(p)}</span><div class="ti-arttbl-hltext"><div class="ti-arttbl-titlerow"><span class="ti-row-sent-dot ${sc}" title="${slbl}"></span><span class="ti-arttbl-title" title="${pt}">${d.post||''}</span></div><span class="ti-arttbl-meta">${d.influencer||''}${d.date?' · '+d.date:''}</span></div></div></td>
+      <td class="ti-arttbl-hl"><div class="ti-arttbl-hlwrap"><span class="soc-plat-ico" title="${p.label}">${socIcon(p)}</span><div class="ti-arttbl-hltext"><div class="ti-arttbl-titlerow"><span class="ti-row-sent-dot ${sc}" title="${slbl}"></span><span class="ti-arttbl-title" title="${pt}">${d.post||''}</span>${seen?'<i data-lucide="eye" class="ti-seen-i" title="You\'ve viewed this post"></i>':''}${bm?'<i data-lucide="bookmark" class="ti-bm-i" title="Bookmarked"></i>':''}</div><span class="ti-arttbl-meta">${d.influencer||''}${d.date?' · '+d.date:''}</span></div></div></td>
       <td class="ti-arttbl-sv">${d.reach}</td>
       <td class="ti-arttbl-ave">${d.engScore}</td>
-      ${more}
+      ${moreSoc}
     </tr>`;
     }
     const ic=tiIcn(d.type);
@@ -5112,6 +5594,18 @@ function initDashboard(){
     let seed=0;for(let i=0;i<String(seedStr).length;i++)seed=(seed*31+String(seedStr).charCodeAt(i))>>>0;
     const out=[];for(let k=0;out.length<n&&k<mentionData.length*3;k++){const c=mentionData[(seed+k*7)%mentionData.length];if(!out.includes(c))out.push(c);}return out;
   }
+  // Posts for a clicked influencer on a platform page: real social posts scoped to that
+  // platform + influencer, stamped so the whole list stays consistent (all one platform / handle).
+  function _domInfPosts(platform,name,n){
+    const all=(window.WS_DATA&&window.WS_DATA.socialMentions)||[];
+    const norm=s=>String(s||'').replace(/^@/,'').toLowerCase();
+    const plat=all.filter(p=>(p.platform||'').toLowerCase()===String(platform||'').toLowerCase());
+    if(!plat.length)return _insSample('dom-'+name,n);
+    const mine=plat.filter(p=>norm(p.influencer)===norm(name));
+    const ordered=[...mine,...plat.filter(p=>mine.indexOf(p)<0)];   // real matches first, then pad with same-platform posts
+    const out=[];for(let i=0;out.length<(n||8)&&i<ordered.length;i++)out.push(Object.assign({},ordered[i],{platform:platform,influencer:name}));
+    return out;
+  }
   const _insByTone=t=>{const m={Positive:'positive',Neutral:'neutral',Negative:'negative'}[t]||t;const list=mentionData.filter(d=>(d.tone||d.brand)===m);return list.length?list:_insSample('tone-'+t,4);};
   window.openInsEntity=name=>openInsCard(_insSample('ent-'+name,6),name,'Entities Map','db-entities-card');
   const curSrc=()=>SRC[tiSource]||SRC.timeline; window.__curSrc=curSrc;
@@ -5165,6 +5659,7 @@ function initDashboard(){
     document.body.classList.remove('ins-open');tiOpen=false;
     document.querySelectorAll('.is-focused,.has-focus').forEach(e=>e.classList.remove('is-focused','has-focus'));
     tiClearSel();
+    if(window._domClearInfActive)window._domClearInfActive();   // clear the Top Influencers bar selection
     const sb=document.getElementById('sidebar');
     if(sb&&!_tiSidebarWasCollapsed)sb.classList.remove('collapsed');
   };
@@ -6259,7 +6754,7 @@ function initDashboard(){
       RC(BarChart,{data:inflDesc,layout:'vertical',margin:{top:16,right:24,bottom:24,left:8}},
         RC(CartesianGrid,{horizontal:false,stroke:'#f0f1f3'}),
         RC(XAxis,{type:'number',dataKey:'posts',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'Post Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
-        RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:140}),
+        RC(YAxis,{type:'category',dataKey:'name',tick:inflLeftTick(110),axisLine:false,tickLine:false,width:110}),
         RC(Tooltip,{content:InflBarTip,cursor:{fill:'rgba(24,29,38,0.04)'}}),
         RC(Bar,{dataKey:'posts',maxBarSize:26,radius:[0,4,4,0]},
           ...inflDesc.map((a,i)=>RC(Cell,{key:i,fill:a.color})),
@@ -6348,7 +6843,7 @@ function initDashboard(){
       RC(BarChart,{data:meEngDesc,layout:'vertical',margin:{top:16,right:24,bottom:24,left:8}},
         RC(CartesianGrid,{horizontal:false,stroke:'#f0f1f3'}),
         RC(XAxis,{type:'number',dataKey:'posts',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'Post Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
-        RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:140}),
+        RC(YAxis,{type:'category',dataKey:'name',tick:inflLeftTick(110),axisLine:false,tickLine:false,width:110}),
         RC(Tooltip,{content:InflBarTip,cursor:{fill:'rgba(24,29,38,0.04)'}}),
         RC(Bar,{dataKey:'posts',maxBarSize:26,radius:[0,4,4,0]},
           ...meEngDesc.map((a,i)=>RC(Cell,{key:i,fill:a.color})),
@@ -6587,15 +7082,20 @@ function initDashboard(){
     const maxPosts=Math.max(...infData.map(x=>x.posts),1);
     const barDomainMax=maxPosts+Math.max(Math.ceil(maxPosts*0.25),1);
     const barTicks=Array.from({length:barDomainMax+1},(_,i)=>i);
-    dbMount('db-dom-topinf',RC(ResponsiveContainer,{width:'99%',height:'100%'},
-      RC(BarChart,{data:infData,layout:'vertical',margin:{top:8,right:40,bottom:24,left:8}},
-        RC(CartesianGrid,{horizontal:false,stroke:'#eef0f2'}),
-        RC(XAxis,{type:'number',domain:[0,barDomainMax],ticks:barTicks,tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'POST COUNT',position:'insideBottom',offset:-10,fontSize:10,fill:'#9ca3af'}}),
-        RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:10,fill:'#4b5563'},width:190,axisLine:false,tickLine:false}),
-        RC(Tooltip,{content:DarkTip,cursor:{fill:'rgba(0,0,0,0.03)'}}),
-        RC(Bar,{dataKey:'posts',name:'Post Count',radius:[0,4,4,0],maxBarSize:15,isAnimationActive:false,cursor:'pointer',onClick:(x)=>{if(x&&x.key)window.openInsListPanel(_insSample('dom-'+x.key,8),x.key,platLabel,document.querySelector('.db-explore-wrap.on .db-card'));}},
-          ...infData.map((x,i)=>RC(Cell,{key:i,fill:x.fill})))
-      )));
+    let _domInfActive=null;
+    window._domClearInfActive=function(){if(_domInfActive){_domInfActive=null;renderDomTopInf();}};
+    function renderDomTopInf(){
+      dbMount('db-dom-topinf',RC(ResponsiveContainer,{width:'99%',height:'100%'},
+        RC(BarChart,{data:infData,layout:'vertical',margin:{top:8,right:40,bottom:24,left:8}},
+          RC(CartesianGrid,{horizontal:false,stroke:'#eef0f2'}),
+          RC(XAxis,{type:'number',domain:[0,barDomainMax],ticks:barTicks,tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'POST COUNT',position:'insideBottom',offset:-10,fontSize:10,fill:'#9ca3af'}}),
+          RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:10,fill:'#4b5563'},width:190,axisLine:false,tickLine:false}),
+          RC(Tooltip,{content:DarkTip,cursor:{fill:'rgba(0,0,0,0.03)'}}),
+          RC(Bar,{dataKey:'posts',name:'Post Count',radius:[0,4,4,0],maxBarSize:15,isAnimationActive:false,cursor:'pointer',onClick:(x)=>{if(!x||!x.key)return;_domInfActive=x.key;renderDomTopInf();window.openInsListPanel(_domInfPosts(platform,x.key,8),x.key,platLabel,document.getElementById('db-dom-topinf-card'));}},
+            ...infData.map((x,i)=>RC(Cell,{key:i,fill:x.fill,opacity:(_domInfActive&&x.key!==_domInfActive)?0.4:1})))
+        )));
+    }
+    renderDomTopInf();
     // Bubble plot — spread x-axis so same-post-count dots don't stack; cap Y at rounded max
     const bubData=[...d.bubble].sort((a,b)=>a.posts-b.posts);
     const bubMaxX=Math.max(...bubData.map(a=>a.posts),1)+Math.max(Math.ceil(Math.max(...bubData.map(a=>a.posts),1)*0.3),1);
@@ -6609,7 +7109,7 @@ function initDashboard(){
             RC(XAxis,{type:'number',dataKey:'posts',name:'Post Count',domain:[0,bubMaxX],tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'Post Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
             RC(YAxis,{type:'number',dataKey:'sv',name:'Story Value',domain:[0,bubMaxY],tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:40,label:{value:'Story Value',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}}),
             RC(Tooltip,{content:InflTip,cursor:{strokeDasharray:'3 3',stroke:'rgba(0,0,0,0.12)'}}),
-            RC(Scatter,{data:bubData,shape:DomDot,cursor:'pointer',onClick:(pt)=>{const n=pt&&(pt.name||(pt.payload&&pt.payload.name));if(n)window.openInsListPanel(_insSample('dom-bub-'+n,8),n,platLabel+' Story Value',document.querySelector('.db-explore-wrap.on .db-card'));}})
+            RC(Scatter,{data:bubData,shape:DomDot,cursor:'pointer',onClick:(pt)=>{const n=pt&&(pt.name||(pt.payload&&pt.payload.name));if(n)window.openInsListPanel(_domInfPosts(platform,n,8),n,platLabel+' Story Value',document.getElementById('db-dom-dist-card'));}})
           ))),
       RC('div',{className:'db-pub-legend'},d.bubble.map(a=>RC('span',{key:a.name,className:'db-pub-leg-item'},RC('span',{className:'dot',style:{background:a.color}}),a.name)))
     ));
@@ -6619,9 +7119,9 @@ function initDashboard(){
       RC(BarChart,{data:barDesc,layout:'vertical',margin:{top:16,right:24,bottom:24,left:8}},
         RC(CartesianGrid,{horizontal:false,stroke:'#f0f1f3'}),
         RC(XAxis,{type:'number',dataKey:'posts',allowDecimals:false,tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'Post Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
-        RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:140}),
+        RC(YAxis,{type:'category',dataKey:'name',tick:inflLeftTick(110),axisLine:false,tickLine:false,width:110}),
         RC(Tooltip,{content:InflBarTip,cursor:{fill:'rgba(24,29,38,0.04)'}}),
-        RC(Bar,{dataKey:'posts',maxBarSize:26,radius:[0,4,4,0],cursor:'pointer',onClick:(a,idx,e)=>{const n=a&&a.name;if(!n)return;const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;window.openInsListPanel(_insSample('dom-bar-'+n,8),n,platLabel,card);}},
+        RC(Bar,{dataKey:'posts',maxBarSize:26,radius:[0,4,4,0],cursor:'pointer',onClick:(a,idx,e)=>{const n=a&&a.name;if(!n)return;const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;window.openInsListPanel(_domInfPosts(platform,n,8),n,platLabel,card);}},
           ...barDesc.map((a,i)=>RC(Cell,{key:i,fill:a.color})),
           RC(LabelList,{dataKey:'posts',position:'right',style:{fontSize:11,fontWeight:600,fill:'#6b7280'}})
         )
@@ -7536,18 +8036,24 @@ function initDashboard(){
   if(_dashPlats.size)influencerData=[..._dashPlats].flatMap(p=>DOM_DATA[p]?DOM_DATA[p].bubble:[]);
   // KPI cards react to the platform filter (Total Results = summed post counts; Top Influencer = top account across the selection)
   (function(){
-    const totEl=document.getElementById('db-kpi-total'),tiEl=document.getElementById('db-kpi-topinf'),tiD=document.getElementById('db-kpi-topinf-detail');
+    const totEl=document.getElementById('db-kpi-total'),tiEl=document.getElementById('db-kpi-topinf'),tiD=document.getElementById('db-kpi-topinf-detail'),tiAv=document.getElementById('db-kpi-topinf-av');
+    const _kpiInit=n=>(String(n||'').replace(/[^a-z0-9]/gi,'').charAt(0)||'?').toUpperCase();
     if(_dashPlats.size){
       const tot=_EXP_PLAT_ALL.filter(p=>_dashPlats.has(p.key)).reduce((s,p)=>s+p.count,0);
       if(totEl)totEl.textContent=tot;
-      let top=null;_dashPlats.forEach(p=>{const inf=DOM_DATA[p]&&DOM_DATA[p].inf;if(inf&&inf[0]&&(!top||inf[0].posts>top.posts))top=inf[0];});
-      if(top){if(tiEl)tiEl.textContent=top.name;if(tiD)tiD.textContent=top.posts+' posts';}
+      let top=null,topPlat=null;_dashPlats.forEach(p=>{const inf=DOM_DATA[p]&&DOM_DATA[p].inf;if(inf&&inf[0]&&(!top||inf[0].posts>top.posts)){top=inf[0];topPlat=p;}});
+      if(top){if(tiEl)tiEl.textContent=top.name;if(tiD)tiD.textContent=top.posts+' posts';if(tiAv){tiAv.textContent=_kpiInit(top.name);tiAv.style.background=(SOCIAL_PLATFORMS[topPlat]&&SOCIAL_PLATFORMS[topPlat].color)||'#7c3aed';}}
     }else{
       if(totEl)totEl.textContent='69';
       if(tiEl)tiEl.textContent='jmccautosupply';if(tiD)tiD.textContent='56 posts';
+      if(tiAv){tiAv.textContent='J';tiAv.style.background='#7c3aed';}
     }
     // Show only the "Most Dominant — {platform}" cards for the selected platforms (all when no filter)
-    document.querySelectorAll('.db-kpi-card[data-plat]').forEach(c=>{c.style.display=(!_dashPlats.size||_dashPlats.has(c.dataset.plat))?'':'none';});
+    document.querySelectorAll('.db-kpi-card[data-plat]').forEach(c=>{
+      c.style.display=(!_dashPlats.size||_dashPlats.has(c.dataset.plat))?'':'none';
+      const lbl=c.querySelector('.db-kpi-label'),pp=SOCIAL_PLATFORMS[c.dataset.plat];
+      if(lbl&&pp&&!lbl.querySelector('.db-kpi-lbl-ico'))lbl.insertAdjacentHTML('afterbegin',`<span class="db-kpi-lbl-ico">${socIcon(pp,pp.color)}</span>`);
+    });
   })();
   const inflAsc=[...influencerData].sort((a,b)=>a.posts-b.posts);
   const inflDesc=[...influencerData].sort((a,b)=>b.posts-a.posts);
@@ -7597,7 +8103,7 @@ function initDashboard(){
     RC(BarChart,{data:inflDesc,layout:'vertical',margin:{top:16,right:24,bottom:24,left:8}},
       RC(CartesianGrid,{horizontal:false,stroke:'#f0f1f3'}),
       RC(XAxis,{type:'number',dataKey:'posts',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,label:{value:'Post Count',position:'insideBottom',offset:-12,fontSize:11,fill:'#6b7280'}}),
-      RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:140}),
+      RC(YAxis,{type:'category',dataKey:'name',tick:inflLeftTick(110),axisLine:false,tickLine:false,width:110}),
       RC(Tooltip,{content:InflBarTip,cursor:{fill:'rgba(24,29,38,0.04)'}}),
       RC(Bar,{dataKey:'posts',maxBarSize:26,radius:[0,4,4,0]},
         ...inflDesc.map((a,i)=>RC(Cell,{key:i,fill:a.color})),
@@ -7947,13 +8453,114 @@ function initDashboard(){
       +(mostPos?_iIns('megaphone',`Amplify <b>${mostPos.influencer}</b>'s positive post ("${_clipTxt(mostPos.post,46)}") — top positive engagement.`):'')
       +(mostNeg?_iIns('shield-alert',`Respond to <b>${mostNeg.influencer}</b>'s concern ("${_clipTxt(mostNeg.post,46)}") before it spreads.`):'')
       +_iIns('users',`Engage the top voices (${byEng.slice(0,3).map(p=>p.influencer).filter(Boolean).join(', ')}) driving most of the ${label} conversation.`)
-      +`<div class="dom-sum-divider"></div>`+_iSec('file-text','Post &amp; comment summaries')
+      +_iSec('file-text','Post &amp; comment summaries')
       +`<div class="dom-sum-hint"><i data-lucide="mouse-pointer-click"></i><span>Expand any post below to read its AI-generated post &amp; comment summary. <b>${tot}</b> ${tot===1?'post':'posts'} analysed.</span></div>`
       +posts.map((p,i)=>_domSumPostHTML(p,i)).join('')
       +_iFoot('AI-generated from '+label+' posts, engagement, keywords, and entities.');
   }
   window.domSumToggle=function(i){const el=document.getElementById('dom-sum-'+i);if(el)el.classList.toggle('open');};
   window.openDomSummary=function(){const p=window._domCurPlat||'facebook';_domSumPlat=p;tiOpenSource('domsummary');};
+  // Most Dominant explore → "Top Influencers" chart insights (platform-aware, explains the ranking)
+  SRC.dominf={card:'db-dom-topinf-card',sub:()=>{const d=DOM_DATA[window._domCurPlat]||DOM_DATA.facebook;return d.label+' · '+d.inf.length+' influencers';},detailTitle:()=>'Top influencers',clear:()=>{},detail:()=>SRC.dominf.overview(),overview:()=>{
+    const d=DOM_DATA[window._domCurPlat]||DOM_DATA.facebook,label=d.label;
+    const _num=v=>parseFloat(String(v).replace(/[^0-9.]/g,''))||0;
+    const inf=(d.inf||[]).map(x=>({name:x.name,posts:+x.posts||0,score:_num(x.score),eng:_num(x.eng),exposure:_num(x.exposure)}));
+    if(!inf.length)return _iNarr(`No ${label} influencers in range.`)+_iFoot('AI-generated summary.');
+    const n=inf.length,byPosts=[...inf].sort((a,b)=>b.posts-a.posts);
+    const totPosts=inf.reduce((s,a)=>s+a.posts,0),top=byPosts[0],second=byPosts[1];
+    const topPct=totPosts?Math.round(top.posts/totPosts*100):0;
+    const top3=byPosts.slice(0,3).reduce((s,a)=>s+a.posts,0),top3Pct=totPosts?Math.round(top3/totPosts*100):0;
+    const singles=inf.filter(a=>a.posts<=1).length,gap=second?top.posts-second.posts:0;
+    const topScore=[...inf].sort((a,b)=>b.score-a.score)[0],topEng=[...inf].sort((a,b)=>b.eng-a.eng)[0];
+    return _iNarr(`On <b>${label}</b>, <b>${top.name}</b> leads the conversation with <b>${top.posts}</b> post${top.posts!==1?'s':''} — the most of any account here. This chart ranks the <b>${n}</b> most active influencers by how many posts they published about this topic.`)
+      +_iStats(
+        _iStat('Total posts',totPosts,'from '+n+' influencers'),
+        _iStat('Top influencer',_clipTxt(top.name,14),top.posts+' post'+(top.posts!==1?'s':'')),
+        _iStat('Top-3 share',top3Pct+'%','of all posts'),
+        _iStat('Highest score',topScore.score.toFixed(2),_clipTxt(topScore.name,14))
+      )
+      +_iSec('list-ordered','How this is ranked')
+      +_iIns('bar-chart-2',`Accounts are ordered by <b>post volume</b> — the number of posts each published mentioning the topic on ${label}. The more an account posts, the higher it sits.`)
+      +_iIns('info',`Volume isn't the same as influence: post count ignores reach and engagement, so a high-volume account can still rank lower on <b>influencer score</b> or <b>engagement</b>.`)
+      +_iSec('trending-up','What the data shows')
+      +_iIns('crown',`<b>${top.name}</b> is the most dominant voice — <b>${topPct}%</b> of all ${label} posts${second?`, <b>${gap}</b> post${gap!==1?'s':''} ahead of <b>${second.name}</b>`:''}.`)
+      +_iIns('layers',`The top 3 accounts hold <b>${top3Pct}%</b> of posts — ${top3Pct>=60?'a concentrated conversation driven by a few voices':'a fairly distributed conversation'}.`)
+      +(singles?_iIns('users',`A long tail of <b>${singles}</b> account${singles!==1?'s':''} posted just once — occasional mentions rather than sustained coverage.`):'')
+      +(topEng&&topEng.name!==top.name?_iIns('flame',`<b>${topEng.name}</b> punches above its volume — the highest engagement (${topEng.eng.toLocaleString()}) despite fewer posts.`):'')
+      +_iSec('award','Top influencers by post count')
+      +_iRank(byPosts.slice(0,6).map(a=>({name:a.name,val:a.posts,pct:Math.round(a.posts/top.posts*100),color:d.color})),d.color)
+      +_iSec('lightbulb','Takeaways')
+      +_iIns('handshake',`Engage <b>${top.name}</b> first — the loudest voice on ${label} for this topic.`)
+      +(topScore.name!==top.name?_iIns('eye',`Watch <b>${topScore.name}</b> — a higher influencer score (${topScore.score.toFixed(2)}) means outsized impact per post.`):_iIns('eye',`<b>${top.name}</b> also holds the top influencer score — a rare volume-and-impact leader worth prioritising.`))
+      +_iFoot('AI-generated from '+label+' influencer post counts, engagement, and influence scores.');
+  }};
+  window.openDomInfInsights=()=>tiOpenSource('dominf');
+  // Most Dominant explore → "Story Value Distribution" chart insights (post count × story value, bubble = score)
+  SRC.domsv={card:'db-dom-dist-card',sub:()=>{const d=DOM_DATA[window._domCurPlat]||DOM_DATA.facebook;return d.label+' · story value distribution';},detailTitle:()=>'Story value distribution',clear:()=>{},detail:()=>SRC.domsv.overview(),overview:()=>{
+    const d=DOM_DATA[window._domCurPlat]||DOM_DATA.facebook,label=d.label;
+    const b=(d.bubble||[]).map(x=>({name:x.name,posts:+x.posts||0,sv:+x.sv||0,score:+x.score||0}));
+    if(!b.length)return _iNarr(`No ${label} influencers in range.`)+_iFoot('AI-generated summary.');
+    const n=b.length,bySv=[...b].sort((a,b)=>b.sv-a.sv),byPosts=[...b].sort((a,b)=>b.posts-a.posts);
+    const totSv=b.reduce((s,a)=>s+a.sv,0),avgSv=totSv/n,totPosts=b.reduce((s,a)=>s+a.posts,0);
+    const topSv=bySv[0],prolific=byPosts[0],decoupled=topSv.name!==prolific.name;
+    const efficient=[...b].filter(a=>a.posts>0).sort((a,b)=>(b.sv/b.posts)-(a.sv/a.posts))[0];
+    const effRate=efficient&&efficient.posts?efficient.sv/efficient.posts:0;
+    return _iNarr(`On <b>${label}</b>, <b>${topSv.name}</b> posts the highest story value at <b>${topSv.sv.toFixed(2)}</b> from ${topSv.posts} post${topSv.posts!==1?'s':''}. ${decoupled?`The most prolific account, <b>${prolific.name}</b> (${prolific.posts} posts), isn't the highest-value — volume and value are <b>decoupled</b> here.`:`<b>${prolific.name}</b> leads on both volume and value.`}`)
+      +_iStats(
+        _iStat('Top story value',topSv.sv.toFixed(2),_clipTxt(topSv.name,14)),
+        _iStat('Most posts',prolific.posts,_clipTxt(prolific.name,14)),
+        _iStat('Avg story value',avgSv.toFixed(2),'per influencer'),
+        _iStat('Influencers',n,'plotted')
+      )
+      +_iSec('compass','How to read this chart')
+      +_iIns('move-horizontal',`<b>X axis = post count</b> — how many posts each account published (volume; further right = more).`)
+      +_iIns('move-vertical',`<b>Y axis = story value</b> — the estimated impact / AVE of those posts (higher = more valuable).`)
+      +_iIns('circle',`<b>Bubble size = influencer score.</b> The <b>top-right</b> is the sweet spot: high volume and high value.`)
+      +_iSec('trending-up','What the data shows')
+      +_iIns(decoupled?'shuffle':'arrow-up-right',`Volume and value are ${decoupled?`<b>decoupled</b> — <b>${topSv.name}</b> drives value while <b>${prolific.name}</b> drives volume`:`<b>aligned</b> — <b>${topSv.name}</b> leads on both`}.`)
+      +(efficient?_iIns('zap',`Most efficient is <b>${efficient.name}</b> — <b>${effRate.toFixed(2)}</b> story value per post, outsized impact for its volume.`):'')
+      +_iIns('gauge',`Story value averages <b>${avgSv.toFixed(2)}</b> per account across <b>${totPosts}</b> posts${topSv.sv>avgSv*1.8?` — skewed upward by <b>${topSv.name}</b>`:''}.`)
+      +_iSec('award','Top influencers by story value')
+      +_iRank(bySv.slice(0,6).map(a=>({name:a.name,val:a.sv.toFixed(2),pct:Math.round(a.sv/topSv.sv*100),color:d.color})),d.color)
+      +_iSec('lightbulb','Takeaways')
+      +_iIns('megaphone',`Amplify <b>${topSv.name}</b> — the highest-value voice on ${label}.`)
+      +(efficient&&efficient.name!==topSv.name?_iIns('eye',`Watch <b>${efficient.name}</b> — high value-per-post signals concentrated influence worth nurturing.`):_iIns('eye',`<b>${topSv.name}</b> pairs top value with efficiency — a priority relationship.`))
+      +_iFoot('AI-generated from '+label+' influencer post counts, story value, and influence scores.');
+  }};
+  window.openDomSvInsights=()=>tiOpenSource('domsv');
+  // Most Dominant explore → "Posts Distribution" histogram insights (story value buckets × post count)
+  SRC.domfreq={card:'db-dom-freq-card',sub:()=>{const d=DOM_DATA[window._domCurPlat]||DOM_DATA.facebook;return d.label+' · posts distribution';},detailTitle:()=>'Posts distribution',clear:()=>{},detail:()=>SRC.domfreq.overview(),overview:()=>{
+    const d=DOM_DATA[window._domCurPlat]||DOM_DATA.facebook,label=d.label;
+    const posts=(d.freq||[]).map(([v,c])=>({value:+v,count:+c}));
+    const total=posts.reduce((s,p)=>s+p.count,0);
+    if(!total)return _iNarr(`No ${label} posts in range.`)+_iFoot('AI-generated summary.');
+    const modal=[...posts].sort((a,b)=>b.count-a.count)[0],modalPct=Math.round(modal.count/total*100);
+    const withVal=posts.filter(p=>p.count>0),maxVal=Math.max(...withVal.map(p=>p.value));
+    const wMean=posts.reduce((s,p)=>s+p.value*p.count,0)/total;
+    const above=posts.filter(p=>p.value>modal.value).reduce((s,p)=>s+p.count,0),abovePct=Math.round(above/total*100);
+    return _iNarr(`On <b>${label}</b>, posts cluster at a story value of <b>${modal.value}</b> — <b>${modalPct}%</b> of the <b>${total}</b> posts sit there. The distribution has a long, thin tail: only <b>${above}</b> post${above!==1?'s':''} (<b>${abovePct}%</b>) score higher, up to a maximum of <b>${maxVal}</b>.`)
+      +_iStats(
+        _iStat('Total posts',total,'analysed'),
+        _iStat('Most common',modal.value,modal.count+' post'+(modal.count!==1?'s':'')),
+        _iStat('Higher-value',abovePct+'%','above value '+modal.value),
+        _iStat('Max story value',maxVal,'reached')
+      )
+      +_iSec('compass','How to read this chart')
+      +_iIns('move-horizontal',`<b>X axis = story value</b> — the estimated impact / AVE of a post, bucketed low to high.`)
+      +_iIns('move-vertical',`<b>Y axis = post count</b> — how many posts fall in each story-value bucket.`)
+      +_iIns('bar-chart-2',`The tall spike at <b>${modal.value}</b> means most posts share that ${modal.value===0?'near-zero':'same'} value; a bar further right would be rarer, higher-value posts.`)
+      +_iSec('trending-up','What the data shows')
+      +_iIns('git-commit-horizontal',`The spread is <b>heavily skewed</b> — <b>${modalPct}%</b> of posts sit in one bucket, so ${label} coverage is dominated by ${modal.value===0?'low-value':'similar-value'} volume.`)
+      +_iIns('star',`A long tail of <b>${above}</b> higher-value post${above!==1?'s':''} carries outsized impact — the value comes from the few, not the many.`)
+      +_iIns('gauge',`The weighted-average story value is <b>${wMean.toFixed(2)}</b> per post — ${wMean<maxVal*0.35?'pulled down by the low-value bulk':'fairly balanced'}.`)
+      +_iSec('award','Story-value buckets by post count')
+      +_iRank([...withVal].sort((a,b)=>b.count-a.count).slice(0,6).map(p=>({name:'Story value '+p.value,val:p.count,pct:Math.round(p.count/modal.count*100),color:d.color})),d.color)
+      +_iSec('lightbulb','Takeaways')
+      +_iIns('search',`Investigate the <b>${above}</b> high-value post${above!==1?'s':''} (value &gt; ${modal.value}) — understanding what lifts them is where the leverage is.`)
+      +_iIns('filter',`Treat the value-<b>${modal.value}</b> bulk as reach/volume; don't let it dilute reporting on the high-impact tail.`)
+      +_iFoot('AI-generated from the '+label+' distribution of posts across story-value buckets.');
+  }};
+  window.openDomFreqInsights=()=>tiOpenSource('domfreq');
   SRC.domsummary={card:null,sub:()=>((SOCIAL_PLATFORMS[_domSumPlat]||{label:_domSumPlat}).label)+' · post & comment insights',detailTitle:()=>'AI Insights',clear:()=>{},detail:()=>_domSummaryHTML(_domSumPlat),overview:()=>_domSummaryHTML(_domSumPlat)};
 }
 (function(){function c(){document.querySelectorAll(".brief-stats .ss").forEach(function(card){var tr=card.querySelector(".ss-trend:not(.neu)");if(!tr)return;var neg=/[↓−-]/.test(tr.textContent);tr.classList.remove("pos","neg");tr.classList.add(neg?"neg":"pos");var v=card.querySelector(".ss-val");if(v){v.classList.remove("tcol-pos","tcol-neg");v.classList.add(neg?"tcol-neg":"tcol-pos");}});}if(document.readyState!=="loading")c();else document.addEventListener("DOMContentLoaded",c);})();

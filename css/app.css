@@ -385,14 +385,71 @@ svg.lucide-chevron-down{width:18px!important;height:18px!important}
 .tbl-card .tbl-header + *{margin-top:12px}
 .tbl-header-left{display:flex;align-items:center;gap:8px}
 .tbl-select{position:relative}
-.tbl-select select{appearance:none;-webkit-appearance:none;font-size:12px;padding:7px 28px 7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font-family:inherit;font-weight:500;cursor:pointer;outline:none;min-width:148px}
-.tbl-select::after{content:"";position:absolute;right:10px;top:50%;transform:translateY(-50%) rotate(45deg);width:6px;height:6px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);pointer-events:none;margin-top:-3px}
+.tbl-select select{appearance:none;-webkit-appearance:none;font-size:12px;padding:7px 28px 7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font-family:inherit;font-weight:500;cursor:pointer;outline:none;min-width:120px}
+.tbl-select::after{content:"";position:absolute;right:10px;top:50%;transform:translateY(-50%) rotate(45deg);width:6px;height:6px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);pointer-events:none;margin-top:-1px}
 .tbl-select select:focus{border-color:var(--focus-border)}
+/* Custom sort trigger — matches the native-select control look; the .tbl-select::after chevron overlays it */
+.tbl-sort-btn,.tbl-saved-btn{appearance:none;font-size:12px;padding:7px 28px 7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font-family:inherit;font-weight:500;cursor:pointer;outline:none;min-width:120px;text-align:left;display:inline-flex;align-items:center;transition:border-color 0.12s}
+.tbl-sort-btn:hover,.tbl-saved-btn:hover{border-color:var(--focus-border)}
+/* Saved Posts group dropdown */
+.saved-menu{position:fixed;z-index:9999;min-width:240px;max-width:340px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 12px 32px rgba(24,29,38,0.16);padding:6px;animation:drPickerIn 0.18s cubic-bezier(0.22,1,0.36,1) both}
+.saved-menu-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 8px 10px}
+.saved-menu-title{font-size:13px;font-weight:600;color:var(--ink)}
+.saved-menu-new{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:#2563eb;background:transparent;border:1px solid rgba(37,99,235,0.4);border-radius:var(--radius-sm);padding:5px 11px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 0.12s}
+.saved-menu-new:hover{background:rgba(37,99,235,0.06)}
+.saved-menu-new i,.saved-menu-new svg{width:13px;height:13px}
+.saved-menu-list{display:flex;flex-direction:column;gap:1px;max-height:260px;overflow-y:auto}
+.saved-opt{display:flex;align-items:center;width:100%;text-align:left;font-size:13px;color:var(--ink);background:none;border:none;border-radius:var(--radius-sm);padding:9px 10px;cursor:pointer;font-family:inherit}
+.saved-opt span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.saved-opt:hover,.saved-opt-all:hover{background:var(--canvas)}
+.saved-opt-all.on{background:rgba(37,99,235,0.08);color:#1d4ed8;font-weight:500}
+.saved-opt-row{display:flex;align-items:center;border-radius:var(--radius-sm)}
+.saved-opt-row>.saved-opt{flex:1;min-width:0}
+.saved-opt-row:hover{background:var(--canvas)}
+.saved-opt-row.on{background:rgba(37,99,235,0.08)}
+.saved-opt-row.on .saved-opt{color:#1d4ed8;font-weight:500;background:transparent}
+.saved-opt-ic{display:inline-flex;align-items:center;justify-content:center;width:26px;height:32px;flex-shrink:0;border:none;background:transparent;color:var(--muted);cursor:pointer;opacity:0.55;transition:opacity 0.12s,color 0.12s}
+.saved-opt-ic:hover{color:var(--ink);opacity:1}
+.saved-opt-ic i,.saved-opt-ic svg{width:13px;height:13px}
+.saved-opt-input{width:100%;font-size:13px;font-family:inherit;color:var(--ink);border:1px solid var(--focus-border);border-radius:var(--radius-sm);padding:8px 10px;outline:none;margin:1px 0;background:var(--surface)}
+.tbl-select:has(.tbl-sort-btn) .ment-sort-lbl{pointer-events:none}
+#sort-menu .vf-opt span{white-space:nowrap;min-width:auto}   /* let the menu widen to the longest sort label instead of wrapping */
 
 .tbl-header-right{display:flex;align-items:center;gap:6px}
 .icon-action{width:32px;height:32px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);background:transparent;border:none;transition:background 0.12s,color 0.12s}
 .icon-action i{width:13px;height:13px}
 .icon-action:hover{background:var(--canvas);color:var(--ink)}
+.icon-action.on{background:var(--ink);color:#fff}
+.icon-action.on:hover{background:var(--ink);color:#fff}
+/* "View" read-status filter dropdown (anchored to the eye button, appended to body → position:fixed) */
+.vf-menu{position:fixed;z-index:9999;min-width:180px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 10px 30px rgba(24,29,38,0.16);padding:6px;animation:drPickerIn 0.18s cubic-bezier(0.22,1,0.36,1) both}
+.vf-opt{display:flex;align-items:center;gap:9px;width:100%;padding:8px 9px;font-size:13px;color:var(--ink);background:none;border:none;cursor:pointer;border-radius:6px;font-family:inherit;text-align:left;transition:background 0.12s}
+.vf-opt:hover{background:var(--canvas)}
+.vf-opt .vf-lead{width:14px;height:14px;flex-shrink:0;color:var(--muted)}
+.vf-opt span{flex:1;min-width:0}
+.vf-opt .vf-check{width:14px;height:14px;flex-shrink:0;color:#16a34a;opacity:0}
+.vf-opt.on{font-weight:600}
+.vf-opt.on .vf-check{opacity:1}
+.vf-opt.on .vf-lead{color:var(--ink)}
+.tbl-empty-row td{text-align:center;color:var(--muted);padding:34px 16px;font-size:13px}
+.mc-empty{padding:40px 16px;text-align:center;color:var(--muted);font-size:13px}
+/* Settings gear → column-visibility dropdown */
+.colmenu{position:fixed;z-index:9999;min-width:190px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 12px 32px rgba(24,29,38,0.16);padding:10px;animation:drPickerIn 0.18s cubic-bezier(0.22,1,0.36,1) both}
+.colmenu-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);padding:2px 4px 8px}
+.colmenu-list{display:flex;flex-direction:column;gap:1px;margin-bottom:10px}
+.colmenu-opt{padding:7px 6px}
+/* Design-system primary button (see design-system.html .btn.btn-primary.btn-md) */
+.colmenu-all{width:100%;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--ink);color:#fff;border:none;border-radius:var(--radius-sm);padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;transition:background 0.12s ease,box-shadow 0.12s ease}
+.colmenu-all:hover{background:#2a3244;box-shadow:var(--shadow-md)}
+/* Column hide — a hide-cN class on the <table> hides that column's header + body cells (persists across tbody re-renders) */
+.tbl.hide-c2 th:nth-child(2),.tbl.hide-c2 td:nth-child(2),
+.tbl.hide-c3 th:nth-child(3),.tbl.hide-c3 td:nth-child(3),
+.tbl.hide-c4 th:nth-child(4),.tbl.hide-c4 td:nth-child(4),
+.tbl.hide-c5 th:nth-child(5),.tbl.hide-c5 td:nth-child(5),
+.tbl.hide-c6 th:nth-child(6),.tbl.hide-c6 td:nth-child(6),
+.tbl.hide-c7 th:nth-child(7),.tbl.hide-c7 td:nth-child(7),
+.tbl.hide-c8 th:nth-child(8),.tbl.hide-c8 td:nth-child(8),
+.tbl.hide-c9 th:nth-child(9),.tbl.hide-c9 td:nth-child(9){display:none}
 .btn-export{font-size:12.5px;padding:7px 16px;background:var(--ink);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:500;font-family:inherit;margin-left:4px;transition:background 0.15s}
 .btn-export:hover{background:var(--accent-hover)}
 
@@ -458,6 +515,18 @@ svg.lucide-chevron-down{width:18px!important;height:18px!important}
 .soc-post{font-size:13px;color:var(--ink);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:none;cursor:default}
 .soc-influencer{display:inline-block;font-size:12px;font-weight:500;color:var(--ws-accent,#2563eb);background:var(--ws-accent-bg,rgba(37,99,235,0.09));padding:3px 9px;border-radius:6px;white-space:nowrap}
 .eng-score{font-size:13px;color:var(--ink);font-weight:500}
+/* Read/unread: a viewed post recedes — a faint COOL grey carries the signal (a warm tint would
+   match the #f5f4f0 page canvas and blend into the gutter). The cool hue also keeps it clearly
+   distinct from the warm selected tone. Eye glyph is the explicit confirmation. Specificity is
+   tuned so state priority is resting(white) < viewed < hover < selected — `tr.soc-viewed td`
+   (0,1,2) beats base `.tbl td` (0,1,1) but loses to `.tbl tr:hover td` (0,2,2) and selected (0,2,3). */
+tr.soc-viewed td{background:#f5f5f5}
+.tbl tbody tr.soc-viewed:hover td{background:#ececec}   /* keep hover feedback on already-tinted rows (must out-specify the generic :hover below) */
+.soc-viewed .soc-post{color:var(--ink-2)}    /* light mute — the tint does the heavy lifting */
+.hl-cell .soc-seen-i{width:13px;height:13px;flex-shrink:0;margin-left:7px;color:var(--muted);opacity:0.85}
+/* Bookmarked marker — filled amber bookmark, distinct from the muted grey viewed-eye */
+.hl-cell .soc-bm-i{width:13px;height:13px;flex-shrink:0;margin-left:6px;color:#f59e0b}
+.hl-cell .soc-bm-i svg{fill:#f59e0b}   /* override lucide's fill="none" so the bookmark reads as filled */
 /* Category detail (buckets) view: let the inner wrapper fill the page so the panels reach the bottom */
 #page-categories.ent-page #cat-page-inner{flex:1;min-height:0}
 /* Buckets header has no subtitle — drop the title's bottom margin so it centers against the stat */
@@ -473,6 +542,10 @@ svg.lucide-chevron-down{width:18px!important;height:18px!important}
 /* ── TABLE ── */
 .tbl-scroll{width:100%;overflow-x:auto;border-radius:var(--radius-md);box-shadow:0 2px 12px rgba(24,29,38,0.07),0 1px 3px rgba(24,29,38,0.05)}
 .tbl{width:100%;border-collapse:separate;border-spacing:0;border-radius:var(--radius-md);overflow:hidden}
+/* Mentions post list: subtle outer border copied from the tracker's .match-tbl (the .tbl already
+   shares its radius/overflow/border-collapse, so only the border line is added). Removed in
+   detail/split view, where the table becomes a rail already framed by .tbl-card. */
+#page-mentions .tbl{border:1px solid var(--border)}
 .tbl th{padding:18px 16px;text-align:left;font-size:11.5px;font-weight:600;color:var(--muted);background:#e3e1db;border-bottom:1px solid var(--border);white-space:nowrap;letter-spacing:0.02em;text-transform:uppercase}
 .tbl th:first-child{border-top-left-radius:0}
 .tbl th:last-child{border-top-right-radius:0}
@@ -505,6 +578,13 @@ svg.lucide-chevron-down{width:18px!important;height:18px!important}
 .date-ago{font-size:11.5px;color:var(--muted);margin-top:2px}
 .row-dots{color:var(--icon-hint);font-size:18px;cursor:pointer;letter-spacing:1px;user-select:none}
 .row-dots:hover{color:var(--ink)}
+/* Row "⋯" actions dropdown (appended to body → position:fixed, anchored to the clicked dots) */
+.rowmenu{position:fixed;z-index:9999;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 10px 30px rgba(24,29,38,0.16);padding:6px;animation:drPickerIn 0.16s cubic-bezier(0.22,1,0.36,1) both}
+.rowmenu-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;font-size:13px;color:var(--ink);background:none;border:none;cursor:pointer;border-radius:6px;font-family:inherit;text-align:left;white-space:nowrap;transition:background 0.12s}
+.rowmenu-item:hover{background:var(--canvas)}
+.rowmenu-item i,.rowmenu-item svg{width:14px;height:14px;flex-shrink:0;color:var(--muted)}
+.rowmenu-item svg{stroke-width:1.5}   /* set on the svg so it overrides lucide's stroke-width="2" attribute */
+.rowmenu-item:hover i,.rowmenu-item:hover svg{color:var(--ink)}
 
 /* ── BRIEF: animations ── */
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(61,165,61,0.45)}50%{box-shadow:0 0 0 6px rgba(61,165,61,0)}}
@@ -988,7 +1068,7 @@ body.aireport-open .app-body{margin-right:var(--aa-w)}
 .md-bar:hover{background:#c4c8d1}
 .md-bar.hi{background:var(--ink)}
 /* Bar chart custom tooltip */
-#md-tooltip{position:fixed;z-index:9999;pointer-events:none;background:var(--ink);color:#fff;border-radius:8px;padding:8px 11px 10px;font-size:11.5px;line-height:1.55;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.18);opacity:0;transition:opacity 0.1s;max-width:200px}
+#md-tooltip{position:fixed;z-index:10001;pointer-events:none;background:var(--ink);color:#fff;border-radius:8px;padding:8px 11px 10px;font-size:11.5px;line-height:1.55;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.18);opacity:0;transition:opacity 0.1s;max-width:200px}
 #md-tooltip.visible{opacity:1}
 #md-tooltip.anchored::before{content:'';position:absolute;top:-4px;left:var(--arrow-x,50%);transform:translateX(-50%) rotate(45deg);width:8px;height:8px;background:var(--ink);border-radius:1px;z-index:-1;pointer-events:none}
 #md-tooltip .tip-date{font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:4px}
@@ -1453,6 +1533,22 @@ body.rpt-open .app-right{transition:padding-right 0.28s cubic-bezier(0.4,0,0.2,1
 .ai-report-lbl{font-size:10.5px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;display:flex;align-items:center;gap:5px}
 .ai-report-txt{font-size:13px;color:var(--ink-2);line-height:1.65}
 .ai-report-txt.loading{color:var(--muted);font-style:italic;animation:glowPulse 1.5s infinite}
+/* On-demand social post + comments summary */
+.qa-btn.qa-summarize i,.qa-btn.qa-summarize svg{color:#6b4de8}
+.qa-btn.qa-summarize.is-on{background:rgba(107,77,232,0.08);border-color:rgba(107,77,232,0.4);color:#6b4de8}
+/* One vertical rhythm, scoped so the shared .ai-report-panel (tracker) is untouched:
+   above-panel 16px (collapses w/ qa-row) · header→body 8px · sections 12px · label→text 4px */
+.soc-summary{margin-top:12px;margin-bottom:20px}
+.soc-summary .ai-report-panel{margin-top:0}
+.soc-summary-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.soc-summary-hd .ai-report-lbl{margin-bottom:0}
+.soc-summary-acts{display:flex;gap:4px}
+.soc-sum-icon{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:1px solid var(--border);background:var(--surface);border-radius:var(--radius-sm);color:var(--muted);cursor:pointer;transition:background 0.12s,color 0.12s,border-color 0.12s}
+.soc-sum-icon:hover{background:var(--canvas);color:var(--ink);border-color:var(--focus-border)}
+.soc-sum-icon i,.soc-sum-icon svg{width:13px;height:13px}
+.soc-sum-sec{margin-bottom:12px}
+.soc-sum-sub{font-size:10px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px}
+.soc-sum-note{display:flex;align-items:center;gap:5px;margin-top:0;padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
 .ms-bar{display:flex;gap:7px;margin-bottom:8px}
 .ms-input-wrap{flex:1;display:flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px}
 .ms-input-wrap input{flex:1;border:none;outline:none;font-size:12px;font-family:var(--font);color:var(--ink);background:transparent}
@@ -1538,7 +1634,7 @@ body.rpt-open .app-right{transition:padding-right 0.28s cubic-bezier(0.4,0,0.2,1
 #page-mentions.detail-open.ment-rail #ment-detail-rail .ti-arttbl thead th{position:sticky;top:0;z-index:3}
 #page-mentions.detail-open.ment-rail #ment-detail-rail .ti-arttbl-pager{margin:auto 0 0;position:sticky;bottom:0;background:#fff;border-top:1px solid var(--border);padding:12px 16px}
 #page-mentions.detail-open .tbl-scroll{border-radius:0;box-shadow:none}
-#page-mentions.detail-open .tbl{border-radius:0}
+#page-mentions.detail-open .tbl{border-radius:0;border:none}
 #page-mentions.detail-open .tbl tr:last-child td:first-child{border-bottom-left-radius:0}
 #page-mentions.detail-open .tbl tr:last-child td:last-child{border-bottom-right-radius:0}
 #page-mentions.detail-open .adp-article{border-radius:0;padding:0;border:none;background:transparent;box-shadow:none}
@@ -2429,6 +2525,11 @@ body.ins-open .cmp-ov-row.is-focused td:first-child{box-shadow:inset 3px 0 0 #7c
 .at-track-row.on:hover{background:rgba(22,163,74,0.13)}
 .at-track-item{display:flex;align-items:center;gap:8px;width:100%;text-align:left;font-size:13px;color:var(--ink);background:transparent;border:none;border-radius:var(--radius-sm);padding:8px 10px;cursor:pointer;font-family:inherit}
 .at-track-item span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Recommended = compact accent pill with a sparkle. Scoped to .at-track-item so flex:0 0 auto out-specifies
+   the generic `.at-track-item span{flex:1}` (which also matches this span) — otherwise the pill grows and
+   leaves dead space on the right. flex:0 0 auto + width:auto → pill sizes to content; the title truncates. */
+.at-track-item .at-track-tag{flex:0 0 auto;width:auto;overflow:visible;display:inline-flex;align-items:center;gap:4px;cursor:default;font-size:9.5px;font-weight:600;color:#6b4de8;background:rgba(107,77,232,0.1);border:1px solid rgba(107,77,232,0.22);padding:2px 7px 2px 5px;border-radius:20px;line-height:1.5;white-space:nowrap}
+.at-track-item .at-track-tag i,.at-track-item .at-track-tag svg{width:11px!important;height:11px!important;color:#6b4de8;flex-shrink:0}
 .at-track-item i,.at-track-item svg{width:14px!important;height:14px!important;flex-shrink:0;color:var(--muted)}
 .at-track-item.at-track-new:hover{background:var(--canvas)}
 .at-track-row.on .at-track-item{color:#15803d}
@@ -2819,9 +2920,13 @@ body.ws-shared .sb-progress-fill{background:var(--ws-accent,#2563eb)!important}
 .db-kpi-card.db-kpi-clickable{cursor:pointer}
 .db-kpi-card.db-kpi-clickable:hover{box-shadow:0 8px 24px rgba(24,29,38,0.1);transform:translateY(-2px);border-color:#d4d7dd}
 .db-kpi-card:hover{box-shadow:0 8px 24px rgba(24,29,38,0.1);transform:translateY(-2px)}
-.db-kpi-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px}
+.db-kpi-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.db-kpi-lbl-ico{display:inline-flex;align-items:center;flex-shrink:0}
+.db-kpi-lbl-ico i,.db-kpi-lbl-ico svg{width:13px;height:13px;font-size:13px}
 .db-kpi-val{font-size:26px;font-weight:700;color:var(--ink);font-family:var(--font-display);letter-spacing:-0.02em;line-height:1.15;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.db-kpi-val--md{font-size:17px;letter-spacing:-0.01em;line-height:1.3;white-space:normal}
+.db-kpi-val--md{font-size:17px;letter-spacing:-0.01em;line-height:1.3;white-space:normal;display:flex;align-items:center;gap:8px}
+.db-kpi-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.db-kpi-avatar{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font);font-size:11px;font-weight:700;color:#fff;line-height:1;text-transform:uppercase;flex-shrink:0}
 .db-kpi-val.db-kpi-green{color:#16a34a}
 .db-kpi-val.db-kpi-na{color:var(--muted);font-weight:600}
 .db-kpi-detail{font-size:12px;color:var(--muted);margin-bottom:10px}
@@ -2875,7 +2980,7 @@ body.ins-open .has-focus .db-card:not(.is-focused){opacity:0.35;filter:saturate(
 body.ins-open .has-focus .db-kpi-card:not(.is-focused){opacity:0.35;filter:saturate(0.55);pointer-events:none}
 /* Same focus/dim in the Explore-view (Total Articles Count) when the Insights panel opens from a graph/publisher */
 .db-explore-inner>*,.ex-pub-card,.cmp-metric-view.on>*{transition:opacity 0.3s ease,filter 0.3s ease}
-body.ins-open .db-explore-inner>*:not(.has-focus){opacity:0.35;filter:saturate(0.55);pointer-events:none}
+body.ins-open .db-explore-inner>*:not(.has-focus):not(.is-focused){opacity:0.35;filter:saturate(0.55);pointer-events:none}
 /* Per-metric compare views nest cards inside a .cmp-metric-view wrapper — spotlight within it too */
 body.ins-open .cmp-metric-view.on>*:not(.has-focus){opacity:0.35;filter:saturate(0.55);pointer-events:none}
 body.ins-open .has-focus .ex-pub-card:not(.is-focused){opacity:0.35;filter:saturate(0.55);pointer-events:none}
@@ -2908,8 +3013,8 @@ body.ins-open .is-focused{box-shadow:0 0 0 2px rgba(124,58,237,0.45),0 12px 32px
 .ti-stat-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .ti-up{color:#16a34a}
 .ti-down{color:#e94f37}
-.ti-sec-title{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink);font-weight:700;margin-top:14px;margin-bottom:6px;display:flex;align-items:center;gap:7px}
-.ti-body>.ti-sec-title:first-child{margin-top:0}
+.ti-sec-title{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink);font-weight:700;margin-top:10px;margin-bottom:6px;padding-top:18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:7px}
+.ti-body>.ti-sec-title:first-child{margin-top:0;padding-top:0;border-top:none}
 .ti-body>div>.ti-sec-title{margin-bottom:12px}
 .ti-sec-title i,.ti-sec-title svg{width:14px;height:14px}
 .ti-sec-title svg{color:#7c3aed}
@@ -3018,6 +3123,14 @@ body.ins-open .is-focused{box-shadow:0 0 0 2px rgba(124,58,237,0.45),0 12px 32px
 .ti-arttbl-row[hidden]{display:none}
 .ti-arttbl-row{cursor:pointer}
 .ti-arttbl-row:hover{background:var(--canvas)}
+/* Read/unread in the split-view rail — mirrors the main list (grey tint + eye + muted title).
+   `:not(.selected)` + 3-class specificity keeps selection (#ece8e1) and this row's own hover on top. */
+.ti-arttbl-row.soc-viewed:not(.selected){background:#f5f5f5}
+.ti-arttbl-row.soc-viewed:not(.selected):hover{background:#ececec}
+.ti-arttbl-row.soc-viewed .ti-arttbl-title{color:var(--ink-2)}
+.ti-arttbl-titlerow .ti-seen-i{width:12px;height:12px;flex-shrink:0;color:var(--muted);opacity:0.85}
+.ti-arttbl-titlerow .ti-bm-i{width:12px;height:12px;flex-shrink:0;color:#f59e0b}
+.ti-arttbl-titlerow .ti-bm-i svg{fill:#f59e0b}   /* filled amber bookmark, matches the main list marker */
 .ti-arttbl-hlwrap{display:flex;align-items:center;gap:10px;min-width:0}
 .soc-plat-ico{flex-shrink:0;width:20px;display:inline-flex;align-items:center;justify-content:center;font-size:18px}
 /* Inline X (Twitter) logo — sizes to the surrounding icon's font-size, matches the fa-brands icons */
