@@ -3227,6 +3227,7 @@ function applyAveColor(){
 // Media-type maps + tooltip helper, hoisted above the top-level mentions init below so
 // renderArticleList can use them during the early spotlight render (avoids a TDZ ReferenceError).
 const ATmc={'TV':'media-tv','Online':'media-online','Print':'media-print','Radio':'media-radio','Social':'media-social'};
+const ATmi={'TV':'tv','Online':'file-text','Print':'newspaper','Radio':'radio','Social':'message-circle'};   // media → lucide icon (timeline badges)
 const ATicn={'TV':{cls:'type-tv',icon:'tv'},'Online':{cls:'type-online',icon:'newspaper'},'Print':{cls:'type-broadsheet',icon:'file-text'},'Radio':{cls:'type-radio',icon:'radio'},'Social':{cls:'type-blog',icon:'share-2'}};
 const _barTips=new Map();
 let _barTipId=0;
@@ -3282,15 +3283,25 @@ const TC={
   'Product':{cls:'type-pd',icls:'icon-pd',icon:'box'},
 };
 const DB=[
-  {media:'Online',source:'Manila Times Online',title:'DITO expands 5G footprint in Metro Manila',date:'May 20, 2026',value:312000},
-  {media:'Print',source:'Philippine Daily Inquirer',title:'DITO Telecommunity posts record subscriber growth',date:'May 19, 2026',value:520000},
-  {media:'TV',source:'ABS-CBN News',title:'DITO eyes Visayas coverage by Q3 2026',date:'May 18, 2026',value:890000},
-  {media:'Online',source:'BusinessWorld',title:'DITO partners with Huawei for network upgrade',date:'May 17, 2026',value:195000},
-  {media:'Online',source:'Rappler',title:'DITO StreamZone promo draws 2M new users',date:'May 16, 2026',value:245000},
-  {media:'TV',source:'CNN Philippines',title:'DITO CME reports Q1 profit surge',date:'May 15, 2026',value:710000},
-  {media:'Print',source:'Philippine Star',title:'DITO rated fastest network by Opensignal',date:'May 14, 2026',value:380000},
-  {media:'Online',source:'One News PH',title:'DITO launches rural connectivity program',date:'May 13, 2026',value:175000},
-  {media:'Social',source:'Facebook / DITO',title:'DITO 5G now live in 50 cities',date:'May 12, 2026',value:45000},
+  // Recommended (system-suggested) — shown first with the Recommended chip
+  {media:'Online',source:'Manila Times Online',title:'DITO expands 5G footprint in Metro Manila',date:'May 20, 2026',value:312000,score:96,recommended:true},
+  {media:'Print',source:'Philippine Daily Inquirer',title:'DITO Telecommunity posts record subscriber growth',date:'May 19, 2026',value:520000,score:93,recommended:true},
+  {media:'TV',source:'ABS-CBN News',title:'DITO eyes Visayas coverage by Q3 2026',date:'May 18, 2026',value:890000,score:90,recommended:true},
+  {media:'Online',source:'BusinessWorld',title:'DITO partners with Huawei for network upgrade',date:'May 17, 2026',value:195000,score:87,recommended:true},
+  {media:'Online',source:'Rappler',title:'DITO StreamZone promo draws 2M new users',date:'May 16, 2026',value:245000,score:83,recommended:true},
+  {media:'TV',source:'CNN Philippines',title:'DITO CME reports Q1 profit surge',date:'May 15, 2026',value:710000,score:80,recommended:true},
+  {media:'Print',source:'Philippine Star',title:'DITO rated fastest network by Opensignal',date:'May 14, 2026',value:380000,score:77,recommended:true},
+  {media:'Online',source:'One News PH',title:'DITO launches rural connectivity program',date:'May 13, 2026',value:175000,score:74,recommended:true},
+  {media:'Social',source:'Facebook / DITO',title:'DITO 5G now live in 50 cities',date:'May 12, 2026',value:45000,score:71,recommended:true},
+  // Rest of the library — no Recommended chip, still scored
+  {media:'Online',source:'GMA News Online',title:'DITO ramps up fiber expansion in Mindanao',date:'May 11, 2026',value:210000,score:68},
+  {media:'Print',source:'Manila Bulletin',title:'DITO reports narrowing losses in Q1 2026',date:'May 10, 2026',value:340000,score:66},
+  {media:'Online',source:'Tech in Asia',title:'How DITO plans to hit 40% coverage by 2027',date:'May 9, 2026',value:150000,score:64},
+  {media:'TV',source:'GMA News TV',title:'DITO subscribers cross 20 million mark',date:'May 8, 2026',value:620000,score:62},
+  {media:'Radio',source:'DZBB',title:'DITO promo update: unli data plans explained',date:'May 7, 2026',value:60000,score:59},
+  {media:'Social',source:'X / DITO',title:'DITO teases new prepaid bundle on social',date:'May 6, 2026',value:38000,score:57},
+  {media:'Online',source:'Inquirer Online',title:'Analysts weigh DITO capex plans for 2027',date:'May 5, 2026',value:180000,score:55},
+  {media:'Print',source:'BusinessMirror',title:'DITO eyes enterprise market with new B2B unit',date:'May 4, 2026',value:290000,score:52},
 ];
 let acts=[
   {id:1,title:'DITO 5G Expansion — Visayas Coverage Push',type:'Press Release',date:'2026-05-18',content:'DITO Telecommunity accelerating 5G rollout across Visayas region. Coverage expansion to reach Cebu Iloilo Bacolod by Q3 2026. Partnership with Huawei for network infrastructure upgrade.',matches:[
@@ -3335,7 +3346,30 @@ let matchSel={}; // per-activity selected match IDs: {actId: Set}
 
 function fv(v){return v>=1000000?'PHP '+(v/1000000).toFixed(1)+'M':v>=1000?'PHP '+(v/1000).toFixed(0)+'K':'PHP '+v;}
 function fmtActDate(s){if(!s)return'';const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);if(!m)return s;const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m[2]-1];return`${mo} ${+m[3]}, ${m[1]}`;}
-function timeAgo(s){if(!s)return'';const then=new Date(s);if(isNaN(then))return'';const h=Math.round((Date.now()-then)/3600000);if(h<1)return'just now';if(h<24)return h+'h ago';const d=Math.round(h/24);if(d<7)return d+'d ago';return Math.round(d/7)+'w ago';}
+function timeAgo(s){
+  if(!s)return'';const then=new Date(s);if(isNaN(then))return'';
+  const ms=Date.now()-then;if(ms<0)return'just now';
+  const mins=Math.round(ms/60000);if(mins<1)return'just now';if(mins<60)return mins+'m ago';
+  const h=Math.round(ms/3600000);if(h<24)return h+'h ago';
+  const d=Math.round(h/24);if(d<7)return d+'d ago';
+  if(d<30)return Math.round(d/7)+'w ago';
+  if(d<365)return Math.max(1,Math.round(d/30))+'mo ago';
+  return Math.max(1,Math.round(d/365))+'y ago';
+}
+// Normalize a match date (a real date OR a relative string like "14 hours ago") to an absolute Date,
+// so the coverage table can show one consistent "MMM D, YYYY / X ago" format for every row.
+function _absDate(s){
+  if(!s)return null;
+  const d=new Date(s);if(!isNaN(d))return d;
+  const m=String(s).toLowerCase().match(/(\d+)\s*(min|minute|hour|hr|day|week|month|year)/);
+  if(!m)return null;
+  const per={min:6e4,minute:6e4,hour:36e5,hr:36e5,day:864e5,week:6048e5,month:2592e6,year:31536e6}[m[2]];
+  return new Date(Date.now()-parseFloat(m[1])*per);
+}
+function _fmtDateShort(d){
+  if(!d||isNaN(d))return'';
+  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();
+}
 function tAve(m){const t=m.reduce((s,x)=>s+x.value,0);return fv(t);}
 // Adapt a tracker activity to the trending-story shape that showNewsletter()/showAIReport() expect,
 // so those existing slide-overs can be reused verbatim for an activity's coverage.
@@ -3459,6 +3493,338 @@ function renderTracker(){
   initIcons();
 }
 
+// ══════════════════════════════════════════════════════════
+// Ported tracker tabs — Timeline, Keyword Cloud, Health Score.
+// Ported from Activity_Tracker_v5 (self-contained prototype); Tabler icons → Lucide,
+// prototype color vars resolved to literals, reuses production TC/fv/ATmc.
+// ══════════════════════════════════════════════════════════
+function _trkTab(a){return trackerTabs[a.id]||'matches';}
+// Count of recommended library items not yet added to this activity (drives the "Add" badge).
+function _recToAdd(a){return (typeof DB!=='undefined')?DB.filter(d=>d.recommended&&!a.matches.some(m=>m.title===d.title)&&!(typeof _aaHidden!=='undefined'&&_aaHidden.has(d.title))).length:0;}
+// Update the Add-article button's recommended dot in place (used after a remove, which doesn't re-render the detail).
+function _refreshRecDot(){
+  const a=acts.find(x=>x.id===addArt.id);if(!a)return;
+  const btn=document.getElementById('at-add-art-btn');if(!btn)return;
+  const n=_recToAdd(a);
+  btn.classList.toggle('has-rec',n>0);
+  if(n>0)btn.setAttribute('data-tip',n+' recommended to add');else btn.removeAttribute('data-tip');
+  const dot=btn.querySelector('.rec-dot');
+  if(n>0&&!dot)btn.insertAdjacentHTML('beforeend','<span class="rec-dot"></span>');
+  else if(n===0&&dot)dot.remove();
+}
+let _trkNoAnim=false;   // suppress the header + 4 KPI cards' entrance animation on tab switches
+function setTrackerTab(id,tab){trackerTabs[id]=tab;_trkNoAnim=true;_trkRerender();_trkNoAnim=false;}
+function _trkRerender(){
+  if(typeof renderDetailOnly==='function')renderDetailOnly();
+  initIcons();
+  if((trackerTabs[trackerSel]||'matches')==='health')animateHealth();
+}
+function _trkTabBar(a){
+  const tab=_trkTab(a);
+  return`<div class="trk-tabs">
+    <div class="dtab${tab==='matches'?' act':''}" onclick="setTrackerTab(${a.id},'matches')"><i data-lucide="list-checks"></i> Matched ${_wPosts()} <span class="dtab-badge">${a.matches.length}</span></div>
+    <div class="dtab tl-tab${tab==='timeline'?' act':''}" onclick="setTrackerTab(${a.id},'timeline')"><i data-lucide="milestone"></i> Timeline</div>
+    <div class="dtab kw-tab${tab==='keywords'?' act':''}" onclick="setTrackerTab(${a.id},'keywords')"><i data-lucide="cloud"></i> Keyword Cloud</div>
+    <div class="dtab chs-tab${tab==='health'?' act':''}" onclick="setTrackerTab(${a.id},'health')"><i data-lucide="activity"></i> Health Score</div>
+  </div>`;
+}
+
+// ── TIMELINE ──
+const TL_MEDIA_ORDER=['Online','Print','TV','Radio','Social'];
+const TL_TIMES=['15 minutes later','1 hour later','3 hours later','5 hours later','8 hours later','1 day later','2 days later'];
+const TL_MEDIA={
+  Online:{icon:'globe',one:'online article',many:'online articles',node:'tl-online'},
+  Print:{icon:'newspaper',one:'print pickup',many:'print pickups',node:'tl-print'},
+  TV:{icon:'tv',one:'TV mention',many:'TV mentions',node:'tl-tv'},
+  Radio:{icon:'radio',one:'radio mention',many:'radio mentions',node:'tl-radio'},
+  Social:{icon:'facebook',one:'social post',many:'social posts',node:'tl-social'}
+};
+function fmtTLDate(d){const dt=new Date(d+'T00:00:00');return isNaN(dt)?d:dt.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});}
+function buildTimeline(a){
+  const total=a.matches.reduce((s,m)=>s+m.value,0),tc=TC[a.type]||TC['Press Release'],ev=[];
+  ev.push({node:'tl-pub',icon:tc.icon,time:'On release · '+fmtTLDate(a.date),title:a.type+' published',sub:a.title});
+  let ti=0;
+  if(a.matches.length){
+    const ch=[...new Set(a.matches.map(m=>m.media))].length;
+    ev.push({node:'tl-agg',icon:'radio-tower',time:TL_TIMES[ti++],title:a.matches.length+' media pickup'+(a.matches.length!==1?'s':'')+' detected',sub:'AI-matched coverage across '+ch+' channel'+(ch!==1?'s':'')});
+  }
+  const present=[...new Set(a.matches.map(m=>m.media))];
+  const ordered=[...TL_MEDIA_ORDER.filter(m=>present.includes(m)),...present.filter(m=>!TL_MEDIA_ORDER.includes(m))];
+  ordered.forEach(media=>{
+    const grp=a.matches.filter(m=>m.media===media);if(!grp.length)return;
+    const md=TL_MEDIA[media]||{icon:'megaphone',one:'mention',many:'mentions',node:'tl-agg'};
+    const ave=grp.reduce((s,m)=>s+m.value,0);
+    const title=media==='Social'?'Social discussion started':grp.length+' '+(grp.length===1?md.one:md.many);
+    ev.push({node:md.node,icon:md.icon,time:TL_TIMES[Math.min(ti++,TL_TIMES.length-1)],title,ave:fv(ave),arts:grp});   // fv() already prefixes "PHP"
+  });
+  ev.push({node:'tl-ms',icon:'coins',time:'Cumulative total',title:fv(total),sub:'Total AVE generated',big:true});
+  return ev;
+}
+function rTimeline(a){
+  if(!a.matches.length){
+    return`<div class="dpane tl-wrap"><div class="tk-scroll-sentinel"></div>
+      <div class="tl-empty"><i data-lucide="milestone"></i><span>No coverage yet — run a scan or add ${_wPosts()} to see how this story spreads over time.</span></div></div>`;
+  }
+  const ev=buildTimeline(a);
+  return`<div class="dpane tl-wrap"><div class="tk-scroll-sentinel"></div>
+    <div class="tl-head">
+      <div class="tl-head-main">
+        <div class="tl-head-t">Coverage timeline</div>
+        <div class="tl-head-s">How this ${a.type.toLowerCase()} spread across media — tap any stage to see the coverage.</div>
+      </div>
+      <div class="tl-head-stat"><b>${a.matches.length}</b> pickups</div>
+    </div>
+    <div class="tl-rail"><div class="tl-track"></div>${ev.map((e,i)=>renderTLEvent(a,e,i)).join('')}</div>
+  </div>`;
+}
+function renderTLEvent(a,e,i){
+  const eid=a.id+'_'+i,hasX=e.arts&&e.arts.length;
+  return`<div class="tl-event" style="animation-delay:${i*0.08}s">
+    <div class="tl-event-hd">
+      <div class="tl-node ${e.node}" style="animation-delay:${i*0.08}s"><i data-lucide="${e.icon}"></i></div>
+      <div class="tl-card${e.big?' tl-card-big':''}"${hasX?` onclick="toggleTL('${eid}')"`:''}>
+        <div class="tl-card-body">
+          <div class="tl-time">${e.time}</div>
+          <div class="tl-title${e.big?' tl-big':''}">${e.title}</div>
+          ${e.sub?`<div class="tl-sub">${e.sub}</div>`:''}
+        </div>
+        <div class="tl-card-aside">${e.ave?`<span class="tl-ave">${e.ave}</span>`:''}${hasX?`<i data-lucide="chevron-down" class="tl-chev" id="tlc-${eid}"></i>`:''}</div>
+      </div>
+    </div>
+    ${hasX?`<div class="tl-x" id="tlx-${eid}">${e.arts.map(m=>`<div class="tl-art"><span class="media-badge media-ico ${ATmc[m.media]||'media-online'}" title="${m.media}" data-media="${m.media}"><i data-lucide="${ATmi[m.media]||'file-text'}"></i></span><div class="tl-art-b"><div class="tl-art-hl">${m.title}</div><div class="tl-art-m"><span class="tl-art-src">${m.source}</span><span class="tl-art-dt">${m.date}</span><span class="tl-art-ave">${fv(m.value)} AVE</span></div></div></div>`).join('')}</div>`:''}
+  </div>`;
+}
+function toggleTL(eid){const p=document.getElementById('tlx-'+eid),c=document.getElementById('tlc-'+eid);if(!p)return;const open=p.classList.toggle('open');if(c)c.classList.toggle('open',open);}
+
+// ── HEALTH SCORE ──
+const CHS_TIER1=['manila times','philippine daily inquirer','inquirer','abs-cbn','gma','cnn philippines','rappler','philippine star','philstar','businessworld','business mirror','manila bulletin','one news','al jazeera','reuters','bloomberg'];
+const CHS_WEIGHTS={'Media Reach':0.22,'Sentiment':0.20,'Tier 1 Publishers':0.20,'Mentions Volume':0.15,'AVE per Article':0.13,'Social Discussion':0.10};
+function chsClamp(v){return Math.max(0,Math.min(100,Math.round(v)));}
+function chsBand(s){if(s>=85)return{label:'Excellent',color:'#16a34a',bg:'#dcfce7'};if(s>=70)return{label:'Strong',color:'#16a34a',bg:'#dcfce7'};if(s>=55)return{label:'Moderate',color:'#d97706',bg:'#fef3c7'};if(s>=40)return{label:'Fair',color:'#ea580c',bg:'#ffedd5'};return{label:'Needs attention',color:'#dc2626',bg:'#fee2e2'};}
+function chsFactorColor(s){return s>=70?'#16a34a':s>=50?'#d97706':'#dc2626';}
+function chsFactorBand(s){return s>=70?'Strong':s>=50?'Moderate':'Low';}
+function chsSentiment(a){const base={'Press Release':78,'Event':80,'Product':82,'Trending':68,'Crisis':52}[a.type]??72;let h=0;for(const c of (a.title||''))h=(h*31+c.charCodeAt(0))>>>0;return chsClamp(base+((h%13)-6));}
+function computeHealth(a){
+  const M=a.matches||[],n=M.length,total=M.reduce((s,m)=>s+m.value,0),avg=n?total/n:0;
+  const t1=M.filter(m=>CHS_TIER1.some(t=>(m.source||'').toLowerCase().includes(t))).length;
+  const social=M.filter(m=>m.media==='Social'||/twitter|facebook|instagram|tiktok|youtube|reddit|\bx\b/i.test(m.media||'')).length;
+  const factors=[
+    {key:'Media Reach',      icon:'radio-tower', score:chsClamp(total/2500*100), val:fv(total)+' AVE'},
+    {key:'Sentiment',        icon:'smile',       score:chsSentiment(a),          val:chsSentiment(a)+'% favourable'},
+    {key:'Tier 1 Publishers',icon:'award',       score:n?chsClamp(t1/n*100):0,   val:t1+' of '+n+' outlet'+(n!==1?'s':'')},
+    {key:'Mentions Volume',  icon:'newspaper',   score:chsClamp(n/8*100),        val:n+' article'+(n!==1?'s':'')},
+    {key:'AVE per Article',  icon:'trending-up', score:chsClamp(avg/600*100),    val:fv(Math.round(avg))+'/article'},
+    {key:'Social Discussion',icon:'facebook',    score:chsClamp(social*50),      val:social+' post'+(social!==1?'s':'')},
+  ];
+  const overall=chsClamp(factors.reduce((s,f)=>s+f.score*(CHS_WEIGHTS[f.key]||0),0));
+  return{overall,factors};
+}
+function rHealth(a){
+  if(!(a.matches&&a.matches.length)){
+    return`<div class="dpane chs-wrap"><div class="tk-scroll-sentinel"></div><div class="chs-card"><div class="chs-eyebrow"><i data-lucide="activity"></i> Executive KPI</div>
+      <div class="chs-title">Coverage Health Score</div>
+      <div style="text-align:center;padding:22px 8px 8px;color:#9ca3af;font-size:13px">Run a scan or add ${_wPosts()} to generate a health score for this activity.</div></div></div>`;
+  }
+  const {overall,factors}=computeHealth(a),band=chsBand(overall),C=2*Math.PI*54,off=C*(1-overall/100);
+  return`<div class="dpane chs-wrap"><div class="tk-scroll-sentinel"></div>
+    <div class="chs-card">
+      <div class="chs-head">
+        <div class="chs-eyebrow"><i data-lucide="activity"></i> Executive KPI</div>
+        <div class="chs-title-row"><div class="chs-title">Coverage Health Score</div>
+          <div class="chs-info" tabindex="0" role="button" aria-label="How this score is calculated"><i data-lucide="info"></i>
+            <div class="chs-tip"><b>How this is calculated</b><br>A weighted 0–100 blend of six signals: Media Reach (22%), Sentiment (20%), Tier 1 Publishers (20%), Mentions Volume (15%), AVE per Article (13%) and Social Discussion (10%) — computed live from this activity's matched coverage.</div>
+          </div>
+        </div>
+      </div>
+      <div class="chs-body">
+        <div class="chs-gauge-wrap">
+          <svg class="chs-gauge" viewBox="0 0 128 128"><circle class="chs-bg" cx="64" cy="64" r="54"/><circle id="chs-ring" class="chs-fg" cx="64" cy="64" r="54" data-offset="${off.toFixed(2)}" style="stroke:${band.color};stroke-dasharray:${C.toFixed(2)};stroke-dashoffset:${C.toFixed(2)}"/></svg>
+          <div class="chs-center"><div class="chs-num-row"><span id="chs-num" data-target="${overall}" style="color:${band.color}">0</span><span class="chs-den">/100</span></div><div class="chs-impact" style="color:${band.color};background:${band.bg}">${band.label}</div></div>
+        </div>
+        <div class="chs-break">
+          <div class="chs-break-lbl">Breakdown</div>
+          ${factors.map((f,i)=>{const c=chsFactorColor(f.score);const wt=Math.round((CHS_WEIGHTS[f.key]||0)*100);return`<div class="chs-row" style="animation-delay:${i*0.06}s">
+            <div class="chs-row-top"><span class="chs-row-name"><i data-lucide="${f.icon}" style="color:${c}"></i> ${f.key} <span class="chs-wt">${wt}%</span></span><span class="chs-status" style="color:${c}">${chsFactorBand(f.score)}</span></div>
+            <div class="chs-row-bot"><div class="chs-bar"><div class="chs-bar-fill" style="width:${f.score}%;background:${c}"></div></div><span class="chs-val">${f.val}</span></div>
+          </div>`;}).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function animateHealth(){
+  const ring=document.getElementById('chs-ring');
+  if(ring){const off=parseFloat(ring.dataset.offset);requestAnimationFrame(()=>{ring.style.strokeDashoffset=off;});}
+  const num=document.getElementById('chs-num');
+  if(num){const target=parseInt(num.dataset.target)||0,start=performance.now(),dur=1050;(function step(t){const p=Math.min(1,(t-start)/dur),e=1-Math.pow(1-p,3);num.textContent=Math.round(e*target);if(p<1)requestAnimationFrame(step);})(start);}
+}
+
+// ── KEYWORD CLOUD ──
+let kwFilter={},kwSel={},kwCatDraft={};
+const KW_CATS={
+  org:{label:'Organizations',emo:'🏢',lu:'building-2',a:'#6b5cb8',b:'#4a3c8c'},
+  people:{label:'People',emo:'👤',lu:'users',a:'#d946ef',b:'#a21caf'},
+  location:{label:'Locations',emo:'📍',lu:'map-pin',a:'#f97316',b:'#c2410c'},
+  agency:{label:'Government Agencies',emo:'🏛',lu:'landmark',a:'#0ea5e9',b:'#0369a1'},
+  infra:{label:'Infrastructure',emo:'🏗',lu:'hard-hat',a:'#14b8a6',b:'#0f766e'},
+  economy:{label:'Economy',emo:'💰',lu:'circle-dollar-sign',a:'#16a34a',b:'#15803d'},
+  brand:{label:'Brands',emo:'🏷',lu:'tag',a:'#ec4899',b:'#be185d'}
+};
+const KW_TERMS=[
+  // Telecom / DITO terms (production data is DITO-focused)
+  ['DITO','brand',['dito']],['DITO Telecommunity','org',['dito telecommunity']],['5G','infra',['5g']],
+  ['Globe','brand',['globe']],['Smart','brand',['smart ']],['PLDT','brand',['pldt']],['Jimenez','people',['jimenez']],
+  ['Telco','economy',['telco','telecom','telecommunications']],['Subscribers','economy',['subscriber','subscribers']],
+  ['Network','infra',['network','coverage']],['Fiber','infra',['fiber','fibre']],['WiFi','infra',['wifi','wi-fi']],
+  ['Opensignal','org',['opensignal']],['StreamZone','brand',['streamzone']],['Huawei','brand',['huawei']],
+  // General entities
+  ['Government','org',['government','administration','admin','cabinet']],['President Marcos','people',['marcos','bbm','president marcos','bongbong']],
+  ['Manila','location',['manila']],['Cebu','location',['cebu']],['Davao','location',['davao']],['Mindanao','location',['mindanao']],
+  ['Visayas','location',['visayas','iloilo','bacolod']],['Luzon','location',['luzon']],['Philippines','location',['philippines','philippine']],
+  ['Infrastructure','infra',['infrastructure','infra']],['Projects','infra',['project','projects']],['Construction','infra',['construction','completion']],
+  ['Budget','economy',['budget','funding','spending']],['Investment','economy',['investment','invest']],['Growth','economy',['growth']],
+  ['Policy','org',['policy','statement','directive']],['Ayala','brand',['ayala']]
+];
+const KW_TIMES=[['all','All time'],['today','Today'],['24h','Last 24 hrs'],['7d','Last 7 days'],['30d','Last 30 days'],['custom','Custom']];
+function kwGetFilter(id){if(!kwFilter[id])kwFilter[id]={cats:[],time:'all'};return kwFilter[id];}
+function moList(arr){arr=arr.filter(Boolean);if(arr.length<=1)return arr[0]||'';if(arr.length===2)return arr[0]+' and '+arr[1];return arr.slice(0,-1).join(', ')+' and '+arr[arr.length-1];}
+function kwDays(dateStr){const s=(dateStr||'').toLowerCase();if(s.includes('today')||s.includes('min ago')||s.includes('hr ago'))return 0;const d=new Date(dateStr);if(!isNaN(d)){const diff=(Date.now()-d.getTime())/86400000;return diff<0?0:diff;}return 3;}
+function kwTimeMatch(m,t){if(t==='all')return true;const d=kwDays(m.date);if(t==='today'||t==='24h')return d<1;if(t==='7d')return d<=7;if(t==='30d')return d<=30;if(t==='custom'){const f=kwFilter._from,to=kwFilter._to;if(!f&&!to)return true;const md=new Date(m.date);if(isNaN(md))return true;if(f&&md<new Date(f))return false;if(to&&md>new Date(to))return false;return true;}return true;}
+function sugSentiment(m){let h=0;for(const c of (m.title||''))h=(h*31+c.charCodeAt(0))>>>0;const r=h%10;return r<2?{t:'Negative'}:r<5?{t:'Neutral'}:{t:'Positive'};}
+function kwSentOf(list){let pos=0,neg=0;list.forEach(m=>{const s=sugSentiment(m).t;if(s==='Positive')pos++;else if(s==='Negative')neg++;});if(pos>neg)return{t:'Positive',c:'#4ade80'};if(neg>pos)return{t:'Negative',c:'#f87171'};return{t:'Neutral',c:'#93c5fd'};}
+function computeKeywords(a){
+  const f=kwGetFilter(a.id),pool=a.matches.filter(m=>kwTimeMatch(m,f.time)),out=[];
+  KW_TERMS.forEach(([label,cat,aliases])=>{
+    const arts=pool.filter(m=>{const hay=((m.title||'')+' '+(m.source||'')).toLowerCase();return aliases.some(al=>hay.includes(al));});
+    if(!arts.length)return;
+    let count=0;arts.forEach(m=>{const hay=((m.title||'')+' '+(m.source||'')).toLowerCase();aliases.forEach(al=>{count+=hay.split(al).length-1;});});
+    out.push({label,cat,count,arts,pct:pool.length?Math.round(arts.length/pool.length*100):0,sent:kwSentOf(arts)});
+  });
+  out.sort((x,y)=>y.count-x.count||y.arts.length-x.arts.length);
+  return {all:out,poolSize:pool.length};
+}
+function kwTier(count,max,min){if(max===min)return 2;const r=(count-min)/(max-min);return r>=0.72?1:r>=0.38?2:r>=0.12?3:4;}
+function rKeywords(a){
+  if(!(a.matches&&a.matches.length)){
+    return`<div class="dpane kw-wrap"><div class="tk-scroll-sentinel"></div><div class="kw-head">
+      <div><div class="kw-title">Keyword Cloud</div><div class="kw-sub">Most frequently mentioned keywords across all linked ${_wPosts()}</div></div></div>
+      <div class="kw-empty"><div class="kw-empty-ic"><i data-lucide="cloud-off"></i></div><div class="kw-empty-t">No keywords available.</div><div class="kw-empty-s">Add ${_wPosts()} to this activity to generate a keyword cloud.</div></div></div>`;
+  }
+  const f=kwGetFilter(a.id),{all,poolSize}=computeKeywords(a);
+  const selCats=(f.cats&&f.cats.length)?new Set(f.cats):null;
+  const shown=selCats?all.filter(k=>selCats.has(k.cat)):all,sel=kwSel[a.id];
+  const cats=Object.keys(KW_CATS).filter(c=>all.some(k=>k.cat===c));
+  const max=shown.length?shown[0].count:1,min=shown.length?shown[shown.length-1].count:1;
+  const top=all.slice(0,10),topMax=top.length?top[0].count:1;
+  return`<div class="dpane kw-wrap"><div class="tk-scroll-sentinel"></div>
+    <div class="kw-head">
+      <div style="flex:1"><div class="kw-title">Keyword Cloud</div><div class="kw-sub">Most frequently mentioned keywords across all linked ${_wPosts()}</div></div></div>
+    <div class="kw-tools">
+      <div class="kw-frow">
+        <span class="kw-flabel">Category</span>
+        <div class="kw-dd">
+          <button class="kw-dd-btn${kwCatSel(a).length?' on':''}" onclick="kwCatOpen(${a.id},event)"><i data-lucide="layers" class="kw-dd-ic"></i><span>${kwCatLabel(a)}</span>${kwCatSel(a).length?`<span class="kw-dd-ct">${kwCatSel(a).length}</span>`:''}<i data-lucide="chevron-down" class="kw-dd-cv"></i></button>
+          <div class="ms-menu kw-menu" id="kw-cat-menu-${a.id}" style="display:none">${kwCatMenuInner(a)}</div>
+        </div>
+        <span class="kw-flabel" style="margin-left:10px">Period</span>
+        <div class="kw-dd">
+          <button class="kw-dd-btn${f.time!=='all'?' on':''}" onclick="kwTimeOpen(${a.id},event)"><i data-lucide="calendar" class="kw-dd-ic"></i><span>${KW_TIMES.find(t=>t[0]===f.time)?.[1]||'All time'}</span><i data-lucide="chevron-down" class="kw-dd-cv"></i></button>
+          <div class="ms-menu kw-menu" id="kw-time-menu-${a.id}" style="display:none">
+            <div class="ms-title">Filter by period</div><div class="ms-divider"></div>
+            ${KW_TIMES.map(([v,l])=>`<div class="kw-opt${f.time===v?' on':''}" onclick="kwPickTime(${a.id},'${v}')"><span>${l}</span>${f.time===v?'<i data-lucide="check" class="kw-opt-ck"></i>':''}</div>`).join('')}
+          </div>
+        </div>
+      </div>
+      ${f.time==='custom'?`<div class="kw-frow kw-custom"><span class="kw-flabel">Range</span><input type="date" class="kw-date" value="${kwFilter._from||''}" onchange="kwRange(${a.id},'from',this.value)"><span style="font-size:11px;color:#9ca3af">to</span><input type="date" class="kw-date" value="${kwFilter._to||''}" onchange="kwRange(${a.id},'to',this.value)"></div>`:''}
+    </div>
+    <div class="kw-grid">
+      <div class="kw-cloud" id="kw-cloud">
+        ${shown.length?shown.map((k,i)=>{const c=KW_CATS[k.cat],tier=kwTier(k.count,max,min),isSel=sel===k.label,dim=sel&&!isSel;
+          return`<span class="kw-word t${tier}${isSel?' sel':''}${dim?' dim':''}" style="--kwA:${c.a};--kwB:${c.b};animation-delay:${i*0.03}s" onmouseenter="kwTip(event,${a.id},'${k.label.replace(/'/g,"\\'")}')" onmousemove="kwTipMove(event)" onmouseleave="kwTipHide()" onclick="kwPick(${a.id},'${k.label.replace(/'/g,"\\'")}')"><span class="kw-dot"></span><span class="kw-wlabel">${k.label}</span><span class="kw-wc">${k.count}</span></span>`;}).join(''):`<div class="kw-empty-s" style="padding:30px">No keywords in this filter.</div>`}
+      </div>
+      <div class="kw-side"><div class="kw-panel"><div class="kw-panel-h"><i data-lucide="list-ordered"></i> Top ${top.length} Keywords</div>
+        ${top.map((k,i)=>{const c=KW_CATS[k.cat];return`<div class="kw-rank${sel===k.label?' sel':''}" onclick="kwPick(${a.id},'${k.label.replace(/'/g,"\\'")}')" title="${k.arts.length} article${k.arts.length!==1?'s':''}">
+          <span class="kw-rn">${i+1}</span><span class="kw-rname">${k.label}</span><span class="kw-rbarw"><span class="kw-rbar" style="width:${Math.round(k.count/topMax*100)}%;background:linear-gradient(90deg,${c.a},${c.b})"></span></span><span class="kw-rc">${k.count}</span>
+        </div>`;}).join('')}
+      </div></div>
+    </div>
+    <div class="kw-ai"><div class="kw-ai-h"><i data-lucide="sparkles"></i> AI Keyword Insights</div><div class="kw-ai-txt" id="kw-ai-${a.id}">${kwInsight(a,all,poolSize)}</div></div>
+  </div>`;
+}
+function kwInsight(a,all,poolSize){
+  if(!all.length)return`No recognisable entities were detected across the linked coverage yet.`;
+  const themes=[...new Set(all.slice(0,6).filter(k=>k.cat==='infra'||k.cat==='economy').map(k=>k.label.toLowerCase()))];
+  const ents=all.filter(k=>k.cat==='people'||k.cat==='agency'||k.cat==='org').slice(0,2).map(k=>k.label);
+  const topCatKey=Object.keys(KW_CATS).map(c=>({c,n:all.filter(k=>k.cat===c).reduce((s,k)=>s+k.count,0)})).sort((x,y)=>y.n-x.n)[0];
+  const sent=kwSentOf(a.matches).t.toLowerCase();
+  return`Media coverage is primarily focused on ${themes.length?moList(themes.slice(0,3)):KW_CATS[topCatKey.c].label.toLowerCase()}${ents.length?`, with <b>${moList(ents)}</b> the most frequently mentioned entit${ents.length>1?'ies':'y'}`:''} across ${poolSize} linked ${poolSize!==1?_wPosts():_wPost()}. The dominant category is <b>${KW_CATS[topCatKey.c].label}</b>, and overall tone reads ${sent}.`;
+}
+// ── Keyword drill-down: right-side push drawer (docks like the Add-article panel) ──
+let kwDrawerId=null,kwSidebarWasCollapsed=false;
+function kwDrawerEl(){
+  let dr=document.getElementById('kw-drawer');
+  if(!dr){dr=document.createElement('aside');dr.id='kw-drawer';dr.className='kw-drawer';document.body.appendChild(dr);}
+  return dr;
+}
+// Map a tracker match {media,source,title,date,value,score} → the shared ti-arttbl row shape.
+// rx (optional): highlights keyword matches in the headline via <mark>.
+function kwMapArt(m,rx){
+  const MED={print:'broadsheet',online:'online',tv:'tv',radio:'radio',social:'online'};
+  const title=m.title||'';
+  return{type:MED[(m.media||'').toLowerCase()]||'online',brand:sugSentiment(m).t.toLowerCase(),
+    title:rx?title.replace(rx,'<mark>$1</mark>'):title,sub:m.source||'',date:m.date||'',
+    sv:(Math.min(6,(m.value||0)/150000)).toFixed(2),ave:fv(m.value||0)};
+}
+function kwOpenDrawer(a,k){
+  const dr=kwDrawerEl();
+  // Auto-collapse the left nav on a fresh open (mirrors openAddArt); remember prior state to restore on close.
+  if(kwDrawerId==null){const sb=document.getElementById('sidebar');kwSidebarWasCollapsed=!!(sb&&sb.classList.contains('collapsed'));if(sb)sb.classList.add('collapsed');}
+  kwDrawerId=a.id;
+  const rx=new RegExp('('+k.label.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig');
+  const c=KW_CATS[k.cat],arts=k.arts.map(m=>kwMapArt(m,rx));
+  dr.innerHTML=`<div class="kw-drawer-hd">
+      <span class="ti-head-badge"><i data-lucide="${c.lu}"></i></span>
+      <div class="kw-drawer-titles"><div class="ti-head-title">${k.label}</div><div class="ti-head-sub">${k.arts.length} related article${k.arts.length!==1?'s':''} · ${k.pct}% of coverage</div></div>
+      <button class="btn-export ti-head-export" onclick="showTrackerToast('Articles exported')">Export</button>
+      <button class="kw-drawer-x" onclick="kwCloseDrawer()" aria-label="Close"><i data-lucide="x"></i></button></div>
+    <div class="kw-drawer-body">${(window.renderArtTable||renderArtTable)(arts,{mode:'open'})}</div>`;
+  dr.style.display='flex';
+  requestAnimationFrame(()=>{dr.classList.add('open');document.body.classList.add('kw-drawer-open');});
+  initIcons();
+}
+function _kwDrawerHide(){const dr=document.getElementById('kw-drawer');if(dr)dr.classList.remove('open');document.body.classList.remove('kw-drawer-open');const sb=document.getElementById('sidebar');if(sb&&!kwSidebarWasCollapsed)sb.classList.remove('collapsed');setTimeout(()=>{if(dr)dr.style.display='none';},300);}
+function kwCloseDrawer(){const id=kwDrawerId;kwDrawerId=null;_kwDrawerHide();if(id!=null&&kwSel[id]){kwSel[id]=null;_trkRerender();}}
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&kwDrawerId!=null)kwCloseDrawer();});
+// ── Category filter (multi-select dropdown) ──
+function kwCatList(a){const{all}=computeKeywords(a);return Object.keys(KW_CATS).filter(c=>all.some(k=>k.cat===c));}
+function kwCatSel(a){const f=kwGetFilter(a.id),cats=kwCatList(a);return(f.cats&&f.cats.length&&f.cats.length<cats.length)?f.cats:[];}
+function kwCatLabel(a){const arr=kwCatSel(a);if(!arr.length)return'All keywords';return arr.length===1?KW_CATS[arr[0]].label:`${KW_CATS[arr[0]].label}, +${arr.length-1}`;}
+function kwCatMenuInner(a){const cats=kwCatList(a),d=kwCatDraft[a.id]||new Set(cats),allOn=d.size>=cats.length;
+  return`<div class="ms-title">Filter by category</div><div class="ms-divider"></div>
+    <label class="ms-opt"><input type="checkbox" ${allOn?'checked':''} onchange="kwCatAll(${a.id},this.checked)"><span class="kw-optlbl"><i data-lucide="layers" class="kw-cat-ic"></i>All keywords</span></label>
+    ${cats.map(c=>`<label class="ms-opt"><input type="checkbox" ${d.has(c)?'checked':''} onchange="kwCatOne(${a.id},'${c}',this.checked)"><span class="kw-optlbl"><i data-lucide="${KW_CATS[c].lu}" class="kw-cat-ic"></i>${KW_CATS[c].label}</span></label>`).join('')}
+    <button class="ms-apply" onclick="kwCatApply(${a.id})">Apply</button>`;}
+function kwCloseMenus(){document.querySelectorAll('.kw-menu').forEach(m=>{m.style.display='none';});document.querySelectorAll('.kw-dd.open').forEach(d=>d.classList.remove('open'));}
+function kwCatOpen(id,e){e.stopPropagation();const menu=document.getElementById('kw-cat-menu-'+id);if(!menu)return;const open=menu.style.display!=='none';kwCloseMenus();if(open)return;const a=acts.find(x=>x.id===id);if(!a)return;const cats=kwCatList(a),f=kwGetFilter(id);kwCatDraft[id]=(f.cats&&f.cats.length&&f.cats.length<cats.length)?new Set(f.cats):new Set(cats);menu.innerHTML=kwCatMenuInner(a);menu.style.display='block';menu.closest('.kw-dd')?.classList.add('open');initIcons();}
+function kwCatRerender(id){const a=acts.find(x=>x.id===id);if(!a)return;const m=document.getElementById('kw-cat-menu-'+id);if(m){m.innerHTML=kwCatMenuInner(a);initIcons();}}
+function kwCatAll(id,on){const a=acts.find(x=>x.id===id);kwCatDraft[id]=on?new Set(kwCatList(a)):new Set();kwCatRerender(id);}
+function kwCatOne(id,c,on){const d=kwCatDraft[id]||new Set();if(on)d.add(c);else d.delete(c);kwCatDraft[id]=d;kwCatRerender(id);}
+function kwCatApply(id){const a=acts.find(x=>x.id===id);if(!a)return;const cats=kwCatList(a),d=kwCatDraft[id]||new Set();kwGetFilter(id).cats=(d.size===0||d.size>=cats.length)?[]:cats.filter(c=>d.has(c));kwCloseMenus();_trkRerender();}
+// ── Period filter (single-select dropdown) ──
+function kwTimeOpen(id,e){e.stopPropagation();const menu=document.getElementById('kw-time-menu-'+id);if(!menu)return;const open=menu.style.display!=='none';kwCloseMenus();if(open)return;menu.style.display='block';menu.closest('.kw-dd')?.classList.add('open');}
+function kwPickTime(id,t){kwGetFilter(id).time=t;kwCloseMenus();_trkRerender();}
+function kwRange(id,which,v){kwFilter['_'+which]=v;_trkRerender();}
+document.addEventListener('click',function(e){if(e.target.closest('.kw-dd'))return;if(document.querySelector('.kw-menu[style*="block"]'))kwCloseMenus();});
+function kwPick(id,label){const a=acts.find(x=>x.id===id);if(!a)return;
+  if(kwSel[id]===label){kwSel[id]=null;kwDrawerId=null;_trkRerender();_kwDrawerHide();return;}
+  kwSel[id]=label;_trkRerender();const k=computeKeywords(a).all.find(x=>x.label===label);if(k)kwOpenDrawer(a,k);}
+function kwTipEl(){let t=document.getElementById('kw-tip');if(!t){t=document.createElement('div');t.id='kw-tip';t.className='kw-tip';document.body.appendChild(t);}return t;}
+function kwTip(e,id,label){const a=acts.find(x=>x.id===id);if(!a)return;const k=computeKeywords(a).all.find(x=>x.label===label);if(!k)return;const c=KW_CATS[k.cat],t=kwTipEl();
+  t.innerHTML=`<div class="kw-tip-t"><span class="kw-tip-dot" style="background:linear-gradient(135deg,${c.a},${c.b})"></span>${k.label}</div><div class="kw-tip-r">Mentioned in <b>${k.arts.length} article${k.arts.length!==1?'s':''}</b></div><div class="kw-tip-r"><b>${k.pct}%</b> of all coverage</div><div class="kw-tip-r" style="color:${k.sent.c}">${k.sent.t} sentiment</div><div class="kw-tip-s">Click to view related articles</div>`;
+  t.classList.add('show');kwTipMove(e);}
+function kwTipMove(e){const t=document.getElementById('kw-tip');if(!t)return;const pad=14;let x=e.clientX+pad,y=e.clientY+pad;const r=t.getBoundingClientRect();if(x+r.width>window.innerWidth-8)x=e.clientX-r.width-pad;if(y+r.height>window.innerHeight-8)y=e.clientY-r.height-pad;t.style.left=x+'px';t.style.top=y+'px';}
+function kwTipHide(){const t=document.getElementById('kw-tip');if(t)t.classList.remove('show');}
+
 function renderTrackerDetail(){
   const a=acts.find(x=>x.id===trackerSel);if(!a)return'';
   return`<div class="detail-wrap" id="dw">${renderDetailInner(a)}</div>`;
@@ -3541,12 +3907,12 @@ function renderDetailInner(a){
     <!-- Coverage snapshot: hidden before scan -->
     ${!freshTrack[a.id]?`<div class="dcoverage">
       <div class="brief-stats at-kpi-strip" id="at-kpi-strip-${a.id}">
-        <div class="ss" data-kpi-tip="0" data-kpi-channels="${encodeURIComponent(JSON.stringify(channels.map(ch=>{const items=a.matches.filter(m=>m.media===ch),ave=items.reduce((s,m)=>s+m.value,0);return{ch,ave,count:items.length,cls:ATmc[ch]||'media-online'};})))}">
+        ${window.WS==='shared'?'':`<div class="ss" data-kpi-tip="0" data-kpi-channels="${encodeURIComponent(JSON.stringify(channels.map(ch=>{const items=a.matches.filter(m=>m.media===ch),ave=items.reduce((s,m)=>s+m.value,0);return{ch,ave,count:items.length,cls:ATmc[ch]||'media-online'};})))}">
           <span class="ss-scan-ring"></span>
           <div class="ss-ico ss-ico-2"><i data-lucide="circle-dollar-sign"></i></div>
           <div class="ss-val hero grn">${fv(total)}</div>
           <div class="ss-lbl">total AVE</div>
-        </div>
+        </div>`}
         <div class="ss" data-kpi-tip="1">
           <span class="ss-scan-ring"></span>
           <div class="ss-ico ss-ico-1"><i data-lucide="sparkles"></i></div>
@@ -3568,6 +3934,9 @@ function renderDetailInner(a){
       </div>
     </div>`:''}
 
+    <!-- Detail tabs: Coverage + Timeline / Keyword Cloud / Health Score -->
+    ${!freshTrack[a.id]?_trkTabBar(a):''}
+    ${['timeline','keywords','health'].includes(_trkTab(a))?(_trkTab(a)==='timeline'?rTimeline(a):_trkTab(a)==='keywords'?rKeywords(a):rHealth(a)):`
     <!-- Unified scrollable pane -->
     <div class="dpane">
       <div class="tk-scroll-sentinel"></div>
@@ -3579,7 +3948,7 @@ function renderDetailInner(a){
           <button class="at-btn-outline" onclick="openAISummary(${a.id})"><i data-lucide="sparkles" style="width:12px;height:12px"></i> AI summary</button>
           <button class="at-btn-outline" onclick="actNewsletter(${a.id})"><i data-lucide="mail" style="width:12px;height:12px"></i> Send as Newsletter</button>
           <button class="at-btn-outline" onclick="actAIReport(${a.id})"><i data-lucide="file-text" style="width:12px;height:12px"></i> Generate AI Report</button>
-          <button class="at-btn-outline" onclick="openAddArt(${a.id})"><i data-lucide="plus" style="width:12px;height:12px"></i> Add ${_wPost()}</button>
+          <button id="at-add-art-btn" class="at-btn-outline${_recToAdd(a)>0?' has-rec':''}"${_recToAdd(a)>0?` data-tip="${_recToAdd(a)} recommended to add"`:''} onclick="openAddArt(${a.id})"><i data-lucide="plus" style="width:12px;height:12px"></i> Add ${_wPost()}${_recToAdd(a)>0?`<span class="rec-dot"></span>`:''}</button>
         </div>
       </div>
       <div class="art-filter-bar">
@@ -3602,7 +3971,7 @@ function renderDetailInner(a){
         ?`<div id="al-trk-${a.id}" class="art-list-region">${renderArticleList(window.WS_DATA.socialMentions,'trk-'+a.id)}</div>`
         :`<div id="art-list-region" class="art-list-region">${buildArtList(a)}</div>`}
 
-    </div>
+    </div>`}
   `;
 }
 
@@ -3618,9 +3987,10 @@ function buildArtList(a){
     const mic=ATicn[m.media]||{cls:'type-online',icon:'newspaper'},pct=m.score?Math.round(m.score*100):null;
     const scoreCls=pct>=85?'sc-hi':pct>=70?'sc-mid':'sc-lo';
     const checked=mSel.has(m.id);
-    // On add, animate only the new row; otherwise the usual staggered entrance.
-    const aStyle=_addAnimNewId?(m.id===_addAnimNewId?'animation-delay:0s':'animation:none'):`animation-delay:${i*0.05}s`;
-    return`<tr id="mr-${m.id}" class="match-tbl-row${checked?' match-row-checked':''}" style="${aStyle}">
+    // On add, slide the new row in from the right (it comes from the Add-coverage drawer); suppress the rest.
+    const isNew=_addAnimNewId&&m.id===_addAnimNewId;
+    const aStyle=_addAnimNewId?(isNew?'':'animation:none'):`animation-delay:${i*0.05}s`;
+    return`<tr id="mr-${m.id}" class="match-tbl-row${checked?' match-row-checked':''}${isNew?' at-new-row':''}" style="${aStyle}">
       <td style="width:32px;text-align:center"><span class="tcb${checked?' tcb-on':''}" onclick="toggleMatchSel(${a.id},'${m.id}')">${checked?'<i data-lucide="check" style="width:9px;height:9px;color:#fff"></i>':''}</span></td>
       <td style="cursor:pointer" onclick="previewMatch(${a.id},'${m.id}')" title="Preview article">
         <div class="hl-cell">
@@ -3631,18 +4001,20 @@ function buildArtList(a){
           </div>
         </div>
       </td>
-      <td style="width:130px"><div class="pub-name">${m.source}</div><div class="pub-cat">${m.media}</div></td>
-      <td style="width:100px"><span class="match-ave">${fv(m.value)}</span></td>
-      <td style="width:120px">${pct?`<span class="art-score-val ${scoreCls}">${pct}% match</span><div class="match-score-track" style="margin-top:4px"><div class="match-score-fill" style="width:${pct}%;background:${pct>=85?'#16a34a':pct>=70?'#d97706':'#9ca3af'}"></div></div>`:'—'}</td>
-      <td style="width:90px;white-space:nowrap"><div class="date-main">${m.date}</div><div class="date-ago">${timeAgo(m.date)}</div></td>
+      <td style="width:180px"><div class="pub-name">${m.source}</div><div class="pub-cat">${m.media}</div></td>
+      <td style="width:115px"><span class="match-ave">${fv(m.value)}</span></td>
+      <td style="width:155px">${pct?`<span class="art-score-val ${scoreCls}">${pct}% match</span><div class="match-score-track" style="margin-top:4px"><div class="match-score-fill" style="width:${pct}%;background:${pct>=85?'#16a34a':pct>=70?'#d97706':'#9ca3af'}"></div></div>`:'—'}</td>
+      <td style="width:120px;white-space:nowrap"><div class="date-main">${_absDate(m.date)?_fmtDateShort(_absDate(m.date)):(m.date||'')}</div><div class="date-ago">${_absDate(m.date)?timeAgo(_absDate(m.date)):''}</div></td>
       <td style="width:36px;text-align:center"><div class="remove-btn" onclick="rmMatch(${a.id},'${m.id}')" title="Remove"><i data-lucide="trash-2" style="width:12px;height:12px"></i></div></td>
     </tr>`;
   };
   const af=artFilter[a.id]||[],as=artSort[a.id]||'similarity';
   let list=a.matches.filter(m=>af.length===0||af.includes(m.media));
-  if(as==='ave') list=[...list].sort((a,b)=>b.value-a.value);
-  else if(as==='date') list=[...list].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  else list=[...list].sort((a,b)=>(b.score||0)-(a.score||0));
+  const byMode=as==='ave'?(x,y)=>y.value-x.value:as==='date'?(x,y)=>new Date(y.date)-new Date(x.date):(x,y)=>(y.score||0)-(x.score||0);
+  // Manually-added coverage always floats to the top (matches[] keeps newest-added first), then the rest by the chosen sort.
+  list=[...list].sort((x,y)=>(!!x.manual!==!!y.manual)?(x.manual?-1:1):byMode(x,y));
+  // Pin the just-added row to the very top for its slide-in (in case another manual outranks it under the mode sort).
+  if(_addAnimNewId){const ni=list.findIndex(m=>m.id===_addAnimNewId);if(ni>0)list.unshift(list.splice(ni,1)[0]);}
   if(list.length===0&&a.matches.length===0&&freshTrack[a.id]){
     const kws=extractKeywords(a.title+' '+a.content);
     const off=scanKwOff[a.id]||new Set();
@@ -3687,10 +4059,10 @@ function buildArtList(a){
   return`${delBar}<table class="tbl match-tbl"><thead><tr>
     <th style="width:32px;text-align:center"><span class="tcb${allChecked?' tcb-on':''}" style="${someChecked?'background:var(--ink-2);border-color:var(--ink-2)':''}" onclick="toggleMatchSelAll(${a.id})">${allChecked?'<i data-lucide="check" style="width:9px;height:9px;color:#fff"></i>':someChecked?'<i data-lucide="minus" style="width:9px;height:9px;color:#fff"></i>':''}</span></th>
     <th>Headline</th>
-    <th style="width:130px">Outlet</th>
-    <th style="width:100px">AVE</th>
-    <th style="width:120px">Match</th>
-    <th style="width:90px;white-space:nowrap">Date</th>
+    <th style="width:180px">Outlet</th>
+    <th style="width:115px">AVE</th>
+    <th style="width:155px">Match</th>
+    <th style="width:120px;white-space:nowrap">Date</th>
     <th style="width:36px"></th>
   </tr></thead><tbody>${pageList.map((m,i)=>renderMatchRow(m,i)).join('')}</tbody></table>${pager}`;
 }
@@ -3949,7 +4321,7 @@ function renderDetailOnly(){
       // Frame already mounted — swap only the inner details (no full-card flash).
       // New child nodes auto-replay their CSS entrance animation, except on add
       // where we suppress the header/KPI entrance (only the new row animates).
-      wrap.classList.toggle('detail-no-anim',!!_addAnimNewId);
+      wrap.classList.toggle('detail-no-anim',!!_addAnimNewId||_trkNoAnim);
       wrap.innerHTML=renderDetailInner(a);
     } else {
       detailEl.innerHTML=renderTrackerDetail();
@@ -3958,6 +4330,7 @@ function renderDetailOnly(){
     detailEl.innerHTML=`<div class="at-empty-state"><i data-lucide="mouse-pointer-2"></i><p>Select an activity to view matched ${_wPosts()}</p></div>`;
   }
   initIcons();
+  if(trackerSel&&(trackerTabs[trackerSel]||'matches')==='health')animateHealth();   // run gauge/count-up when the Health tab is showing
   wireKpiTooltips();
   _wireTrackerShrinkObserver(detailEl);
   // update selected state on list cards
@@ -4141,11 +4514,18 @@ function addMan(aid,title,value,media,source,date){
 }
 
 // ── Add coverage slide-over (Search existing DB + Add manually) ──
-let addArt={id:null,media:'',q:'',_results:[]};
+let addArt={id:null,media:'',q:'',publisher:'',_results:[]};
+let _aaSkipAnim=false;   // suppress the row entrance animation on the post-add re-render (avoids a re-flash)
+// Added/removed items are hidden from the CURRENT drawer view only — in-memory, never persisted.
+// Cleared each time the drawer opens, so re-opening (or reloading) restores the full library.
+let _aaHidden=new Set();
+try{sessionStorage.removeItem('aa-dismissed');}catch(_){}   // drop the old persisted state
 
 let _aaSidebarWasCollapsed=false;
 function openAddArt(id){
-  addArt.id=id; addArt.media=''; addArt.q='';
+  addArt.id=id; addArt.media=''; addArt.q=''; addArt.publisher='';
+  _aaHidden.clear();   // fresh view — full library restored each time the drawer opens
+  _refreshRecDot();    // recommendeds are back → keep the Add-article dot accurate
   const ov=document.getElementById('addart-overlay');if(!ov)return;
   // Auto-collapse the left nav (mirrors openNewsletter); remember prior state to restore on close
   const sb=document.getElementById('sidebar');
@@ -4164,6 +4544,7 @@ function openAddArt(id){
 }
 function closeAddArt(){
   const ov=document.getElementById('addart-overlay');if(!ov)return;
+  closeAddArtPubMenu();
   ov.classList.remove('open');                       // slides out
   document.body.classList.remove('addart-open');     // content expands back in sync
   const sb=document.getElementById('sidebar');        // restore nav unless it was already collapsed
@@ -4172,9 +4553,35 @@ function closeAddArt(){
 }
 function renderAddArtPills(){
   const el=document.getElementById('aa-pills');if(!el)return;
-  el.innerHTML=['All','Online','Print','TV','Radio'].map(x=>{const v=x==='All'?'':x;return`<span class="ms-f${addArt.media===v?' on':''}" onclick="setAddArtMedia('${v}')">${x}</span>`;}).join('');
+  const pills=['All','Online','Print','TV','Radio'].map(x=>{const v=x==='All'?'':x;return`<span class="ms-f${addArt.media===v?' on':''}" onclick="setAddArtMedia('${v}')">${x}</span>`;}).join('');
+  el.innerHTML=`<div class="aa-pill-row">${pills}</div>
+    <button class="aa-pub-btn" onclick="openAddArtPubMenu(this,event)"><span class="aa-pub-lbl">${_atEsc(addArt.publisher||'All publishers')}</span><i data-lucide="chevron-down"></i></button>`;
+  initIcons();
 }
-function setAddArtMedia(v){addArt.media=v;renderAddArtPills();renderAddArtResults();}
+// Publishers available under the active media filter (scoped, so no empty media+publisher combos)
+function _aaPublishers(){return [...new Set(DB.filter(d=>!addArt.media||d.media===addArt.media).map(d=>d.source))];}
+function setAddArtMedia(v){
+  addArt.media=v;
+  if(addArt.publisher&&!_aaPublishers().includes(addArt.publisher))addArt.publisher='';   // selected publisher no longer under this media → reset
+  renderAddArtPills();renderAddArtResults();
+}
+function setAddArtPub(v){addArt.publisher=v||'';renderAddArtPills();renderAddArtResults();closeAddArtPubMenu();}
+function openAddArtPubMenu(btn,e){
+  if(e)e.stopPropagation();
+  if(document.getElementById('aa-pub-menu'))return closeAddArtPubMenu();
+  const opt=(v,lbl)=>`<button class="vf-opt${addArt.publisher===v?' on':''}" data-pub="${_atEsc(v)}" onclick="setAddArtPub(this.dataset.pub)"><span>${_atEsc(lbl)}</span><i data-lucide="check" class="vf-check"></i></button>`;
+  const menu=document.createElement('div');menu.className='vf-menu aa-pub-menu';menu.id='aa-pub-menu';
+  menu.innerHTML=opt('','All publishers')+_aaPublishers().map(p=>opt(p,p)).join('');
+  document.body.appendChild(menu);
+  const r=btn.getBoundingClientRect(),vw=window.innerWidth,mw=Math.max(menu.offsetWidth,r.width);
+  menu.style.minWidth=Math.max(r.width,180)+'px';
+  menu.style.top=(r.bottom+6)+'px';
+  menu.style.left=Math.max(8,Math.min(r.right-mw,vw-mw-8))+'px';
+  initIcons();
+  setTimeout(()=>document.addEventListener('mousedown',_aaPubMenuOutside),0);
+}
+function _aaPubMenuOutside(e){const m=document.getElementById('aa-pub-menu');if(m&&!m.contains(e.target)&&!e.target.closest('.aa-pub-btn'))closeAddArtPubMenu();}
+function closeAddArtPubMenu(){const m=document.getElementById('aa-pub-menu');if(m)m.remove();document.removeEventListener('mousedown',_aaPubMenuOutside);}
 function addArtInput(v){addArt.q=v;renderAddArtResults();}
 function renderAddArtResults(){
   const el=document.getElementById('addart-results');if(!el)return;
@@ -4182,29 +4589,42 @@ function renderAddArtResults(){
   const q=(addArt.q||'').trim().toLowerCase();
   const existing=a?new Set(a.matches.map(m=>m.title)):new Set();
   let list=DB.filter(d=>!addArt.media||d.media===addArt.media);
+  if(addArt.publisher)list=list.filter(d=>d.source===addArt.publisher);
   if(q)list=list.filter(d=>d.title.toLowerCase().includes(q)||d.source.toLowerCase().includes(q)||d.media.toLowerCase().includes(q));
+  list=list.filter(d=>!_aaHidden.has(d.title));   // hide only what was added/removed in THIS drawer view (not persisted)
+  list.sort((x,y)=>(y.recommended?1:0)-(x.recommended?1:0));   // recommended first (stable — keeps order within each group)
   addArt._results=list;
   if(list.length===0){el.innerHTML=`<div class="aa-empty">${q?'No results — try different keywords, or use “Add manually”.':'No coverage in the library for this filter.'}</div>`;initIcons();return;}
   el.innerHTML=list.map((r,i)=>{
-    const ic=ATicn[r.media]||{cls:'type-online',icon:'newspaper'},added=existing.has(r.title);
-    return`<div class="match-row" data-aa-idx="${i}" style="animation-delay:${i*0.04}s">
+    const ic=ATicn[r.media]||{cls:'type-online',icon:'newspaper'};
+    return`<div class="match-row" data-aa-idx="${i}" style="${_aaSkipAnim?'animation:none':`animation-delay:${i*0.04}s`}">
       <span class="hl-icon ${ic.cls}" data-btip="${_makeTip({label:r.media})}"><i data-lucide="${ic.icon}"></i></span>
       <div class="match-main">
         <div class="match-hl">${r.title}</div>
-        <div class="match-meta"><span class="match-source">${r.source}</span><span class="aa-dot">·</span><span class="match-date">${r.date}</span><span class="aa-dot">·</span><span class="match-ave">${fv(r.value)} AVE</span></div>
+        <div class="match-meta">${r.recommended?`<span class="aa-rec"><i data-lucide="sparkles"></i>Recommended</span><span class="aa-dot">·</span>`:''}<span class="match-source">${r.source}</span><span class="aa-dot">·</span><span class="match-date">${r.date}</span><span class="aa-break"></span><span class="match-ave">${fv(r.value)} AVE</span>${r.score!=null?`<span class="aa-dot">·</span><span class="aa-match ${r.score>=85?'sc-hi':r.score>=70?'sc-mid':'sc-lo'}">${r.score}% match</span>`:''}</div>
       </div>
-      <div class="aa-action">${added?`<span class="aa-added"><i data-lucide="check"></i> Added</span>`:`<button class="at-btn-outline" onclick="addArtAddIdx(${i})"><i data-lucide="plus" style="width:12px;height:12px"></i> Add</button>`}</div>
+      <div class="aa-action"><button class="aa-dismiss-btn" onclick="addArtDismissIdx(${i})" data-tip="Remove"><i data-lucide="x"></i></button><button class="at-btn-outline aa-add-btn" onclick="addArtAddIdx(${i})" data-tip="Add to activity"><i data-lucide="plus"></i></button></div>
     </div>`;
   }).join('');
   initIcons();
 }
 function addArtAddIdx(i){
   const r=(addArt._results||[])[i];if(!r||addArt.id==null)return;
-  addMan(addArt.id,r.title,r.value,r.media,r.source,r.date);
-  // Flip only the clicked row's action (Add → Added) with a pop — avoids re-animating
-  // the whole list and keeps scroll position. Later searches/filters re-sync via full render.
-  const act=document.querySelector(`#addart-results [data-aa-idx="${i}"] .aa-action`);
-  if(act){act.innerHTML=`<span class="aa-added aa-pop"><i data-lucide="check"></i> Added</span>`;initIcons();}
+  const row=document.querySelector(`#addart-results [data-aa-idx="${i}"]`);
+  const a=acts.find(x=>x.id===addArt.id);
+  if(a&&!a.matches.some(m=>m.title===r.title))addMan(addArt.id,r.title,r.value,r.media,r.source,r.date);   // add to activity (no dup) + toast
+  _aaHidden.add(r.title);   // leave the current view only (restored on re-open — nothing persisted)
+  // Slide the added row out, then re-render (which now filters it out of the list).
+  if(row){row.classList.add('aa-removing');setTimeout(()=>{_aaSkipAnim=true;renderAddArtResults();_aaSkipAnim=false;},420);}
+  else renderAddArtResults();
+}
+// Remove ("not interested") — hide the article from the list without adding it (session-persisted); slides out right.
+function addArtDismissIdx(i){
+  const r=(addArt._results||[])[i];if(!r)return;
+  _aaHidden.add(r.title);   // hide from the current view only (restored on re-open — nothing persisted)
+  _refreshRecDot();          // recommended count may have dropped → update the Add-article dot
+  const row=document.querySelector(`#addart-results [data-aa-idx="${i}"]`);
+  if(row){row.classList.add('aa-dismissing');setTimeout(()=>{_aaSkipAnim=true;renderAddArtResults();_aaSkipAnim=false;},420);}
   else renderAddArtResults();
 }
 document.addEventListener('keydown',function(e){
@@ -4980,7 +5400,7 @@ function dbMount(id,el){
     }
     const ic=tiIcn(d.type);
     const[sc,slbl]=_sentInfo(d.brand);
-    const t=(d.title||'').replace(/"/g,'&quot;');
+    const t=(d.title||'').replace(/<[^>]+>/g,'').replace(/"/g,'&quot;');   // strip any highlight tags for the native tooltip
     return `${rowOpen}
       <td class="ti-arttbl-hl"><div class="ti-arttbl-hlwrap"><span class="hl-icon ${ic.cls}"><i data-lucide="${ic.icon}"></i></span><div class="ti-arttbl-hltext"><div class="ti-arttbl-titlerow"><span class="ti-row-sent-dot ${sc}" title="${slbl}"></span><span class="ti-arttbl-title" title="${t}">${d.title}</span></div><span class="ti-arttbl-meta">${d.sub||''}${d.date?' · '+d.date:''}</span></div></div></td>
       <td class="ti-arttbl-sv">${d.sv}</td>
@@ -5291,6 +5711,7 @@ function dbMount(id,el){
       <div class="ti-arttbl-pager"${pages>1?'':' hidden'}><div class="ti-arttbl-info">${total?`1–${shown} of ${total}`:'0 of 0'}</div><div class="ti-arttbl-btns">${tiArtPagerBtns(1,pages)}</div></div>
     </div>`;
   }
+  window.renderArtTable=renderArtTable;   // exposed so the Keyword Cloud drawer can reuse the shared article table
   // Dashboard Insights slide-over: Shared View → the social posts in the social variant; else the passed news articles.
   function renderInsTable(arts){
     if(window.WS_DATA&&window.WS_DATA.socialMentions){
