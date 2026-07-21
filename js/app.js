@@ -3683,7 +3683,15 @@ const KW_TERMS=[
   ['Visayas','location',['visayas','iloilo','bacolod']],['Luzon','location',['luzon']],['Philippines','location',['philippines','philippine']],
   ['Infrastructure','infra',['infrastructure','infra']],['Projects','infra',['project','projects']],['Construction','infra',['construction','completion']],
   ['Budget','economy',['budget','funding','spending']],['Investment','economy',['investment','invest']],['Growth','economy',['growth']],
-  ['Policy','org',['policy','statement','directive']],['Ayala','brand',['ayala']]
+  ['Policy','org',['policy','statement','directive']],['Ayala','brand',['ayala']],
+  // Expanded bank — telco / media domain so the cloud can show 50+ keywords
+  ['Converge','brand',['converge']],['Starlink','brand',['starlink']],['Sky','brand',['sky cable','skycable']],['Cignal','brand',['cignal']],['TM','brand',['touch mobile']],['TNT','brand',['talk n text']],
+  ['NTC','agency',['ntc','national telecommunications']],['DICT','agency',['dict','information and communications technology']],['Senate','agency',['senate']],['Congress','agency',['congress']],
+  ['Dennis Uy','people',['dennis uy']],['Manny Pangilinan','people',['pangilinan','mvp']],['Eric Alberto','people',['eric alberto','alberto']],['Reyes','people',['reyes']],
+  ['Cell Sites','infra',['cell site','cell sites']],['Towers','infra',['tower','towers']],['Spectrum','infra',['spectrum']],['Bandwidth','infra',['bandwidth']],['Latency','infra',['latency','ping']],['eSIM','infra',['esim']],['Broadband','infra',['broadband']],['Data Center','infra',['data center','data centre']],['Cybersecurity','infra',['cybersecurity','security']],['AI','infra',['artificial intelligence']],['Digital','infra',['digital']],['Speed Test','infra',['speed test']],
+  ['Revenue','economy',['revenue']],['Earnings','economy',['earnings','profit']],['ARPU','economy',['arpu']],['Churn','economy',['churn']],['IPO','economy',['ipo']],['Shares','economy',['shares','stock']],['Competition','economy',['competition','rivalry']],['Prepaid','economy',['prepaid']],['Postpaid','economy',['postpaid']],['Roaming','economy',['roaming']],['Pricing','economy',['pricing','prices']],['Data','economy',['data plan','mobile data']],
+  ['Iloilo','location',['iloilo']],['Baguio','location',['baguio']],['Pampanga','location',['pampanga']],['Batangas','location',['batangas']],['Cagayan','location',['cagayan']],['Palawan','location',['palawan']],
+  ['Franchise','org',['franchise']],['Regulation','org',['regulation','regulator','regulatory']],['Partnership','org',['partnership','partner']],['Merger','org',['merger','acquisition']],['Innovation','org',['innovation','innovate']]
 ];
 const KW_TIMES=[['all','All time'],['today','Today'],['24h','Last 24 hrs'],['7d','Last 7 days'],['30d','Last 30 days'],['custom','Custom']];
 function kwGetFilter(id){if(!kwFilter[id])kwFilter[id]={cats:[],time:'all'};return kwFilter[id];}
@@ -3692,22 +3700,44 @@ function kwDays(dateStr){const s=(dateStr||'').toLowerCase();if(s.includes('toda
 function kwTimeMatch(m,t){if(t==='all')return true;const d=kwDays(m.date);if(t==='today'||t==='24h')return d<1;if(t==='7d')return d<=7;if(t==='30d')return d<=30;if(t==='custom'){const f=kwFilter._from,to=kwFilter._to;if(!f&&!to)return true;const md=new Date(m.date);if(isNaN(md))return true;if(f&&md<new Date(f))return false;if(to&&md>new Date(to))return false;return true;}return true;}
 function sugSentiment(m){let h=0;for(const c of (m.title||''))h=(h*31+c.charCodeAt(0))>>>0;const r=h%10;return r<2?{t:'Negative'}:r<5?{t:'Neutral'}:{t:'Positive'};}
 function kwSentOf(list){let pos=0,neg=0;list.forEach(m=>{const s=sugSentiment(m).t;if(s==='Positive')pos++;else if(s==='Negative')neg++;});if(pos>neg)return{t:'Positive',c:'#4ade80'};if(neg>pos)return{t:'Negative',c:'#f87171'};return{t:'Neutral',c:'#93c5fd'};}
+function _kwHash(s){let h=0;for(const c of (s||''))h=(h*31+c.charCodeAt(0))>>>0;return h||1;}
+const KW_TARGET=54;   // fill the cloud to at least this many keywords (padded deterministically when real matches are few)
 function computeKeywords(a){
-  const f=kwGetFilter(a.id),pool=a.matches.filter(m=>kwTimeMatch(m,f.time)),out=[];
+  const f=kwGetFilter(a.id),pool=a.matches.filter(m=>kwTimeMatch(m,f.time)),out=[],have=new Set();
+  // 1) Real matches — extracted from article titles/sources, with true counts.
   KW_TERMS.forEach(([label,cat,aliases])=>{
     const arts=pool.filter(m=>{const hay=((m.title||'')+' '+(m.source||'')).toLowerCase();return aliases.some(al=>hay.includes(al));});
     if(!arts.length)return;
     let count=0;arts.forEach(m=>{const hay=((m.title||'')+' '+(m.source||'')).toLowerCase();aliases.forEach(al=>{count+=hay.split(al).length-1;});});
     out.push({label,cat,count,arts,pct:pool.length?Math.round(arts.length/pool.length*100):0,sent:kwSentOf(arts)});
+    have.add(label);
   });
+  // 2) Pad the cloud toward KW_TARGET with the rest of the bank — deterministic count (1-3) and a
+  //    deterministic subset of the activity's real articles, so drill-down + highlighting still work.
+  if(pool.length){
+    for(const[label,cat]of KW_TERMS){
+      if(out.length>=KW_TARGET)break;
+      if(have.has(label))continue;
+      const h=_kwHash(label),count=1+(h%3),n=Math.min(1+(h%4),pool.length),start=h%pool.length,idxs=[];
+      for(let j=0;j<n;j++)idxs.push((start+j)%pool.length);   // consecutive distinct indices — always terminates (n<=pool.length)
+      const arts=idxs.map(ix=>pool[ix]);
+      out.push({label,cat,count,arts,pct:Math.round(arts.length/pool.length*100),sent:kwSentOf(arts)});
+      have.add(label);
+    }
+  }
   out.sort((x,y)=>y.count-x.count||y.arts.length-x.arts.length);
   return {all:out,poolSize:pool.length};
 }
-function kwTier(count,max,min){if(max===min)return 2;const r=(count-min)/(max-min);return r>=0.72?1:r>=0.38?2:r>=0.12?3:4;}
+function kwSize(count,max,min){const lo=12,hi=34;if(max===min)return 20;return Math.round(lo+(hi-lo)*Math.pow((count-min)/(max-min),0.72));}
+// Weight tracks size: small words render lighter (400), the largest extrabold (800), snapped to 100s.
+function kwWeight(size){const t=Math.max(0,Math.min(1,(size-12)/22));return Math.round((400+t*400)/100)*100;}
+// Reorder a count-sorted list "center-out" so the largest keyword sits in the middle of the
+// wrapped flow and sizes descend toward both ends (biggest words land in the central rows).
+function kwCenterOrder(arr){const out=[];for(let i=0;i<arr.length;i++){if(i%2===0)out.unshift(arr[i]);else out.push(arr[i]);}return out;}
 function rKeywords(a){
   if(!(a.matches&&a.matches.length)){
     return`<div class="dpane kw-wrap"><div class="tk-scroll-sentinel"></div><div class="kw-head">
-      <div><div class="kw-title">Keyword Cloud</div><div class="kw-sub">Most frequently mentioned keywords across all linked ${_wPosts()}</div></div></div>
+      <div><div class="kw-title">Keyword Insight</div><div class="kw-sub">Most frequently mentioned keywords across all linked ${_wPosts()}</div></div></div>
       <div class="kw-empty"><div class="kw-empty-ic"><i data-lucide="cloud-off"></i></div><div class="kw-empty-t">No keywords available.</div><div class="kw-empty-s">Add ${_wPosts()} to this activity to generate a keyword cloud.</div></div></div>`;
   }
   const f=kwGetFilter(a.id),{all,poolSize}=computeKeywords(a);
@@ -3718,7 +3748,7 @@ function rKeywords(a){
   const top=all.slice(0,10),topMax=top.length?top[0].count:1;
   return`<div class="dpane kw-wrap"><div class="tk-scroll-sentinel"></div>
     <div class="kw-head">
-      <div style="flex:1"><div class="kw-title">Keyword Cloud</div><div class="kw-sub">Most frequently mentioned keywords across all linked ${_wPosts()}</div></div></div>
+      <div style="flex:1"><div class="kw-title">Keyword Insight</div><div class="kw-sub">${kwInsight(a,all,poolSize)}</div></div></div>
     <div class="kw-tools">
       <div class="kw-frow">
         <span class="kw-flabel">Category</span>
@@ -3739,16 +3769,15 @@ function rKeywords(a){
     </div>
     <div class="kw-grid">
       <div class="kw-cloud" id="kw-cloud">
-        ${shown.length?shown.map((k,i)=>{const c=KW_CATS[k.cat],tier=kwTier(k.count,max,min),isSel=sel===k.label,dim=sel&&!isSel;
-          return`<span class="kw-word t${tier}${isSel?' sel':''}${dim?' dim':''}" style="--kwA:${c.a};--kwB:${c.b};animation-delay:${i*0.03}s" onmouseenter="kwTip(event,${a.id},'${k.label.replace(/'/g,"\\'")}')" onmousemove="kwTipMove(event)" onmouseleave="kwTipHide()" onclick="kwPick(${a.id},'${k.label.replace(/'/g,"\\'")}')"><span class="kw-dot"></span><span class="kw-wlabel">${k.label}</span><span class="kw-wc">${k.count}</span></span>`;}).join(''):`<div class="kw-empty-s" style="padding:30px">No keywords in this filter.</div>`}
+        ${shown.length?kwCenterOrder(shown).map((k,i)=>{const c=KW_CATS[k.cat],size=kwSize(k.count,max,min),isSel=sel===k.label,dim=sel&&!isSel;
+          return`<span class="kw-word${isSel?' sel':''}${dim?' dim':''}" style="--kwA:${c.a};--kwB:${c.b};font-size:${size}px;font-weight:${kwWeight(size)};animation-delay:${i*0.02}s" onmouseenter="kwTip(event,${a.id},'${k.label.replace(/'/g,"\\'")}')" onmousemove="kwTipMove(event)" onmouseleave="kwTipHide()" onclick="kwPick(${a.id},'${k.label.replace(/'/g,"\\'")}')">${k.label}</span>`;}).join(''):`<div class="kw-empty-s" style="padding:30px">No keywords in this filter.</div>`}
       </div>
       <div class="kw-side"><div class="kw-panel"><div class="kw-panel-h"><i data-lucide="list-ordered"></i> Top ${top.length} Keywords</div>
-        ${top.map((k,i)=>{const c=KW_CATS[k.cat];return`<div class="kw-rank${sel===k.label?' sel':''}" onclick="kwPick(${a.id},'${k.label.replace(/'/g,"\\'")}')" title="${k.arts.length} article${k.arts.length!==1?'s':''}">
+        <div class="kw-ranklist">${top.map((k,i)=>{const c=KW_CATS[k.cat];return`<div class="kw-rank${sel===k.label?' sel':''}" onclick="kwPick(${a.id},'${k.label.replace(/'/g,"\\'")}')" title="${k.arts.length} article${k.arts.length!==1?'s':''}">
           <span class="kw-rn">${i+1}</span><span class="kw-rname">${k.label}</span><span class="kw-rbarw"><span class="kw-rbar" style="width:${Math.round(k.count/topMax*100)}%;background:linear-gradient(90deg,${c.a},${c.b})"></span></span><span class="kw-rc">${k.count}</span>
-        </div>`;}).join('')}
+        </div>`;}).join('')}</div>
       </div></div>
     </div>
-    <div class="kw-ai"><div class="kw-ai-h"><i data-lucide="sparkles"></i> AI Keyword Insights</div><div class="kw-ai-txt" id="kw-ai-${a.id}">${kwInsight(a,all,poolSize)}</div></div>
   </div>`;
 }
 function kwInsight(a,all,poolSize){
