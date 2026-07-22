@@ -6380,7 +6380,10 @@ function initDashboard(){
     {key:'tiktok',label:'TikTok',color:'#8b5cf6',count:5}
   ];
   const _expSelPlat=(expIsSocial&&_dashPlats.size)?_EXP_PLAT_ALL.filter(p=>_dashPlats.has(p.key)):null;
-  const expSeries=(window.WS==='adwatch')?[{key:'broadsheet',label:'Broadsheet',color:'#4f46e5',labelColor:'#fff'}]
+  const expSeries=(window.WS==='adwatch')?[
+      {key:'broadsheet',label:'Broadsheet',color:'#4f46e5',labelColor:'#fff'},
+      {key:'video',label:'Video',color:'#7c3aed',labelColor:'#fff'},
+      {key:'radio',label:'Radio',color:'#db2777',labelColor:'#fff'}]
     :_expSelPlat?_expSelPlat.map(p=>({key:p.key,label:p.label,color:p.color,labelColor:'#fff'}))
     :expIsSocial?[
     {key:'facebook',label:'Facebook',color:'#3b7dd8',labelColor:'#fff'},
@@ -6395,7 +6398,7 @@ function initDashboard(){
     {key:'tv',label:'TV',color:'#7c3aed',labelColor:'#fff'},
     {key:'radio',label:'Radio',color:'#db2777',labelColor:'#fff'}
   ];
-  const expData=(window.WS==='adwatch')?[{name:'',broadsheet:100}]
+  const expData=(window.WS==='adwatch')?[{name:'',broadsheet:45,video:35,radio:20}]
     :_expSelPlat
     ?[(()=>{const tot=_expSelPlat.reduce((s,p)=>s+p.count,0)||1,o={name:''};_expSelPlat.forEach(p=>o[p.key]=+(p.count/tot*100).toFixed(2));return o;})()]
     :expIsSocial?[{name:'',facebook:81.16,twitter:17.39,instagram:1.45}]
@@ -6945,10 +6948,14 @@ function initDashboard(){
   dbMount('db-mediasources',RC(TopMediaSources));
 
   // ── Timeline "Explore Data" → full-page "Total Articles Count" drill-down ──
-  const EXPLORE_MEDIUM_COLOR={'Online News':'#dc4a8f','TV':'#16a34a','Broadsheet':'#2563eb'};
+  const EXPLORE_MEDIUM_COLOR={'Online News':'#dc4a8f','TV':'#16a34a','Broadsheet':'#2563eb','Video':'#7c3aed','Radio':'#db2777'};
   const explorePubs=(window.WS==='adwatch')?[
-    {name:'Philippine Daily Inquirer',medium:'Broadsheet',articles:1,score:'6.77',ave:'1.8M',svalue:'0.00',exposure:'0.00'},
-    {name:'The Philippine Star',medium:'Broadsheet',articles:1,score:'6.74',ave:'914.4K',svalue:'0.00',exposure:'0.00'}
+    {name:'Philippine Daily Inquirer',medium:'Broadsheet',articles:5,score:'6.77',ave:'1.8M',svalue:'0.00',exposure:'0.00'},
+    {name:'The Philippine Star',medium:'Broadsheet',articles:4,score:'6.74',ave:'914.4K',svalue:'0.00',exposure:'0.00'},
+    {name:'ABS-CBN News',medium:'Video',articles:4,score:'5.90',ave:'2.4M',svalue:'0.00',exposure:'0.00'},
+    {name:'CNN Philippines',medium:'Video',articles:3,score:'5.40',ave:'1.6M',svalue:'0.00',exposure:'0.00'},
+    {name:'DZRH News',medium:'Radio',articles:2,score:'3.20',ave:'420K',svalue:'0.00',exposure:'0.00'},
+    {name:'DZBB Super Radyo',medium:'Radio',articles:2,score:'2.90',ave:'380K',svalue:'0.00',exposure:'0.00'}
   ]:[
     {name:'Philstar Online',medium:'Online News',articles:23,score:'2.19',ave:'10.6M',svalue:'0.00',exposure:'0.00'},
     {name:'Inquirer Online',medium:'Online News',articles:21,score:'3.16',ave:'8.2M',svalue:'0.00',exposure:'0.00'},
@@ -6965,8 +6972,11 @@ function initDashboard(){
   ];
   function ExplorePubBar(){
     const data=explorePubs.map(p=>({name:p.name+' ('+p.medium+')',pub:p.name,articles:p.articles,fill:EXPLORE_MEDIUM_COLOR[p.medium]||'#9ca3af'}));
-    // AdWatch has a sparse ad dataset (1 ad/publisher) → scale the axis to the data instead of the article-scale 0–25.
-    const _adw=window.WS==='adwatch',_xmax=_adw?1:25,_xticks=_adw?[0,0.25,0.5,0.75,1]:[0,5,10,15,20,25];
+    // AdWatch has a sparse ad dataset → scale the axis to the data max instead of the article-scale 0–25.
+    const _adw=window.WS==='adwatch';
+    const _dmax=data.reduce((m,d)=>Math.max(m,d.articles),0);
+    const _xmax=_adw?Math.max(1,Math.ceil(_dmax)):25;
+    const _xticks=_adw?Array.from({length:_xmax+1},(_,i)=>i):[0,5,10,15,20,25];
     return RC(ResponsiveContainer,{width:'99%',height:'100%'},
       RC(BarChart,{data,layout:'vertical',margin:{top:8,right:40,bottom:24,left:8}},
         RC(CartesianGrid,{horizontal:false,stroke:'#eef0f2'}),
