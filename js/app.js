@@ -3956,6 +3956,7 @@ function rKeywords(a){
             ${KW_TIMES.map(([v,l])=>`<div class="kw-opt${f.time===v?' on':''}" onclick="kwPickTime(${a.id},'${v}')"><span>${l}</span>${f.time===v?'<i data-lucide="check" class="kw-opt-ck"></i>':''}</div>`).join('')}
           </div>
         </div>
+        <button class="kw-dd-btn kw-export-btn" style="margin-left:auto" onclick="kwExportCsv(${a.id})" title="Export keywords as CSV"><i data-lucide="download" class="kw-dd-ic"></i><span>Export</span></button>
       </div>
       ${f.time==='custom'?`<div class="kw-frow kw-custom"><span class="kw-flabel">Range</span><input type="date" class="kw-date" value="${kwFilter._from||''}" onchange="kwRange(${a.id},'from',this.value)"><span style="font-size:11px;color:#9ca3af">to</span><input type="date" class="kw-date" value="${kwFilter._to||''}" onchange="kwRange(${a.id},'to',this.value)"></div>`:''}
     </div>
@@ -4395,6 +4396,27 @@ function dlCSV(id){
   const link=document.createElement('a');
   link.href=url;link.download=`ActivityTracker_${a.title.replace(/[^a-z0-9]/gi,'_')}.csv`;link.click();
   URL.revokeObjectURL(url);
+}
+
+// Keyword Insight tab: export the currently-filtered keyword ranking (period + category) as CSV.
+function kwExportCsv(id){
+  const a=acts.find(x=>x.id===id);if(!a)return;
+  const f=kwGetFilter(a.id),{all}=computeKeywords(a);
+  const selCats=(f.cats&&f.cats.length)?new Set(f.cats):null;
+  const shown=selCats?all.filter(k=>selCats.has(k.cat)):all;
+  const esc=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  const catName=c=>(KW_CATS[c]&&KW_CATS[c].label)||c;
+  const catLbl=selCats?[...selCats].map(catName).join(' / '):'All keywords';
+  const perLbl=(KW_TIMES.find(t=>t[0]===f.time)||[])[1]||'All time';
+  let csv='MEDIA METER — KEYWORD INSIGHT\n';
+  csv+=`Activity:,${esc(a.title)}\nCategory:,${esc(catLbl)}\nPeriod:,${esc(perLbl)}\n\nRank,Keyword,Category,Mentions,${_wPosts()}\n`;
+  shown.forEach((k,i)=>{csv+=`${i+1},${esc(k.label)},${esc(catName(k.cat))},${k.count},${k.arts.length}\n`;});
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;link.download=`Keywords_${a.title.replace(/[^a-z0-9]/gi,'_')}.csv`;link.click();
+  URL.revokeObjectURL(url);
+  showSimpleToast('Keywords exported as CSV','download');
 }
 
 function toggleMatchSel(aid,mid){
