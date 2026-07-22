@@ -5345,7 +5345,9 @@ if(document.getElementById('page-mentions')){
     0:['Mentions today','Total media mentions captured today across all monitored sources (<span style="color:#4ade80;font-weight:600">↑22%</span> vs yesterday).'],
     1:['Combined AVE','Advertising Value Equivalent — estimated ad-spend value of today\'s coverage: <span style="color:#4ade80;font-weight:600">PHP 2.78M</span>.'],
     2:['Sentiment today','Overall tone of today\'s coverage — <span style="color:#4ade80;font-weight:600">22% positive</span> · <span style="color:#9ca3af;font-weight:600">68% neutral</span> · <span style="color:#f87171;font-weight:600">10% negative</span>.'],
-    3:['Tier 1 '+_wPosts(),'Mentions from Tier 1 (top-priority) publications flagged today: <span style="color:#a78bfa;font-weight:600">3 '+_wPosts()+'</span>.']
+    3:(window.WS==='adwatch')
+      ?['Flagged ads','Ads flagged as high-priority in today\'s coverage: <span style="color:#a78bfa;font-weight:600">3 ads</span>.']
+      :['Tier 1 '+_wPosts(),'Mentions from Tier 1 (top-priority) publications flagged today: <span style="color:#a78bfa;font-weight:600">3 '+_wPosts()+'</span>.']
   };
   let pop;
   function showPop(card,i){
@@ -5457,6 +5459,7 @@ function refreshKPIs(){
 // ── Brief scan intro animation (replayable via the regenerate button) ──
 function runBriefScan(){
   const _soc=typeof _SOC==='function'&&_SOC();
+  const _adw=window.WS==='adwatch';   // AdWatch: coverage is ads, and has no Tier 1 tiering
   const phases=_soc?[
     {pct:15, label:'Scanning posts...',     sub:'Fetching latest social mentions',   count:12},
     {pct:38, label:'Analysing accounts...', sub:'Cross-referencing influencers',      count:28},
@@ -5467,8 +5470,8 @@ function runBriefScan(){
     {pct:15, label:'Scanning coverage...',  sub:'Fetching latest mentions',       count:12},
     {pct:38, label:'Analysing sources...',  sub:'Cross-referencing publications', count:28},
     {pct:62, label:'Scoring sentiment...',  sub:'Running tone analysis',          count:39},
-    {pct:84, label:'Ranking stories...',    sub:'Sorting by relevance score',     count:43},
-    {pct:100,label:'3 Tier 1 stories found',sub:'Brief ready',                   count:44},
+    {pct:84, label:_adw?'Ranking ads...':'Ranking stories...',    sub:'Sorting by relevance score',     count:43},
+    {pct:100,label:_adw?'3 ads found':'3 Tier 1 stories found',sub:'Brief ready',                   count:44},
   ];
   const sources=_soc?[
     {src:'@DITOphofficial', status:'found',    tier:'', time:'14h ago'},
@@ -5485,6 +5488,7 @@ function runBriefScan(){
     {src:'Manila Bulletin',           status:'found',    tier:'T2', time:'20h ago'},
     {src:'Rappler',                   status:'scanning', tier:'',   time:''},
   ];
+  if(_adw)sources.forEach(s=>s.tier='');   // AdWatch has no Tier 1/Tier 2 badges
   let phaseIdx=0,srcIdx=0;
   // reset overlay + reveal state so the scan can replay on regenerate
   const _bso=document.getElementById('bso');
