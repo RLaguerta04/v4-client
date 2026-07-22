@@ -872,7 +872,10 @@ function openExport(){
   initIcons();
 }
 // ── Compare Topics modal (dashboard) ──
-const COMPARE_CATS=[
+const COMPARE_CATS=(window.WS==='adwatch')?[
+  {group:'TMP Ads',topics:['Broadsheet','Tabloid','Provincial','Magazine']},
+  {group:'Competitor Ads',topics:['Broadsheet','Tabloid','Provincial','Magazine']}
+]:[
   {group:'Company News - DITO Telecommunity',topics:['Brand Identity','Awards & Recognition','CSR & Public Affairs','Product & Plans','Connectivity & Network','Products & Plans','Corporate & Investors','Tech & Innovation','Regulatory & Policy']},
   {group:'Competitor News - Globe Telecom',topics:['Brand and Identity','Awards and Recognition','CSR and Public Affairs','Connectivity and Network','Products and Plans','Corporate and Investors','Tech and Innovation','Regulatory and Policy']},
   {group:'Competitor News - PLDT / Smart Communications',topics:['(Brand & Identity)','(Awards & Recognition)','(CSR & Public Affairs)','(Connectivity & Network)','(Products & Plans)','(Corporate & Investors)','(Tech & Innovation)','(Regulatory & Policy)','(Connectivity & Speed)','(Mobile & Plans)','(Industry & Market)','(Awards & Benchmarks)','(CSR & Social Impact)']},
@@ -7958,7 +7961,12 @@ function initDashboard(){
   // ── Compare view (Phase 1): chips + Overview table + Timeline + Media Exposure + Share of Voice ──
   const CMP_COLORS=['#7c3aed','#ea580c','#2563eb','#16a34a'];
   let _cmpCats=[];
-  const CMP_OVERVIEW=[
+  const CMP_OVERVIEW=(window.WS==='adwatch')?[
+    ['Total Results',['8','-60%'],['2','0%'],['','']],
+    ['Top Exposure by Medium',['Broadsheet','100%'],['Broadsheet','0%'],['5 ad/s published','2 ad/s published']],
+    ['Top Ad Exposure by Publisher',['Daily Tribune','-67%'],['Philippine Daily Inq…','0%'],['3 ad/s published','1 ad/s published']],
+    ['Most Dominant Section',['Money','50%'],['Motoring','0%'],['3 ad/s published','1 ad/s published']]
+  ]:[
     ['Total Results',['82','92%'],['573','100%'],['','']],
     ['Top Media Exposure by Publisher',['Manila Times Online','96%'],['Philstar Online','100%'],['5 articles published','23 articles published']],
     ['Top Author',['Logan Kat-D M. Zap…','100%'],['Vicky Morales','100%'],['4 articles published','8 articles published']],
@@ -7991,14 +7999,14 @@ function initDashboard(){
       const cells=_cmpCats.map((c,ci)=>{
         const v=r[1+(ci%2)]||['',''],sub=(r[3]||[])[ci%2]||'';
         const nodata=v[0]==='No Data';
-        return `<td class="cmp-ov-cell"><div class="cmp-ov-top"><span class="cmp-ov-val${nodata?' cmp-ov-nodata':''}">${v[0]}</span>${v[1]?`<span class="cmp-ov-pct">${v[1]}</span>`:''}</div>${sub?`<div class="cmp-ov-sub">${sub}</div>`:''}</td>`;
+        return `<td class="cmp-ov-cell"><div class="cmp-ov-top"><span class="cmp-ov-val${nodata?' cmp-ov-nodata':''}">${v[0]}</span>${v[1]?`<span class="cmp-ov-pct"${v[1].charAt(0)==='-'?' style="color:#dc2626"':''}>${v[1]}</span>`:''}</div>${sub?`<div class="cmp-ov-sub">${sub}</div>`:''}</td>`;
       }).join('');
       return `<tr class="cmp-ov-row" onclick="openCompareDetail('${r[0].replace(/'/g,"\\'")}',this)"><td class="cmp-ov-lbl${social?' cmp-ov-lbl-link':''}">${r[0]}</td>${cells}</tr>`;
     }).join('');
     const metricW=_cmpCats.length>=4?'22%':_cmpCats.length===3?'28%':'38%';   // narrow the Metric column as topics grow
     host.innerHTML=`<table class="cmp-ov-tbl"><thead><tr><th style="width:${metricW}">Metric</th>${_cmpCats.map(c=>`<th style="color:${c.color}">${c.name}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
   }
-  const cmpTimelineData=[{date:'Jun 30',c0:45,c1:52,c2:33,c3:60},{date:'Jul 01',c0:52,c1:70,c2:41,c3:48},{date:'Jul 02',c0:40,c1:55,c2:50,c3:38},{date:'Jul 03',c0:30,c1:48,c2:22,c3:65},{date:'Jul 04',c0:8,c1:35,c2:44,c3:20},{date:'Jul 05',c0:35,c1:88,c2:60,c3:52},{date:'Jul 06',c0:52,c1:60,c2:30,c3:75},{date:'Jul 07',c0:20,c1:30,c2:48,c3:15}];
+  const cmpTimelineData=(window.WS==='adwatch')?[{date:'Jul 14',c0:1,c1:0},{date:'Jul 15',c0:1,c1:0},{date:'Jul 16',c0:2,c1:1},{date:'Jul 17',c0:1,c1:0},{date:'Jul 18',c0:0,c1:0},{date:'Jul 19',c0:2,c1:0},{date:'Jul 20',c0:0,c1:0},{date:'Jul 21',c0:1,c1:1},{date:'Jul 22',c0:0,c1:0}]:[{date:'Jun 30',c0:45,c1:52,c2:33,c3:60},{date:'Jul 01',c0:52,c1:70,c2:41,c3:48},{date:'Jul 02',c0:40,c1:55,c2:50,c3:38},{date:'Jul 03',c0:30,c1:48,c2:22,c3:65},{date:'Jul 04',c0:8,c1:35,c2:44,c3:20},{date:'Jul 05',c0:35,c1:88,c2:60,c3:52},{date:'Jul 06',c0:52,c1:60,c2:30,c3:75},{date:'Jul 07',c0:20,c1:30,c2:48,c3:15}];
   function CompareTimeline(){
     // one line per compared category (2–4); c2/c3 mirror c0/c1 for the layout demo
     const data=cmpTimelineData.map(row=>{const o={date:row.date};_cmpCats.forEach((c,i)=>{o['c'+i]=row['c'+i]!=null?row['c'+i]:row['c'+(i%2)];});return o;});
@@ -8006,16 +8014,19 @@ function initDashboard(){
       RC(ComposedChart,{data,margin:{top:16,right:24,bottom:8,left:0},onClick:(s,e)=>{if(!s||!s.activeLabel)return;const card=e&&e.target&&e.target.closest?e.target.closest('.db-card'):null;window.openInsListPanel(_insSample('cmpdate-'+s.activeLabel,8),s.activeLabel,'Timeline',card);}},
         RC(CartesianGrid,{vertical:false,stroke:'#eef0f2'}),
         RC(XAxis,{dataKey:'date',tick:{fontSize:11,fill:'#6b7280'},axisLine:{stroke:'#e4e6ea'},tickLine:false}),
-        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,width:36}),
+        RC(YAxis,{tick:{fontSize:11,fill:'#6b7280'},axisLine:false,tickLine:false,allowDecimals:false,width:window.WS==='adwatch'?46:36,label:window.WS==='adwatch'?{value:'AD COUNT',angle:-90,position:'insideLeft',style:{fontSize:10.5,fill:'#9ca3af',textAnchor:'middle'}}:undefined}),
         RC(Tooltip,{content:DarkTip}),RC(Legend,{iconType:'plainline',wrapperStyle:{fontSize:11,paddingTop:10}}),
         ..._cmpCats.map((c,i)=>RC(Line,{key:i,type:'linear',dataKey:'c'+i,name:c.name,stroke:c.color,strokeWidth:2,dot:{r:3,fill:c.color},activeDot:{r:5}}))
       ));
   }
   const CMP_MEDIA_COLORS={'Online News':'#d67db3','Blogs':'#a8548f','Broadsheet':'#2f6fb0','Tabloid':'#29b6d8','Provincial':'#4a90d9','TV':'#1b7d3f','Radio':'#43a047'};
-  const CMP_MEDIA_DIST=[
+  const CMP_MEDIA_DIST=((window.WS==='adwatch')?[
+    [['Broadsheet',71.43,5],['Tabloid',14.29,1],['Provincial',14.29,1]],
+    [['Broadsheet',100,2]]
+  ]:[
     [['Online News',65.43,53],['Blogs',16.05,13],['Broadsheet',9.88,8],['Tabloid',2.47,2],['Provincial',1.23,1],['TV',1.23,3],['Radio',1.23,1]],
     [['Online News',56.30,295],['Blogs',15.46,81],['Broadsheet',10.11,53],['Tabloid',2.10,11],['Provincial',0.57,3],['TV',3.05,64],['Radio',0.57,17]]
-  ].map(cat=>cat.map(([name,value,count])=>({name,value,count,color:CMP_MEDIA_COLORS[name]})));
+  ]).map(cat=>cat.map(([name,value,count])=>({name,value,count,color:CMP_MEDIA_COLORS[name]})));
   // SharedView: platform exposure per topic (Facebook/Twitter/Instagram/Reddit)
   const CMP_PLATFORM_COLORS={Facebook:'#3d7fd6',Twitter:'#29b6d8',Instagram:'#d6337f',Reddit:'#f0a6c4',Youtube:'#e0245e'};
   const CMP_PLATFORM_DIST=[
