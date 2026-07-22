@@ -7226,7 +7226,7 @@ function initDashboard(){
       ));
   }
   // Per-category Pubscore Distribution for the compare "Top Media Exposure by Medium" view
-  const CMP_PUBSCORE_DIST=[[14,24,0,10,0,0,0,0,0,4,1],[67,108,26,52,4,0,0,0,0,10,13]];
+  const CMP_PUBSCORE_DIST=(window.WS==='adwatch')?[[0,0,0,0,0,0,2,0,0,0,3],[0,0,0,0,0,0,2,0,0,0,0]]:[[14,24,0,10,0,0,0,0,0,4,1],[67,108,26,52,4,0,0,0,0,10,13]];
   function CmpPubscoreDist(props){
     const ci=(props&&props.ci)||0;
     const data=(CMP_PUBSCORE_DIST[ci]||CMP_PUBSCORE_DIST[0]).map((c,v)=>({score:v.toFixed(1),count:c}));
@@ -7257,10 +7257,18 @@ function initDashboard(){
     {type:'broadsheet',ave:'PHP 290K',  title:'Suzuki Dzire — big savings this month, ₱58K all-in',date:'July 15, 2026',ago:'7 days ago',section:'Business',sub:'Philippine Daily Inquirer'},
     {type:'broadsheet',ave:'PHP 240K',  title:'Kia Stonic — compact SUV, low monthly at ₱13,888',date:'July 14, 2026',ago:'8 days ago',section:'Wheels',sub:'The Philippine Star'}
   ];
-  function renderAdExposureTable(hostId){
+  // Compare → "Top Exposure by Medium": the TMP Ads rows shown in that drill-down's ad table.
+  const CMPMD_ADS=[
+    {type:'broadsheet',ave:'PHP 440.3K',title:'STATEMENT OF COMMITMENT',date:'July 20, 2026',ago:'2 days ago',section:'Money',sub:'Daily Tribune'},
+    {type:'broadsheet',ave:'PHP 415.7K',title:'CUSTOMER WELFARE COMMITMENT',date:'July 20, 2026',ago:'2 days ago',section:'Money',sub:'Daily Tribune'},
+    {type:'broadsheet',ave:'PHP 3.0M',  title:'AllNew Toyota Land Cruiser FJ',date:'July 18, 2026',ago:'4 days ago',section:'Metro',sub:'The Philippine Star'},
+    {type:'broadsheet',ave:'PHP 807.5K',title:'Power Maintenance Updates by Meralco Advisory',date:'July 17, 2026',ago:'5 days ago',section:'News',sub:'The Philippine Star'},
+    {type:'broadsheet',ave:'PHP 197.6K',title:'HEY!',date:'July 16, 2026',ago:'6 days ago',section:'Money',sub:'Daily Tribune'}
+  ];
+  function renderAdTable(hostId,ads){
     const host=document.getElementById(hostId);if(!host)return;
-    const rows=EXPMED_ADS.map((d,i)=>renderTableRow(d,i)).join('');
-    const n=EXPMED_ADS.length;
+    const rows=ads.map((d,i)=>renderTableRow(d,i)).join('');
+    const n=ads.length;
     host.innerHTML=`<div class="tbl-scroll"><table class="tbl"><thead><tr>
         <th style="width:46px"><span class="tcb"></span></th>
         <th style="width:130px">AVE</th>
@@ -7280,7 +7288,7 @@ function initDashboard(){
     dbMount('db-expmed-toppub',_adw?RC(ExplorePubBar,{pubs:explorePubs.filter(p=>p.medium==='Broadsheet')}):RC(ExplorePubBar));
     buildTimeline(7,'db-expmed-timeline');
     document.querySelectorAll('#db-expmed-ranges .db-tl-range').forEach(b=>b.classList.toggle('on',+b.dataset.r===7));
-    if(_adw)renderAdExposureTable('db-expmed-table');
+    if(_adw)renderAdTable('db-expmed-table',EXPMED_ADS);
     else window.renderMentionsTable('db-expmed-table',0,'Top Exposure · Online News','All articles');
     _bindExploreScroll(wrap);
     initIcons();
@@ -8638,7 +8646,7 @@ function initDashboard(){
     // Per-metric view routing
     const isAuthor=/top author/i.test(metric||'');
     const isToppub=/media exposure by publisher/i.test(metric||'');
-    const isMedium=/media exposure by medium/i.test(metric||'');
+    const isMedium=/exposure by medium/i.test(metric||'');   // matches "Top Media/Ad Exposure by Medium" and AdWatch's "Top Exposure by Medium"
     const isTonality=/tonality/i.test(metric||'');
     const isEntity=/top entity/i.test(metric||'');
     const common=document.getElementById('db-cmpd-common');
@@ -8680,7 +8688,8 @@ function initDashboard(){
       });
       dbMount('db-cmpd-md-timeline',CompareTimeline());
       const mtcat=document.getElementById('db-cmpd-md-tbl-cat');if(mtcat)mtcat.innerHTML=_cmpCats.map(c=>`<option>${c.name}</option>`).join('');
-      window.renderMentionsTable('db-cmpd-md-table',0,metric,'All articles');
+      if(window.WS==='adwatch')renderAdTable('db-cmpd-md-table',CMPMD_ADS);
+      else window.renderMentionsTable('db-cmpd-md-table',0,metric,'All articles');
     } else if(isAuthor){
       _cmpCats.forEach((cat,ci)=>{
         const h=document.getElementById('db-cmpd-au-hd-'+ci);if(h){h.textContent=cat.name;h.style.color=cat.color;}
