@@ -2939,7 +2939,7 @@ body.ws-shared .brief-stats .ss:nth-child(2) .ss-trend{background:rgba(255,255,2
 body.ws-shared .brief-stats .ss:nth-child(2) .ss-scan-ring{border-color:rgba(255,255,255,0.4)}
 /* AdWatch: no sentiment tile in the ad brief → hide it. nth-child colors are unaffected
    (display:none doesn't renumber siblings), so mentions·AVE·Flagged stay peach·grey·dark. */
-body.ws-adwatch #ss-2{display:none}
+body.ws-adwatch #ss-2{display:none!important}   /* !important + id beats the .ss{display:grid/block!important} rules below */
 /* ---- Sentiment → palette (negative=coral, neutral=gold, positive stays green) ---- */
 .tbl-sent.neg,.md-sel-btn.on.neg{background:rgba(220,38,38,0.1)!important;color:#dc2626!important;border-color:#dc2626!important}
 .tbl-sent.neg .tbl-sent-dot,.md-li-dot.neg{background:#dc2626!important}
