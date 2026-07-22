@@ -873,8 +873,8 @@ function openExport(){
 }
 // ── Compare Topics modal (dashboard) ──
 const COMPARE_CATS=(window.WS==='adwatch')?[
-  {group:'TMP Ads',topics:['Broadsheet','Tabloid','Provincial','Magazine']},
-  {group:'Competitor Ads',topics:['Broadsheet','Tabloid','Provincial','Magazine']}
+  {group:'TMP Ads',topics:['New Model Launch','Price & Financing Promo','SUV & Pickup','Sedan & Hatchback','Safety & Technology','Fuel Efficiency & Hybrid','After-Sales & Service']},
+  {group:'Competitor Ads',topics:['New Model Launch','Price & Financing Promo','SUV & Pickup','Sedan & Hatchback','Safety & Technology','Fuel Efficiency & Hybrid','After-Sales & Service']}
 ]:[
   {group:'Company News - DITO Telecommunity',topics:['Brand Identity','Awards & Recognition','CSR & Public Affairs','Product & Plans','Connectivity & Network','Products & Plans','Corporate & Investors','Tech & Innovation','Regulatory & Policy']},
   {group:'Competitor News - Globe Telecom',topics:['Brand and Identity','Awards and Recognition','CSR and Public Affairs','Connectivity and Network','Products and Plans','Corporate and Investors','Tech and Innovation','Regulatory and Policy']},
