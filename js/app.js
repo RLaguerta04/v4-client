@@ -3282,6 +3282,7 @@ let _barTipId=0;
 function _makeTip(data){const id='bt'+(++_barTipId);_barTips.set(id,data);return id;}
 // Static tip entries (for markup that can't call _makeTip at build time)
 _barTips.set('btip-regen',{label:'Regenerate brief'});
+_barTips.set('btip-adspend',{detail:'A visual representation of advertising expenditure over a specific period of time'});
 if(document.getElementById('page-mentions')){
   renderTrendRows();
   applyAveColor();
