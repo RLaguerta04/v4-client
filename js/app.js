@@ -6970,8 +6970,9 @@ function initDashboard(){
     {name:'Manila Standard',medium:'Broadsheet',articles:12,score:'1.74',ave:'3.3M',svalue:'0.00',exposure:'0.00'},
     {name:'BusinessWorld',medium:'Broadsheet',articles:11,score:'1.74',ave:'4.8M',svalue:'0.00',exposure:'0.00'}
   ];
-  function ExplorePubBar(){
-    const data=explorePubs.map(p=>({name:p.name+' ('+p.medium+')',pub:p.name,articles:p.articles,fill:EXPLORE_MEDIUM_COLOR[p.medium]||'#9ca3af'}));
+  function ExplorePubBar(props){
+    const src=(props&&props.pubs)||explorePubs;
+    const data=src.map(p=>({name:p.name+' ('+p.medium+')',pub:p.name,articles:p.articles,fill:EXPLORE_MEDIUM_COLOR[p.medium]||'#9ca3af'}));
     // AdWatch has a sparse ad dataset → scale the axis to the data max instead of the article-scale 0–25.
     const _adw=window.WS==='adwatch';
     const _dmax=data.reduce((m,d)=>Math.max(m,d.articles),0);
@@ -7182,7 +7183,7 @@ function initDashboard(){
     initIcons();
   };
   // ── "Top Exposure by Medium" → Top Exposure explore: Pubscore Distribution + Top Publishers + Timeline + table ──
-  const pubscoreDistData=[69,105,30,49,5,0,0,2,0,13,15].map((c,v)=>({score:v.toFixed(1),count:c}));
+  const pubscoreDistData=((window.WS==='adwatch')?[0,0,0,0,0,2,5,2,0,0,0]:[69,105,30,49,5,0,0,2,0,13,15]).map((c,v)=>({score:v.toFixed(1),count:c}));
   function PubscoreDistChart(){
     const [hov,setHov]=React.useState(null);
     return RC(ResponsiveContainer,{width:'99%',height:'100%'},
@@ -7219,13 +7220,43 @@ function initDashboard(){
           RC(Area,{dataKey:'count',type:'monotone',stroke:'#b9a4f7',fill:'#ece6fb',fillOpacity:0.6}))
       ));
   }
+  // AdWatch "Top Exposure for Broadsheet": the 9 broadsheet ads (PDI 5 + Star 4) shown in the drill-down table.
+  const EXPMED_ADS=[
+    {type:'broadsheet',ave:'PHP 1.8M', title:'Mitsubishi XFORCE feels right at ₱1.049M — New GLX Variant special intro',date:'July 22, 2026',ago:'10 hours ago',section:'Motoring',sub:'Philippine Daily Inquirer'},
+    {type:'broadsheet',ave:'PHP 914.4K',title:'Enjoy cash savings up to ₱1,000,000 — own a Hyundai now and drive the journey',date:'July 17, 2026',ago:'5 days ago',section:'Wheels',sub:'The Philippine Star'},
+    {type:'broadsheet',ave:'PHP 720K',  title:'Toyota Vios GR-S now available nationwide — starting ₱1.02M',date:'July 20, 2026',ago:'2 days ago',section:'Motoring',sub:'Philippine Daily Inquirer'},
+    {type:'broadsheet',ave:'PHP 540K',  title:'Ford Territory Titanium+ — limited-time zero down payment promo',date:'July 19, 2026',ago:'3 days ago',section:'Motoring',sub:'Philippine Daily Inquirer'},
+    {type:'broadsheet',ave:'PHP 480K',  title:'Geely Coolray Sport — turbocharged, now with free insurance',date:'July 18, 2026',ago:'4 days ago',section:'Wheels',sub:'The Philippine Star'},
+    {type:'broadsheet',ave:'PHP 410K',  title:'Honda City RS — book now and drive home for ₱88K all-in',date:'July 16, 2026',ago:'6 days ago',section:'Motoring',sub:'Philippine Daily Inquirer'},
+    {type:'broadsheet',ave:'PHP 360K',  title:'Nissan Almera VL Turbo — the fuel-efficient city sedan',date:'July 15, 2026',ago:'7 days ago',section:'Wheels',sub:'The Philippine Star'},
+    {type:'broadsheet',ave:'PHP 290K',  title:'Suzuki Dzire — big savings this month, ₱58K all-in',date:'July 15, 2026',ago:'7 days ago',section:'Business',sub:'Philippine Daily Inquirer'},
+    {type:'broadsheet',ave:'PHP 240K',  title:'Kia Stonic — compact SUV, low monthly at ₱13,888',date:'July 14, 2026',ago:'8 days ago',section:'Wheels',sub:'The Philippine Star'}
+  ];
+  function renderAdExposureTable(hostId){
+    const host=document.getElementById(hostId);if(!host)return;
+    const rows=EXPMED_ADS.map((d,i)=>renderTableRow(d,i)).join('');
+    const n=EXPMED_ADS.length;
+    host.innerHTML=`<div class="tbl-scroll"><table class="tbl"><thead><tr>
+        <th style="width:46px"><span class="tcb"></span></th>
+        <th style="width:130px">AVE</th>
+        <th>Headline</th>
+        <th style="width:170px">Date Published</th>
+        <th style="width:180px">Section/Program</th>
+        <th style="width:220px">Publication</th>
+        <th style="width:40px"></th>
+      </tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="tbl-footer"><div class="ti-arttbl-info">1–${n} of ${n} results</div><div class="ti-arttbl-btns"><button class="ti-pgb" disabled><i data-lucide="chevron-left"></i></button><button class="ti-pgb on">1</button><button class="ti-pgb" disabled><i data-lucide="chevron-right"></i></button></div></div>`;
+    initIcons();
+  }
   window.openExposureMediumExplore=function(){
     const wrap=_showExplore('db-expmed-explore');if(!wrap)return;
+    const _adw=window.WS==='adwatch';
     dbMount('db-expmed-pubscore',RC(PubscoreDistChart));
-    dbMount('db-expmed-toppub',RC(ExplorePubBar));
+    dbMount('db-expmed-toppub',_adw?RC(ExplorePubBar,{pubs:explorePubs.filter(p=>p.medium==='Broadsheet')}):RC(ExplorePubBar));
     buildTimeline(7,'db-expmed-timeline');
     document.querySelectorAll('#db-expmed-ranges .db-tl-range').forEach(b=>b.classList.toggle('on',+b.dataset.r===7));
-    window.renderMentionsTable('db-expmed-table',0,'Top Exposure · Online News','All articles');
+    if(_adw)renderAdExposureTable('db-expmed-table');
+    else window.renderMentionsTable('db-expmed-table',0,'Top Exposure · Online News','All articles');
     _bindExploreScroll(wrap);
     initIcons();
   };
