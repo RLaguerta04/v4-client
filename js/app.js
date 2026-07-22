@@ -2,8 +2,8 @@
 let activeTrend=null,spotTracked=false;
 // Shared View uses social posts; MediaWatch uses news articles. Use this to word user-visible copy accordingly.
 function _SOC(){return !!(window.WS_DATA&&window.WS_DATA.socialMentions);}
-function _wPost(cap){return _SOC()?(cap?'Post':'post'):(cap?'Article':'article');}
-function _wPosts(cap){return _SOC()?(cap?'Posts':'posts'):(cap?'Articles':'articles');}
+function _wPost(cap){if(window.WS==='adwatch')return cap?'Ad':'ad';return _SOC()?(cap?'Post':'post'):(cap?'Article':'article');}
+function _wPosts(cap){if(window.WS==='adwatch')return cap?'Ads':'ads';return _SOC()?(cap?'Posts':'posts'):(cap?'Articles':'articles');}
 const MC={'TV':'media-tv','Online':'media-online','Print':'media-print','Radio':'media-radio','Social':'media-social'};
 
 // ── Workspace data layer ──
@@ -20,6 +20,14 @@ function wsData(k,def){
 }
 // Tag the document with the workspace so CSS can theme it (Shared View = blue, MediaWatch = coral)
 if(window.WS&&window.WS!=='mediawatch'&&document.body)document.body.classList.add('ws-'+window.WS);
+
+// AdWatch shows only ad-type coverage: video (TV), print (broadsheet/provincial/tabloid/magazine) and radio.
+const _AD_MEDIA={TV:1,Print:1,Radio:1};
+const _AD_TYPES={tv:1,broadsheet:1,provincial:1,tabloid:1,magazine:1,radio:1};
+const _AD_MEDIA_LABEL={TV:'ADS - Video',Print:'ADS - Print',Radio:'ADS - Radio'};
+const _AD_MEDIA_ICON={TV:{cls:'type-tv',icon:'video'},Print:{cls:'type-broadsheet',icon:'printer'},Radio:{cls:'type-radio',icon:'radio'}};
+function _isAdItem(x){if(!x)return false;if(x.media!=null)return !!_AD_MEDIA[x.media];return !!_AD_TYPES[x.type];}
+function _adOnly(arr){return (window.WS==='adwatch'&&Array.isArray(arr))?arr.filter(_isAdItem):arr;}
 
 let trendStories=[
   {id:0,rank:1,tier:'T1',hl:'Jimenez/PLDT executive rivalry — telco competitive landscape narrative',why:"Triggered by 'DITO Telecommunity' — Jimenez's pointed remarks on PLDT competitors picked up across Tier 1 business outlets, broadcast, and radio within 24 hours.",chips:[{cls:'c-neu',t:'Neutral'},{cls:'c-vel',t:'12 '+_wPosts()+' / 1 day'},{cls:'c-ch',t:'Online'},{cls:'c-ch',t:'Print'},{cls:'c-ch',t:'TV'},{cls:'c-ch',t:'Radio'}],tracked:false,ave:'PHP 4.41M',articles:[
@@ -140,6 +148,7 @@ function articlesForList(listId){
 }
 
 function renderArticleList(articles,listId){
+  articles=_adOnly(articles);   // AdWatch: only video/print/radio ads
   const state=alState[listId]||(alState[listId]={sort:'sim',filters:[],page:1});
   // Shared View brief: social posts get a dedicated row layout (Source · Post · Sentiment · Influencer · Match · As of)
   if(articles[0]&&articles[0].platform) return renderSocialArticleList(articles,listId,state);
@@ -323,13 +332,21 @@ const MS_OPTIONS=[
   {label:'TV',val:'TV'},
   {label:'Radio',val:'Radio'},
 ];
-let msSel=new Set(MS_OPTIONS.map(o=>o.label));   // default: all selected
+// AdWatch: three ad-type sources; val maps to the feed's media field (video→TV, print, radio) so the
+// detail preview reuses the existing print / video / radio templates.
+const MS_OPTIONS_ADWATCH=[
+  {label:'ADS - Video',val:'TV'},
+  {label:'ADS - Print',val:'Print'},
+  {label:'ADS - Radio',val:'Radio'},
+];
+function _msOpts(){return window.WS==='adwatch'?MS_OPTIONS_ADWATCH:MS_OPTIONS;}
+let msSel=new Set(_msOpts().map(o=>o.label));   // default: all selected
 function msRender(){
   const menu=document.getElementById('ms-menu');if(!menu)return;
-  const allOn=msSel.size===MS_OPTIONS.length;
+  const allOn=msSel.size===_msOpts().length;
   menu.innerHTML=`<div class="ms-title">Media Source</div><div class="ms-divider"></div>
     <label class="ms-opt"><input type="checkbox" ${allOn?'checked':''} onchange="msToggleAll(this.checked)"><span>Select All</span></label>
-    ${MS_OPTIONS.map(o=>`<label class="ms-opt"><input type="checkbox" ${msSel.has(o.label)?'checked':''} onchange="msToggleOne('${o.label}',this.checked)"><span>${o.label}</span></label>`).join('')}
+    ${_msOpts().map(o=>`<label class="ms-opt"><input type="checkbox" ${msSel.has(o.label)?'checked':''} onchange="msToggleOne('${o.label}',this.checked)"><span>${o.label}</span></label>`).join('')}
     <button class="ms-apply" onclick="msApply()">Apply</button>`;
 }
 function msClose(){
@@ -345,18 +362,20 @@ function msToggle(e){
   if(open){msClose();return;}
   m.classList.remove('closing');msRender();m.style.display='block';
 }
-function msToggleAll(on){msSel=on?new Set(MS_OPTIONS.map(o=>o.label)):new Set();msRender();}
+function msToggleAll(on){msSel=on?new Set(_msOpts().map(o=>o.label)):new Set();msRender();}
 function msToggleOne(label,on){if(on)msSel.add(label);else msSel.delete(label);msRender();}
 function msLabel(){
-  if(msSel.size===MS_OPTIONS.length)return'All media';
+  const opts=_msOpts();
   if(msSel.size===0)return'No media';
-  const arr=MS_OPTIONS.filter(o=>msSel.has(o.label)).map(o=>o.label);
+  if(window.WS==='adwatch')return opts.filter(o=>msSel.has(o.label)).map(o=>o.label).join(', ');
+  if(msSel.size===opts.length)return'All media';
+  const arr=opts.filter(o=>msSel.has(o.label)).map(o=>o.label);
   return arr.length===1?arr[0]:`${arr[0]}, +${arr.length-1}`;
 }
 function msApply(){
   const lbl=document.getElementById('ms-label');if(lbl)lbl.textContent=msLabel();
-  const allOn=msSel.size===MS_OPTIONS.length;
-  const vals=allOn?[]:[...new Set(MS_OPTIONS.filter(o=>msSel.has(o.label)).map(o=>o.val))];
+  const allOn=msSel.size===_msOpts().length;
+  const vals=allOn?[]:[...new Set(_msOpts().filter(o=>msSel.has(o.label)).map(o=>o.val))];
   const s=alStateFor('spot');s.filters=vals;s.page=1;rerenderList('spot');
   msClose();
 }
@@ -545,7 +564,7 @@ function trkPersist(na){
 function aveToVal(s){const n=parseFloat(String(s).replace(/[^0-9.]/g,''))||0;return /m/i.test(s)?Math.round(n*1e6):/k/i.test(s)?Math.round(n*1e3):Math.round(n);}
 function addToTracker(title,type,content,matches){
   const today=new Date().toISOString().split('T')[0];
-  const na={id:atNid++,title,type,date:today,content,matches:matches||[]};
+  const na={id:atNid++,title,type,date:today,content,matches:_adOnly(matches)||[]};
   acts.unshift(na);
   trackerSel=na.id;
   freshTrack[na.id]=true;
@@ -1032,8 +1051,11 @@ function _mentEmptyLabel(){
 // Filtered rows with the ORIGINAL index preserved as `oi` — the row's data-idx / click target must stay
 // an index into the full mentTableData() list (openSocialPost/openMention index into it), not the filtered set.
 function mentRows(){
-  const raw=mentTableData(),social=raw!==mentionData,out=[];
-  for(let i=0;i<raw.length;i++)if(_passesViewFilter(raw[i],social))out.push({d:raw[i],oi:i});
+  const raw=mentTableData(),social=raw!==mentionData,out=[],adw=window.WS==='adwatch';
+  for(let i=0;i<raw.length;i++){
+    if(adw&&!_isAdItem(raw[i]))continue;           // AdWatch: only video/print/radio ads (oi stays the real index)
+    if(_passesViewFilter(raw[i],social))out.push({d:raw[i],oi:i});
+  }
   if(social)_sortMentRows(out);   // social list only — news view keeps its data order + own dropdown. oi is preserved so click-through/data-idx stay correct.
   return out;
 }
@@ -1142,13 +1164,24 @@ function deleteSavedGroup(id,e){
 }
 function tblTotalPages(){return Math.max(1,Math.ceil(mentRows().length/tblPerPage()));}
 function renderTableRow(d,globalIdx){
-  const sentClass={positive:'pos',negative:'neg',neutral:'neu'}[d.brand]||'none';
-  const sentLabel={positive:'Positive',negative:'Negative',neutral:'Neutral'}[d.brand]||'Not set';
+  const hl=`<div class="hl-cell"><span class="hl-icon type-${articleType(d)}" data-btip="${_makeTip({label:typeLabel(d)})}" ><i data-lucide="${typeIcon(d)}"></i></span><span class="hl-text">${d.title}</span></div>`;
+  if(window.WS==='adwatch'){
+    // AdWatch layout: AVE · Headline · Date Published · Section/Program · Publisher
+    return `<tr data-idx="${globalIdx}">
+    <td><span class="tcb"></span></td>
+    <td><span class="ave-val">${d.ave}</span></td>
+    <td>${hl}</td>
+    <td><div class="date-main">${d.date}</div><div class="date-ago">${d.ago}</div></td>
+    <td><div class="pub-cat">${d.section||''}</div></td>
+    <td><div class="pub-name">${d.sub||''}</div><div class="pub-cat">${d.section||''}</div></td>
+    <td><span class="row-dots">⋯</span></td>
+  </tr>`;
+  }
   return `<tr data-idx="${globalIdx}">
     <td><span class="tcb"></span></td>
     <td><span class="sv-val">${d.sv}</span></td>
     <td><span class="ave-val">${d.ave}</span></td>
-    <td><div class="hl-cell"><span class="hl-icon type-${articleType(d)}" data-btip="${_makeTip({label:typeLabel(d)})}" ><i data-lucide="${typeIcon(d)}"></i></span><span class="hl-text">${d.title}</span></div></td>
+    <td>${hl}</td>
     <td><div class="pub-name">${d.sub}</div><div class="pub-cat">${d.section}</div></td>
     <td class="tbl-sent-cell">${sentimentCellHtml(d.brand)}</td>
     <td><div class="date-main">${d.date}</div><div class="date-ago">${d.ago}</div></td>
@@ -1856,12 +1889,19 @@ function backToSpotlight(){
   const trend=listId.indexOf('trend-')===0;
   const t=tabs[trend?1:0];if(t)switchBriefTab(trend?'trend':'spot',t);
 }
-function spotToMention(a){
-  const tmpl=JSON.parse(JSON.stringify(mentionData[0]||{}));   // clone a real mention → every field exists
+// Clone a real mention of the SAME medium so synthetic previews keep the right scaffolding —
+// e.g. a TV/Radio item keeps its player, poster, program and transcript instead of borrowing an online article.
+function _mentTemplate(media){
   const typeMap={Print:'broadsheet',Online:'online',TV:'tv',Radio:'radio',Social:'blog'};
+  const ty=typeMap[media]||'online';
+  const base=mentionData.find(d=>(d.type||'online')===ty)||mentionData[0]||{};
+  return {tmpl:JSON.parse(JSON.stringify(base)),ty};
+}
+function spotToMention(a){
+  const {tmpl,ty}=_mentTemplate(a.media);
   const sv=Math.max(1,a.score/20);
   return Object.assign(tmpl,{
-    title:a.hl,sub:a.source,outlet:a.source,type:typeMap[a.media]||'online',
+    title:a.hl,sub:a.source,outlet:a.source,type:ty,
     ave:a.ave,sv:+sv.toFixed(2),avgSv:sv.toFixed(2),authorScore:(sv*0.8).toFixed(2),
     date:a.date,ago:a.date,section:'News',author:'Staff Writer',brand:'neutral',tone:'neutral'
   });
@@ -1872,11 +1912,10 @@ let mdActCtx=null,mdActMatch=null;
 function matchToMention(m){
   const idx=mentionData.findIndex(d=>d.title===m.title);
   if(idx>=0)return mentionData[idx];
-  const tmpl=JSON.parse(JSON.stringify(mentionData[0]||{}));
-  const typeMap={Print:'broadsheet',Online:'online',TV:'tv',Radio:'radio',Social:'blog'};
+  const {tmpl,ty}=_mentTemplate(m.media);
   const sv=Math.max(1,(m.score?m.score*5:2));
   return Object.assign(tmpl,{
-    title:m.title,sub:m.source,outlet:m.source,type:typeMap[m.media]||'online',
+    title:m.title,sub:m.source,outlet:m.source,type:ty,
     ave:fv(m.value),sv:+sv.toFixed(2),avgSv:sv.toFixed(2),authorScore:(sv*0.8).toFixed(2),
     date:m.date,ago:timeAgo(m.date),section:'News',author:'Staff Writer',brand:'neutral',tone:'neutral'
   });
@@ -2497,11 +2536,14 @@ function switchMetric(tab,key){
 // Article-type registry — add a type by adding one entry here
 const ARTICLE_TYPES={online:{icon:'newspaper',label:'Online News'},tv:{icon:'tv',label:'TV'},blog:{icon:'rss',label:'Blog'},radio:{icon:'radio',label:'Radio'},broadsheet:{icon:'file-text',label:'Broadsheet'},provincial:{icon:'map-pin',label:'Provincial'},tabloid:{icon:'scroll-text',label:'Tabloid'},magazine:{icon:'book-open',label:'Magazine'}};
 function articleType(d){return (d&&ARTICLE_TYPES[d.type])?d.type:'online';}
-function typeLabel(d){return ARTICLE_TYPES[articleType(d)].label;}
+// AdWatch: the print sub-types collapse to a single "ADS - Print" (with a printer icon); TV/Radio become ADS - Video/Radio.
+const _AD_LABEL={broadsheet:'ADS - Print',provincial:'ADS - Print',tabloid:'ADS - Print',magazine:'ADS - Print',tv:'ADS - Video',radio:'ADS - Radio'};
+const _AD_ICON={broadsheet:'printer',provincial:'printer',tabloid:'printer',magazine:'printer',tv:'video',radio:'radio'};
+function typeLabel(d){const t=articleType(d);return (window.WS==='adwatch'&&_AD_LABEL[t])?_AD_LABEL[t]:ARTICLE_TYPES[t].label;}
 function isPdfPreview(d){return ['broadsheet','provincial','tabloid','magazine'].includes(articleType(d));} // print types share the PDF preview
 function isTV(d){return !!(d&&d.type==='tv');}          // TV uses the <video> media element
 function isBroadcast(d){return !!(d&&(d.type==='tv'||d.type==='radio'));} // TV + Radio share the player + transcript layout
-function typeIcon(d){return ARTICLE_TYPES[articleType(d)].icon;}
+function typeIcon(d){const t=articleType(d);return (window.WS==='adwatch'&&_AD_ICON[t])?_AD_ICON[t]:ARTICLE_TYPES[t].icon;}
 // Meta rows for the detail/reader sidebar — broadcast fields for TV, web fields otherwise (p = class prefix 'adp'|'mr')
 function renderMetaRows(d,p){
   const mentions=d.chart.reduce((a,b)=>a+b,0);
@@ -2900,7 +2942,7 @@ function renderArticleBody(d,p){
     return renderTVCard(d,p)+renderTVTranscript(d);
   }
   if(isPdfPreview(d)){
-    const pdf=d.pdfUrl||'PDF/cl15.pdf';
+    const pdf=(window.WS==='adwatch')?'../PDF/bwad80.pdf':(d.pdfUrl||'PDF/cl15.pdf');   // AdWatch print ads use the ad PDF (../ for the adwatch/ subfolder)
     return `
       <h1 class="${p}-title">${d.title}</h1>
       <div class="${p}-byline">
@@ -2964,12 +3006,12 @@ function renderReaderSide(d){
     </div>`;
   document.getElementById('mr-col-analytics').innerHTML=`
     <div class="mr-card">${renderReaderInsights(d)}</div>
-    <div class="mr-card">
+    ${window.WS==='adwatch'?'':`<div class="mr-card">
       <div class="mr-card-hd">Brand Sentiment</div>
       ${mdSelector('brand',d.brand,MD_SENTIMENT_OPTS)}
       <div class="mr-card-hd" style="margin-top:16px">Article Tone</div>
       ${mdSelector('tone',d.tone,MD_TONE_OPTS)}
-    </div>
+    </div>`}
     <div class="mr-card"><div class="mr-card-hd">Keywords</div><div class="md-kw">${kw}</div></div>
     <div class="mr-card"><div class="mr-card-hd">Entities</div>${entities}</div>`;
   return '';
@@ -3153,7 +3195,7 @@ function renderInlineDetail(d){
         </div>
       </div>
     </div>
-    <div class="adp-card">
+    ${window.WS==='adwatch'?'':`<div class="adp-card">
       <div class="adp-sent-grid">
         <div>
           <div class="adp-card-hd">Brand Sentiment</div>
@@ -3164,7 +3206,7 @@ function renderInlineDetail(d){
           ${mdSelector('tone',d.tone,MD_TONE_OPTS)}
         </div>
       </div>
-    </div>
+    </div>`}
     <div class="adp-card-pair-half">
       <div class="adp-card">
         <div class="adp-card-hd">Keywords</div>
@@ -3327,6 +3369,8 @@ let acts=[
   {id:10,title:'DITO SIM 5G Provincial Expansion',type:'Event',date:'2026-06-10',content:'DITO SIM finally gets 5G in the province. Expansion of 5G coverage to provincial areas driving social buzz and adoption.',matches:[]},
 ];
 acts=wsData('acts',acts);
+// AdWatch: restrict every activity's coverage to ad types (video/print/radio) — cascades to all counts, KPIs and views.
+if(window.WS==='adwatch')acts.forEach(a=>{if(a&&Array.isArray(a.matches))a.matches=a.matches.filter(_isAdItem);});
 let atNid=11,trackerSel=null,trackerTabs={},msQ={},msF={},msR={},aiCache={},atTypeFilter='',atSearchFilter='',atAddOpen={},artFilter={},artSort={},artPage={},freshTrack={},scanKwOff={};
 let trackerListPage=0;
 const TRACKER_PER_PAGE=15;
@@ -3337,7 +3381,7 @@ let atSelectMode=false,atSelected=new Set();
 (function mergeTrackedExtras(){
   trkLoad().forEach(e=>{
     if(acts.some(a=>a.title===e.title))return;
-    acts.unshift({id:atNid++,title:e.title,type:e.type,date:e.date,content:e.content,matches:e.matches||[]});
+    acts.unshift({id:atNid++,title:e.title,type:e.type,date:e.date,content:e.content,matches:_adOnly(e.matches)||[]});
   });
   const nb=document.getElementById('nb-tracker');
   if(nb)nb.textContent=acts.length;
@@ -3518,6 +3562,7 @@ function _trkRerender(){
   if(typeof renderDetailOnly==='function')renderDetailOnly();
   initIcons();
   if((trackerTabs[trackerSel]||'matches')==='health')animateHealth();
+  requestAnimationFrame(()=>{kwFitCloud();tlAlignTrack();});   // fit the keyword cloud + align the timeline connector (no-ops off those tabs)
 }
 function _trkTabBar(a){
   const tab=_trkTab(a);
@@ -3541,17 +3586,19 @@ const TL_MEDIA={
 };
 function fmtTLDate(d){const dt=new Date(d+'T00:00:00');return isNaN(dt)?d:dt.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});}
 function buildTimeline(a){
-  const total=a.matches.reduce((s,m)=>s+m.value,0),tc=TC[a.type]||TC['Press Release'],ev=[];
+  // MediaWatch: drop social coverage from the timeline (no "Social discussion started" stage); Shared View keeps it.
+  const M=(window.WS==='shared')?a.matches:a.matches.filter(m=>m.media!=='Social');
+  const total=M.reduce((s,m)=>s+m.value,0),tc=TC[a.type]||TC['Press Release'],ev=[];
   ev.push({node:'tl-pub',icon:tc.icon,time:'On release · '+fmtTLDate(a.date),title:a.type+' published',sub:a.title});
   let ti=0;
-  if(a.matches.length){
-    const ch=[...new Set(a.matches.map(m=>m.media))].length;
-    ev.push({node:'tl-agg',icon:'radio-tower',time:TL_TIMES[ti++],title:a.matches.length+' media pickup'+(a.matches.length!==1?'s':'')+' detected',sub:'AI-matched coverage across '+ch+' channel'+(ch!==1?'s':'')});
+  if(M.length){
+    const ch=[...new Set(M.map(m=>m.media))].length;
+    ev.push({node:'tl-agg',icon:'radio-tower',time:TL_TIMES[ti++],title:M.length+' media pickup'+(M.length!==1?'s':'')+' detected',sub:'AI-matched coverage across '+ch+' channel'+(ch!==1?'s':'')});
   }
-  const present=[...new Set(a.matches.map(m=>m.media))];
+  const present=[...new Set(M.map(m=>m.media))];
   const ordered=[...TL_MEDIA_ORDER.filter(m=>present.includes(m)),...present.filter(m=>!TL_MEDIA_ORDER.includes(m))];
   ordered.forEach(media=>{
-    const grp=a.matches.filter(m=>m.media===media);if(!grp.length)return;
+    const grp=M.filter(m=>m.media===media);if(!grp.length)return;
     const md=TL_MEDIA[media]||{icon:'megaphone',one:'mention',many:'mentions',node:'tl-agg'};
     const ave=grp.reduce((s,m)=>s+m.value,0);
     const title=media==='Social'?'Social discussion started':grp.length+' '+(grp.length===1?md.one:md.many);
@@ -3584,9 +3631,9 @@ function renderTLEvent(a,e,i){
       <div class="tl-node ${e.node}" style="animation-delay:${i*0.08}s"><i data-lucide="${e.icon}"></i></div>
       <div class="tl-card${e.big?' tl-card-big':''}"${hasX?` onclick="toggleTL('${eid}')"`:''}>
         <div class="tl-card-body">
-          <div class="tl-time">${e.time}</div>
           <div class="tl-title${e.big?' tl-big':''}">${e.title}</div>
           ${e.sub?`<div class="tl-sub">${e.sub}</div>`:''}
+          <div class="tl-time">${e.time}</div>
         </div>
         <div class="tl-card-aside">${e.ave?`<span class="tl-ave">${e.ave}</span>`:''}${hasX?`<i data-lucide="chevron-down" class="tl-chev" id="tlc-${eid}"></i>`:''}</div>
       </div>
@@ -3594,7 +3641,18 @@ function renderTLEvent(a,e,i){
     ${hasX?`<div class="tl-x" id="tlx-${eid}">${e.arts.map(m=>`<div class="tl-art"><span class="media-badge media-ico ${ATmc[m.media]||'media-online'}" title="${m.media}" data-media="${m.media}"><i data-lucide="${ATmi[m.media]||'file-text'}"></i></span><div class="tl-art-b"><div class="tl-art-hl">${m.title}</div><div class="tl-art-m"><span class="tl-art-src">${m.source}</span><span class="tl-art-dt">${m.date}</span><span class="tl-art-ave">${fv(m.value)} AVE</span></div></div></div>`).join('')}</div>`:''}
   </div>`;
 }
-function toggleTL(eid){const p=document.getElementById('tlx-'+eid),c=document.getElementById('tlc-'+eid);if(!p)return;const open=p.classList.toggle('open');if(c)c.classList.toggle('open',open);}
+// Anchor the vertical connector to the actual first/last node centers (card heights vary), so no line
+// overshoots above the first icon or below the last.
+function tlAlignTrack(){
+  const rail=document.querySelector('.tl-rail');if(!rail)return;
+  const track=rail.querySelector('.tl-track'),nodes=rail.querySelectorAll('.tl-node');if(!track)return;
+  if(nodes.length<2){track.style.display='none';return;}
+  track.style.display='';
+  const rr=rail.getBoundingClientRect(),a=nodes[0].getBoundingClientRect(),b=nodes[nodes.length-1].getBoundingClientRect();
+  const top=(a.top+a.height/2)-rr.top;
+  track.style.top=top+'px';track.style.bottom='auto';track.style.height=Math.max(0,((b.top+b.height/2)-rr.top)-top)+'px';
+}
+function toggleTL(eid){const p=document.getElementById('tlx-'+eid),c=document.getElementById('tlc-'+eid);if(!p)return;const open=p.classList.toggle('open');if(c)c.classList.toggle('open',open);requestAnimationFrame(tlAlignTrack);setTimeout(tlAlignTrack,430);}
 
 // ── HEALTH SCORE ──
 const CHS_TIER1=['manila times','philippine daily inquirer','inquirer','abs-cbn','gma','cnn philippines','rappler','philippine star','philstar','businessworld','business mirror','manila bulletin','one news','al jazeera','reuters','bloomberg'];
@@ -3602,7 +3660,10 @@ const CHS_WEIGHTS={'Media Reach':0.22,'Sentiment':0.20,'Tier 1 Publishers':0.20,
 function chsClamp(v){return Math.max(0,Math.min(100,Math.round(v)));}
 function chsBand(s){if(s>=85)return{label:'Excellent',color:'#16a34a',bg:'#dcfce7'};if(s>=70)return{label:'Strong',color:'#16a34a',bg:'#dcfce7'};if(s>=55)return{label:'Moderate',color:'#d97706',bg:'#fef3c7'};if(s>=40)return{label:'Fair',color:'#ea580c',bg:'#ffedd5'};return{label:'Needs attention',color:'#dc2626',bg:'#fee2e2'};}
 function chsFactorColor(s){return s>=70?'#16a34a':s>=50?'#d97706':'#dc2626';}
+function chsFactorBg(s){return s>=70?'#dcfce7':s>=50?'#fef3c7':'#fee2e2';}
 function chsFactorBand(s){return s>=70?'Strong':s>=50?'Moderate':'Low';}
+function chsPt(cx,cy,r,v){const a=(180-v*1.8)*Math.PI/180;return{x:cx+r*Math.cos(a),y:cy-r*Math.sin(a)};}
+function chsArc(cx,cy,r,v1,v2){const p1=chsPt(cx,cy,r,v1),p2=chsPt(cx,cy,r,v2),large=(v2-v1)>50?1:0;return`M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} A ${r} ${r} 0 ${large} 1 ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;}
 function chsSentiment(a){const base={'Press Release':78,'Event':80,'Product':82,'Trending':68,'Crisis':52}[a.type]??72;let h=0;for(const c of (a.title||''))h=(h*31+c.charCodeAt(0))>>>0;return chsClamp(base+((h%13)-6));}
 function computeHealth(a){
   const M=a.matches||[],n=M.length,total=M.reduce((s,m)=>s+m.value,0),avg=n?total/n:0;
@@ -3619,13 +3680,16 @@ function computeHealth(a){
   const overall=chsClamp(factors.reduce((s,f)=>s+f.score*(CHS_WEIGHTS[f.key]||0),0));
   return{overall,factors};
 }
+const CHS_SCAN={'Media Reach':'Measuring media reach…','Sentiment':'Analysing sentiment…','Tier 1 Publishers':'Checking Tier 1 outlets…','Mentions Volume':'Counting mentions…','AVE per Article':'Computing AVE per article…','Social Discussion':'Scanning social chatter…'};
 function rHealth(a){
   if(!(a.matches&&a.matches.length)){
     return`<div class="dpane chs-wrap"><div class="tk-scroll-sentinel"></div><div class="chs-card"><div class="chs-eyebrow"><i data-lucide="activity"></i> Executive KPI</div>
       <div class="chs-title">Coverage Health Score</div>
       <div style="text-align:center;padding:22px 8px 8px;color:#9ca3af;font-size:13px">Run a scan or add ${_wPosts()} to generate a health score for this activity.</div></div></div>`;
   }
-  const {overall,factors}=computeHealth(a),band=chsBand(overall),C=2*Math.PI*54,off=C*(1-overall/100);
+  const {overall,factors}=computeHealth(a),band=chsBand(overall);
+  const series=chsTrendData(a,overall),trendDelta=overall-series[0].score;
+  chsTrendCur={series,color:band.color,id:a.id};
   return`<div class="dpane chs-wrap"><div class="tk-scroll-sentinel"></div>
     <div class="chs-card">
       <div class="chs-head">
@@ -3637,26 +3701,138 @@ function rHealth(a){
         </div>
       </div>
       <div class="chs-body">
-        <div class="chs-gauge-wrap">
-          <svg class="chs-gauge" viewBox="0 0 128 128"><circle class="chs-bg" cx="64" cy="64" r="54"/><circle id="chs-ring" class="chs-fg" cx="64" cy="64" r="54" data-offset="${off.toFixed(2)}" style="stroke:${band.color};stroke-dasharray:${C.toFixed(2)};stroke-dashoffset:${C.toFixed(2)}"/></svg>
-          <div class="chs-center"><div class="chs-num-row"><span id="chs-num" data-target="${overall}" style="color:${band.color}">0</span><span class="chs-den">/100</span></div><div class="chs-impact" style="color:${band.color};background:${band.bg}">${band.label}</div></div>
+        <div class="chs-gauge-card">
+          <div class="chs-gauge-wrap">
+            <svg class="chs-gauge" viewBox="0 0 240 150">
+              <defs><linearGradient id="chs-grad-${a.id}" gradientUnits="userSpaceOnUse" x1="22" y1="118" x2="218" y2="118">
+                <stop offset="0" stop-color="#e11d48"/><stop offset="0.28" stop-color="#f97316"/><stop offset="0.5" stop-color="#eab308"/><stop offset="0.74" stop-color="#22c55e"/><stop offset="1" stop-color="#16a34a"/>
+              </linearGradient></defs>
+              <path class="chs-seg" d="${chsArc(120,118,98,0,100)}" style="stroke:url(#chs-grad-${a.id})"/>
+              <g id="chs-needle" class="chs-needle" data-angle="${((overall-50)*1.8).toFixed(1)}" style="transform:rotate(-90deg)">
+                <circle cx="120" cy="20" r="7" fill="#fff" stroke="${band.color}" stroke-width="3.5"/>
+              </g>
+            </svg>
+            <div class="chs-center"><div class="chs-num-row"><span id="chs-num" data-target="${overall}" style="color:${band.color}">0</span></div><div class="chs-impact" style="color:${band.color};background:${band.bg}">${band.label}</div></div>
+          </div>
+          <div class="chs-gauge-foot"><div class="chs-gauge-cap">Overall Coverage Health</div><div class="chs-gauge-date">${fmtActDate(a.date)}</div></div>
+          <button class="chs-rerun" id="chs-rerun" onclick="chsRerun(${a.id})"><i data-lucide="refresh-cw"></i> Re-run analysis</button>
         </div>
-        <div class="chs-break">
-          <div class="chs-break-lbl">Breakdown</div>
-          ${factors.map((f,i)=>{const c=chsFactorColor(f.score);const wt=Math.round((CHS_WEIGHTS[f.key]||0)*100);return`<div class="chs-row" style="animation-delay:${i*0.06}s">
-            <div class="chs-row-top"><span class="chs-row-name"><i data-lucide="${f.icon}" style="color:${c}"></i> ${f.key} <span class="chs-wt">${wt}%</span></span><span class="chs-status" style="color:${c}">${chsFactorBand(f.score)}</span></div>
-            <div class="chs-row-bot"><div class="chs-bar"><div class="chs-bar-fill" style="width:${f.score}%;background:${c}"></div></div><span class="chs-val">${f.val}</span></div>
+        <div class="chs-grid">
+          ${factors.map((f,i)=>{const c=chsFactorColor(f.score);const bg=chsFactorBg(f.score);const wt=Math.round((CHS_WEIGHTS[f.key]||0)*100);const scan=CHS_SCAN[f.key]||('Analysing '+f.key+'…');return`<div class="chs-mcard" style="animation-delay:${i*0.06}s">
+            <div class="chs-mcard-top"><span class="chs-mcard-name"><i data-lucide="${f.icon}" style="color:${c}"></i> ${f.key}</span><span class="chs-wt">${wt}%</span></div>
+            <span class="chs-pill" style="color:${c};background:${bg}">${chsFactorBand(f.score)}</span>
+            <div class="chs-mcard-val" data-val="${(f.val||'').replace(/"/g,'&quot;')}">${f.val}</div>
+            <div class="chs-bar"><div class="chs-bar-fill" style="width:${f.score}%;background:${c}"></div></div>
+            <div class="chs-mcard-loader"><div class="chs-spin-wrap"><span class="chs-spinner"></span><i data-lucide="${f.icon}" class="chs-spin-ico"></i></div><span class="chs-scan-txt">${scan}</span></div>
           </div>`;}).join('')}
         </div>
+      </div>
+      <div class="chs-trend">
+        <div class="chs-trend-hd"><span class="chs-trend-t">Coverage health trend</span><span class="chs-trend-delta" style="color:${trendDelta>=0?'#16a34a':'#dc2626'}">${trendDelta>=0?'▲':'▼'} ${Math.abs(trendDelta)} pts · last ${series.length} days</span></div>
+        <div class="chs-trend-chart" id="chs-trend-${a.id}"></div>
       </div>
     </div>
   </div>`;
 }
-function animateHealth(){
-  const ring=document.getElementById('chs-ring');
-  if(ring){const off=parseFloat(ring.dataset.offset);requestAnimationFrame(()=>{ring.style.strokeDashoffset=off;});}
+// Count up the numeric tokens inside each factor value (keeps prefixes/suffixes like PHP, %, M/K, "of 12").
+function chsCountVals(scope){
+  (scope||document).querySelectorAll('.chs-mcard-val').forEach(el=>{
+    const raw=el.dataset.val!=null?el.dataset.val:el.textContent;el.dataset.val=raw;
+    const toks=[];const html=raw.replace(/\d+(?:\.\d+)?/g,m=>{const dec=(m.split('.')[1]||'').length;toks.push({to:parseFloat(m),dec});return`<span class="chs-cv">${dec?(0).toFixed(dec):'0'}</span>`;});
+    if(!toks.length){el.textContent=raw;return;}
+    el.innerHTML=html;const spans=el.querySelectorAll('.chs-cv'),start=performance.now(),dur=900;
+    (function step(t){const p=Math.min(1,(t-start)/dur),e=1-Math.pow(1-p,3);spans.forEach((s,i)=>{s.textContent=(toks[i].to*e).toFixed(toks[i].dec);});if(p<1)requestAnimationFrame(step);else spans.forEach((s,i)=>{s.textContent=toks[i].dec?toks[i].to.toFixed(toks[i].dec):String(toks[i].to);});})(start);
+  });
+}
+function animateHealth(skipVals){
+  const needle=document.getElementById('chs-needle');
+  if(needle){const ang=parseFloat(needle.dataset.angle)||0;requestAnimationFrame(()=>{needle.style.transform='rotate('+ang+'deg)';});}
   const num=document.getElementById('chs-num');
   if(num){const target=parseInt(num.dataset.target)||0,start=performance.now(),dur=1050;(function step(t){const p=Math.min(1,(t-start)/dur),e=1-Math.pow(1-p,3);num.textContent=Math.round(e*target);if(p<1)requestAnimationFrame(step);})(start);}
+  if(chsTrendCur){const tEl=document.getElementById('chs-trend-'+chsTrendCur.id);if(tEl)mountHealthTrend(tEl,chsTrendCur.series,chsTrendCur.color);}
+  if(!skipVals)chsCountVals();
+}
+// ── Coverage-health trend (illustrative 12-day history landing on today's score) ──
+let chsTrendCur=null;
+function chsTrendData(a,overall){
+  const n=12,h=_kwHash((a.title||'')+'_'+a.id),mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],end=new Date((a.date||'')+'T00:00:00'),out=[];
+  for(let i=0;i<n;i++){
+    const back=n-1-i,noise=((h>>((i*5)%24))%13)-6;
+    let v=Math.max(15,Math.min(99,Math.round(overall-back*1.1+noise)));
+    let lbl='D'+(i+1);if(!isNaN(end)){const d=new Date(end);d.setDate(end.getDate()-back);lbl=mo[d.getMonth()]+' '+d.getDate();}
+    out.push({date:lbl,score:v});
+  }
+  out[n-1].score=overall;
+  const yr=isNaN(end)?'':end.getFullYear();
+  out.forEach((d,i)=>{const b=(typeof chsBand==='function')?chsBand(d.score):{label:'',color:'#16a34a'};d.band=b.label;d.bandColor=b.color;d.fullDate=yr?d.date+', '+yr:d.date;d.delta=i>0?d.score-out[i-1].score:null;d.prevLabel=i>0?out[i-1].date:null;});
+  return out;
+}
+// Detailed hover card: full date + score/band pill + day-over-day change.
+function chsTrendTip(o){
+  if(!o||!o.active||!o.payload||!o.payload.length)return null;
+  const p=o.payload[0].payload;
+  const rows=[
+    RC('div',{key:'d',style:{color:'#cbd5e1',fontSize:11,marginBottom:7}},p.fullDate||p.date),
+    RC('div',{key:'s',style:{display:'flex',alignItems:'center',gap:7}},
+      RC('span',{style:{color:'#fff',fontWeight:800,fontSize:16,fontVariantNumeric:'tabular-nums'}},p.score),
+      RC('span',{style:{color:'#94a3b8',fontSize:11}},'/ 100'),
+      p.band?RC('span',{style:{marginLeft:2,fontSize:10,fontWeight:700,color:p.bandColor||'#4ade80',background:'rgba(255,255,255,0.12)',padding:'2px 8px',borderRadius:20}},p.band):null)
+  ];
+  if(p.delta!=null){
+    const flat=p.delta===0,up=p.delta>0,col=flat?'#94a3b8':(up?'#4ade80':'#f87171'),sym=flat?'—':(up?'▲':'▼');
+    rows.push(RC('div',{key:'c',style:{marginTop:7,paddingTop:7,borderTop:'1px solid rgba(255,255,255,0.12)',fontSize:11,color:col,fontWeight:600}},
+      sym+' '+(flat?'No change':(Math.abs(p.delta)+' pt'+(Math.abs(p.delta)!==1?'s':'')))+(p.prevLabel?' vs '+p.prevLabel:'')));
+  }
+  return RC('div',{style:{background:'#181d26',borderRadius:10,padding:'11px 13px',boxShadow:'0 8px 24px rgba(0,0,0,0.3)',minWidth:150}},rows);
+}
+function healthTrendEl(series,color){
+  const R=window.Recharts;if(!R)return null;
+  const{ResponsiveContainer,AreaChart,Area,XAxis,YAxis,CartesianGrid,Tooltip,ReferenceLine}=R;
+  return RC(ResponsiveContainer,{width:'99%',height:'100%'},
+    RC(AreaChart,{data:series,margin:{top:8,right:14,left:0,bottom:0}},
+      RC('defs',null,RC('linearGradient',{id:'chsTG',x1:0,y1:0,x2:0,y2:1},
+        RC('stop',{offset:'0%',stopColor:color,stopOpacity:0.28}),RC('stop',{offset:'100%',stopColor:color,stopOpacity:0}))),
+      RC(CartesianGrid,{vertical:false,stroke:'#eef0f3'}),
+      RC(ReferenceLine,{y:70,stroke:'#d1d5db',strokeDasharray:'4 4'}),
+      RC(XAxis,{dataKey:'date',tick:{fontSize:10,fill:'#9ca3af'},tickLine:false,axisLine:false,interval:'preserveStartEnd',minTickGap:24}),
+      RC(YAxis,{domain:[0,100],ticks:[0,50,100],tick:{fontSize:10,fill:'#9ca3af'},tickLine:false,axisLine:false,width:34}),
+      RC(Tooltip,{cursor:{stroke:'#cbd5e1',strokeWidth:1,strokeDasharray:'3 3'},content:chsTrendTip}),
+      RC(Area,{type:'monotone',dataKey:'score',stroke:color,strokeWidth:2.5,fill:'url(#chsTG)',dot:false,activeDot:{r:4,fill:color,stroke:'#fff',strokeWidth:2}})
+    ));
+}
+function mountHealthTrend(el,series,color){
+  if(!el||!window.Recharts||typeof ReactDOM==='undefined')return;
+  const doMount=()=>{try{if(!el._chsRoot)el._chsRoot=ReactDOM.createRoot(el);el._chsRoot.render(healthTrendEl(series,color));}catch(e){}};
+  if(el.clientWidth>0)doMount();else{const ro=new ResizeObserver(()=>{if(el.clientWidth>0){ro.disconnect();doMount();}});ro.observe(el);}
+}
+// Re-run the coverage-health analysis: reset the gauge, show a brief "analysing" beat, then re-animate.
+function chsRerun(id){
+  const card=document.querySelector('.chs-card');if(!card)return;
+  const btn=document.getElementById('chs-rerun');
+  if(btn){btn.classList.add('spin');btn.disabled=true;}
+  card.classList.add('chs-analyzing');
+  const num=document.getElementById('chs-num'),needle=document.getElementById('chs-needle');
+  if(num)num.textContent='0';
+  if(needle)needle.style.transform='rotate(-90deg)';
+  const mcards=[...card.querySelectorAll('.chs-mcard')],n=mcards.length,TOTAL=10000;
+  mcards.forEach(c=>{c.classList.add('scanning');const b=c.querySelector('.chs-bar-fill');if(b){if(!b.dataset.w)b.dataset.w=b.style.width||'0%';b.style.width='0%';}});
+  // Reveal cards progressively over the second half of the 10s scan (each metric "finishes computing").
+  mcards.forEach((c,i)=>{
+    const t=Math.round(TOTAL*0.5+(TOTAL*0.45)*(n>1?i/(n-1):0));
+    setTimeout(()=>{
+      c.classList.remove('scanning');
+      c.style.animation='none';void c.offsetWidth;c.style.animation='chsPop 0.5s ease both';
+      chsCountVals(c);
+      const b=c.querySelector('.chs-bar-fill');if(b&&b.dataset.w)setTimeout(()=>{b.style.width=b.dataset.w;},130);
+    },t);
+  });
+  // Overall gauge finishes last.
+  setTimeout(()=>{
+    card.classList.remove('chs-analyzing');
+    animateHealth(true);
+    if(btn){btn.classList.remove('spin');btn.disabled=false;}
+    if(typeof showSimpleToast==='function')showSimpleToast('Coverage health re-analysed','circle-check');
+  },TOTAL);
 }
 
 // ── KEYWORD CLOUD ──
@@ -3734,6 +3910,15 @@ function kwWeight(size){const t=Math.max(0,Math.min(1,(size-12)/22));return Math
 // Reorder a count-sorted list "center-out" so the largest keyword sits in the middle of the
 // wrapped flow and sizes descend toward both ends (biggest words land in the central rows).
 function kwCenterOrder(arr){const out=[];for(let i=0;i<arr.length;i++){if(i%2===0)out.unshift(arr[i]);else out.push(arr[i]);}return out;}
+// Shrink the whole cloud uniformly (via --kwsc) until the words fit the box height — no vertical scroll.
+function kwFitCloud(){
+  const el=document.getElementById('kw-cloud');if(!el)return;
+  el.style.setProperty('--kwsc','1');
+  let s=1,guard=0;
+  while(el.scrollHeight>el.clientHeight+1&&s>0.5&&guard++<24){s=Math.max(0.5,+(s-0.05).toFixed(2));el.style.setProperty('--kwsc',String(s));}
+}
+let _kwFitT=null;
+window.addEventListener('resize',()=>{clearTimeout(_kwFitT);_kwFitT=setTimeout(()=>{kwFitCloud();tlAlignTrack();},120);});
 function rKeywords(a){
   if(!(a.matches&&a.matches.length)){
     return`<div class="dpane kw-wrap"><div class="tk-scroll-sentinel"></div><div class="kw-head">
@@ -3770,11 +3955,12 @@ function rKeywords(a){
     <div class="kw-grid">
       <div class="kw-cloud" id="kw-cloud">
         ${shown.length?kwCenterOrder(shown).map((k,i)=>{const c=KW_CATS[k.cat],size=kwSize(k.count,max,min),isSel=sel===k.label,dim=sel&&!isSel;
-          return`<span class="kw-word${isSel?' sel':''}${dim?' dim':''}" style="--kwA:${c.a};--kwB:${c.b};font-size:${size}px;font-weight:${kwWeight(size)};animation-delay:${i*0.02}s" onmouseenter="kwTip(event,${a.id},'${k.label.replace(/'/g,"\\'")}')" onmousemove="kwTipMove(event)" onmouseleave="kwTipHide()" onclick="kwPick(${a.id},'${k.label.replace(/'/g,"\\'")}')">${k.label}</span>`;}).join(''):`<div class="kw-empty-s" style="padding:30px">No keywords in this filter.</div>`}
+          return`<span class="kw-word${isSel?' sel':''}${dim?' dim':''}" data-kw="${k.label.replace(/"/g,'&quot;')}" style="--kwA:${c.a};--kwB:${c.b};font-size:calc(${size}px*var(--kwsc,1));font-weight:${kwWeight(size)};animation-delay:${i*0.02}s" onmouseenter="kwTip(event,${a.id},'${k.label.replace(/'/g,"\\'")}')" onmousemove="kwTipMove(event)" onmouseleave="kwTipHide()" onclick="kwPick(${a.id},'${k.label.replace(/'/g,"\\'")}')">${k.label}</span>`;}).join(''):`<div class="kw-empty-s" style="padding:30px">No keywords in this filter.</div>`}
       </div>
-      <div class="kw-side"><div class="kw-panel"><div class="kw-panel-h"><i data-lucide="list-ordered"></i> Top ${top.length} Keywords</div>
-        <div class="kw-ranklist">${top.map((k,i)=>{const c=KW_CATS[k.cat];return`<div class="kw-rank${sel===k.label?' sel':''}" onclick="kwPick(${a.id},'${k.label.replace(/'/g,"\\'")}')" title="${k.arts.length} article${k.arts.length!==1?'s':''}">
-          <span class="kw-rn">${i+1}</span><span class="kw-rname">${k.label}</span><span class="kw-rbarw"><span class="kw-rbar" style="width:${Math.round(k.count/topMax*100)}%;background:linear-gradient(90deg,${c.a},${c.b})"></span></span><span class="kw-rc">${k.count}</span>
+      <div class="kw-side"><div class="kw-panel">
+        <div class="kw-lbhead"><span>Top ${top.length} Keywords</span><span>Mentions</span></div>
+        <div class="kw-ranklist">${top.map((k,i)=>{const c=KW_CATS[k.cat],pct=Math.round(k.count/topMax*100);return`<div class="kw-rank${sel===k.label?' sel':''}" data-kw="${k.label.replace(/"/g,'&quot;')}" style="--kwpct:${pct}%;--kwA:${c.a};--kwB:${c.b}" onclick="kwPick(${a.id},'${k.label.replace(/'/g,"\\'")}')" title="${k.arts.length} article${k.arts.length!==1?'s':''}">
+          <span class="kw-rn">${i+1}</span><span class="kw-rdot"></span><span class="kw-rname">${k.label}</span><span class="kw-rc">${k.count}</span>
         </div>`;}).join('')}</div>
       </div></div>
     </div>
@@ -3820,9 +4006,10 @@ function kwOpenDrawer(a,k){
   dr.style.display='flex';
   requestAnimationFrame(()=>{dr.classList.add('open');document.body.classList.add('kw-drawer-open');});
   initIcons();
+  setTimeout(kwFitCloud,340);   // re-fit once the sidebar/content width animation settles
 }
-function _kwDrawerHide(){const dr=document.getElementById('kw-drawer');if(dr)dr.classList.remove('open');document.body.classList.remove('kw-drawer-open');const sb=document.getElementById('sidebar');if(sb&&!kwSidebarWasCollapsed)sb.classList.remove('collapsed');setTimeout(()=>{if(dr)dr.style.display='none';},300);}
-function kwCloseDrawer(){const id=kwDrawerId;kwDrawerId=null;_kwDrawerHide();if(id!=null&&kwSel[id]){kwSel[id]=null;_trkRerender();}}
+function _kwDrawerHide(){const dr=document.getElementById('kw-drawer');if(dr)dr.classList.remove('open');document.body.classList.remove('kw-drawer-open');const sb=document.getElementById('sidebar');if(sb&&!kwSidebarWasCollapsed)sb.classList.remove('collapsed');setTimeout(()=>{if(dr)dr.style.display='none';},300);setTimeout(kwFitCloud,340);}
+function kwCloseDrawer(){const id=kwDrawerId;kwDrawerId=null;_kwDrawerHide();if(id!=null&&kwSel[id]){kwSel[id]=null;kwUpdateSelection(id);}}
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&kwDrawerId!=null)kwCloseDrawer();});
 // ── Category filter (multi-select dropdown) ──
 function kwCatList(a){const{all}=computeKeywords(a);return Object.keys(KW_CATS).filter(c=>all.some(k=>k.cat===c));}
@@ -3844,9 +4031,15 @@ function kwTimeOpen(id,e){e.stopPropagation();const menu=document.getElementById
 function kwPickTime(id,t){kwGetFilter(id).time=t;kwCloseMenus();_trkRerender();}
 function kwRange(id,which,v){kwFilter['_'+which]=v;_trkRerender();}
 document.addEventListener('click',function(e){if(e.target.closest('.kw-dd'))return;if(document.querySelector('.kw-menu[style*="block"]'))kwCloseMenus();});
+// Flip highlight/dim classes on the existing cloud words + leaderboard rows — no full section re-render.
+function kwUpdateSelection(id){
+  const sel=kwSel[id]||null,cloud=document.getElementById('kw-cloud');
+  if(cloud)cloud.querySelectorAll('.kw-word').forEach(w=>{const on=w.dataset.kw===sel;w.classList.toggle('sel',on);w.classList.toggle('dim',!!sel&&!on);});
+  document.querySelectorAll('.kw-rank').forEach(r=>r.classList.toggle('sel',r.dataset.kw===sel));
+}
 function kwPick(id,label){const a=acts.find(x=>x.id===id);if(!a)return;
-  if(kwSel[id]===label){kwSel[id]=null;kwDrawerId=null;_trkRerender();_kwDrawerHide();return;}
-  kwSel[id]=label;_trkRerender();const k=computeKeywords(a).all.find(x=>x.label===label);if(k)kwOpenDrawer(a,k);}
+  if(kwSel[id]===label){kwSel[id]=null;kwDrawerId=null;kwUpdateSelection(id);_kwDrawerHide();return;}
+  kwSel[id]=label;kwUpdateSelection(id);const k=computeKeywords(a).all.find(x=>x.label===label);if(k)kwOpenDrawer(a,k);}
 function kwTipEl(){let t=document.getElementById('kw-tip');if(!t){t=document.createElement('div');t.id='kw-tip';t.className='kw-tip';document.body.appendChild(t);}return t;}
 function kwTip(e,id,label){const a=acts.find(x=>x.id===id);if(!a)return;const k=computeKeywords(a).all.find(x=>x.label===label);if(!k)return;const c=KW_CATS[k.cat],t=kwTipEl();
   t.innerHTML=`<div class="kw-tip-t"><span class="kw-tip-dot" style="background:linear-gradient(135deg,${c.a},${c.b})"></span>${k.label}</div><div class="kw-tip-r">Mentioned in <b>${k.arts.length} article${k.arts.length!==1?'s':''}</b></div><div class="kw-tip-r"><b>${k.pct}%</b> of all coverage</div><div class="kw-tip-r" style="color:${k.sent.c}">${k.sent.t} sentiment</div><div class="kw-tip-s">Click to view related articles</div>`;
@@ -4006,14 +4199,21 @@ function renderDetailInner(a){
 
 // Media-filter pills (rebuilt in isolation when a filter is toggled)
 function buildPills(a){
-  return ['All','Print','Online','TV','Radio'].map(x=>{const sel=artFilter[a.id]||[];if(x==='All')return `<span class="art-pill${sel.length===0?' on':''}" onclick="clearArtFilter(${a.id})">All</span>`;const on=sel.includes(x);return `<span class="art-pill${on?' on':''}" onclick="toggleArtFilter(${a.id},'${x}')">${on?'<i data-lucide="check"></i> ':''}${x}</span>`;}).join('');
+  const sel=artFilter[a.id]||[];
+  const all=`<span class="art-pill${sel.length===0?' on':''}" onclick="clearArtFilter(${a.id})">All</span>`;
+  const pill=(val,lbl)=>{const on=sel.includes(val);return `<span class="art-pill${on?' on':''}" onclick="toggleArtFilter(${a.id},'${val}')">${on?'<i data-lucide="check"></i> ':''}${lbl}</span>`;};
+  if(window.WS==='adwatch')return all+[['Print','ADS - Print'],['TV','ADS - Video'],['Radio','ADS - Radio']].map(([v,l])=>pill(v,l)).join('');
+  return all+['Print','Online','TV','Radio'].map(v=>pill(v,v)).join('');
 }
 
 // Article list (filter + sort applied) — extracted so it can be re-rendered alone
 function buildArtList(a){
   const mSel=matchSel[a.id]||(matchSel[a.id]=new Set());
   const renderMatchRow=(m,i)=>{
-    const mic=ATicn[m.media]||{cls:'type-online',icon:'newspaper'},pct=m.score?Math.round(m.score*100):null;
+    const adw=window.WS==='adwatch';
+    const mic=(adw&&_AD_MEDIA_ICON[m.media])?_AD_MEDIA_ICON[m.media]:(ATicn[m.media]||{cls:'type-online',icon:'newspaper'});
+    const mlabel=(adw&&_AD_MEDIA_LABEL[m.media])?_AD_MEDIA_LABEL[m.media]:m.media;
+    const pct=m.score?Math.round(m.score*100):null;
     const scoreCls=pct>=85?'sc-hi':pct>=70?'sc-mid':'sc-lo';
     const checked=mSel.has(m.id);
     // On add, slide the new row in from the right (it comes from the Add-coverage drawer); suppress the rest.
@@ -4023,14 +4223,14 @@ function buildArtList(a){
       <td style="width:32px;text-align:center"><span class="tcb${checked?' tcb-on':''}" onclick="toggleMatchSel(${a.id},'${m.id}')">${checked?'<i data-lucide="check" style="width:9px;height:9px;color:#fff"></i>':''}</span></td>
       <td style="cursor:pointer" onclick="previewMatch(${a.id},'${m.id}')" title="Preview article">
         <div class="hl-cell">
-          <span class="hl-icon ${mic.cls}" data-btip="${_makeTip({label:m.media})}"><i data-lucide="${mic.icon}"></i></span>
+          <span class="hl-icon ${mic.cls}" data-btip="${_makeTip({label:mlabel})}"><i data-lucide="${mic.icon}"></i></span>
           <div>
             <div class="match-hl">${m.title}</div>
             ${m.manual?`<span style="font-size:10px;color:#854f0b;background:#faeeda;padding:1px 6px;border-radius:10px;font-weight:500;display:inline-block;margin-top:3px">Manual</span>`:''}
           </div>
         </div>
       </td>
-      <td style="width:180px"><div class="pub-name">${m.source}</div><div class="pub-cat">${m.media}</div></td>
+      <td style="width:180px"><div class="pub-name">${m.source}</div><div class="pub-cat">${mlabel}</div></td>
       <td style="width:115px"><span class="match-ave">${fv(m.value)}</span></td>
       <td style="width:155px">${pct?`<span class="art-score-val ${scoreCls}">${pct}% match</span><div class="match-score-track" style="margin-top:4px"><div class="match-score-fill" style="width:${pct}%;background:${pct>=85?'#16a34a':pct>=70?'#d97706':'#9ca3af'}"></div></div>`:'—'}</td>
       <td style="width:120px;white-space:nowrap"><div class="date-main">${_absDate(m.date)?_fmtDateShort(_absDate(m.date)):(m.date||'')}</div><div class="date-ago">${_absDate(m.date)?timeAgo(_absDate(m.date)):''}</div></td>
@@ -4921,6 +5121,7 @@ function startScan(){
           {id:'n3',media:'TV',source:'ABS-CBN News',title:'DITO eyes Visayas coverage by Q3 2026',date:d3,value:890000,score:0.84,manual:false},
           {id:'n4',media:'Online',source:'BusinessWorld',title:'DITO partners with Huawei for network upgrade',date:d4,value:195000,score:0.79,manual:false},
         ]};
+        na.matches=_adOnly(na.matches)||[];
         acts.unshift(na);trackerSel=na.id;trackerTabs[na.id]='matches';renderTracker();renderDetailOnly();
       },500);
       return;
@@ -4971,19 +5172,17 @@ function wsToggle(e){
   if(menu&&menu.style.display==='block'){menu.style.display='none';return;}
   wsOpen();
 }
+// Each workspace lives in its own folder (MediaWatch = root); land on the current page if the
+// target has it, else fall back to Mentions.
+const WS_FOLDER={mediawatch:'',shared:'shared/',adwatch:'adwatch/'};
+const WS_PAGES={mediawatch:['mentions','tracker','dashboard','publishers','authors','categories'],shared:['mentions','tracker','dashboard','influencers','categories'],adwatch:['mentions','tracker','dashboard']};
 function wsSelect(name){
   const menu=document.getElementById('ws-menu');if(menu)menu.style.display='none';
   const target=WS_MAP[name]||'mediawatch';
   if(target===wsNow)return;                          // already here
-  if(target==='adwatch'){if(typeof showSimpleToast==='function')showSimpleToast('AdWatch workspace coming soon','sparkles');return;}
-  // Map the current page to the target workspace (Influencers is Shared-only; Publishers/Authors are MediaWatch-only)
-  const common=['mentions','tracker','dashboard','categories'];
-  const page=common.includes(currentPage)?currentPage:'mentions';
-  const inShared=wsNow==='shared';
-  let url;
-  if(target==='shared') url=(inShared?'':'shared/')+page+'.html';
-  else url=(inShared?'../':'')+page+'.html';
-  window.location.href=url;
+  const page=(WS_PAGES[target]||[]).includes(currentPage)?currentPage:'mentions';
+  const up=(WS_FOLDER[wsNow]?'../':'');              // climb out of any subfolder back to root first
+  window.location.href=up+(WS_FOLDER[target]||'')+page+'.html';
 }
 (function wsInit(){
   const sel=document.querySelector('.sb-selector');if(!sel)return;
@@ -5389,7 +5588,7 @@ function dbMount(id,el){
 
 // ── Shared article table (ti-arttbl) — top-level so mentions/publishers/authors can reuse it ──
   const TI_ICN={online:{cls:'type-online',icon:'newspaper'},broadsheet:{cls:'type-broadsheet',icon:'file-text'},provincial:{cls:'type-provincial',icon:'newspaper'},tabloid:{cls:'type-tabloid',icon:'newspaper'},blog:{cls:'type-blog',icon:'rss'},magazine:{cls:'type-magazine',icon:'book-open'},tv:{cls:'type-tv',icon:'tv'},radio:{cls:'type-radio',icon:'radio'}};
-  const tiIcn=t=>TI_ICN[t||'online']||TI_ICN.online;
+  const tiIcn=t=>{const b=TI_ICN[t||'online']||TI_ICN.online;return (window.WS==='adwatch'&&_AD_ICON[t])?{cls:b.cls,icon:_AD_ICON[t]}:b;};
   // Insights article list as a paginated table (Headline · Sentiment · ⋯) — screenshot-2 style.
   function tiArtPagerBtns(cur,pages){
     let b=`<button class="ti-pgb" onclick="tiArtTblPage(this,${cur-1})"${cur<=1?' disabled':''}><i data-lucide="chevron-left"></i></button>`;
@@ -5725,6 +5924,7 @@ function dbMount(id,el){
   };
   function renderArtTable(arts,opts){
     opts=opts||{};
+    arts=_adOnly(arts);   // AdWatch: only video/print/radio ads
     insArts=arts;
     _artMode=opts.mode==='select'?'select':'open';
     _artSelFn=opts.onSelect||'selectInsArticle';
