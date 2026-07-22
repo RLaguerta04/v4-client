@@ -6380,7 +6380,8 @@ function initDashboard(){
     {key:'tiktok',label:'TikTok',color:'#8b5cf6',count:5}
   ];
   const _expSelPlat=(expIsSocial&&_dashPlats.size)?_EXP_PLAT_ALL.filter(p=>_dashPlats.has(p.key)):null;
-  const expSeries=_expSelPlat?_expSelPlat.map(p=>({key:p.key,label:p.label,color:p.color,labelColor:'#fff'}))
+  const expSeries=(window.WS==='adwatch')?[{key:'broadsheet',label:'Broadsheet',color:'#4f46e5',labelColor:'#fff'}]
+    :_expSelPlat?_expSelPlat.map(p=>({key:p.key,label:p.label,color:p.color,labelColor:'#fff'}))
     :expIsSocial?[
     {key:'facebook',label:'Facebook',color:'#3b7dd8',labelColor:'#fff'},
     {key:'twitter',label:'Twitter',color:'#29a3f0',labelColor:'#fff'},
@@ -6394,7 +6395,8 @@ function initDashboard(){
     {key:'tv',label:'TV',color:'#7c3aed',labelColor:'#fff'},
     {key:'radio',label:'Radio',color:'#db2777',labelColor:'#fff'}
   ];
-  const expData=_expSelPlat
+  const expData=(window.WS==='adwatch')?[{name:'',broadsheet:100}]
+    :_expSelPlat
     ?[(()=>{const tot=_expSelPlat.reduce((s,p)=>s+p.count,0)||1,o={name:''};_expSelPlat.forEach(p=>o[p.key]=+(p.count/tot*100).toFixed(2));return o;})()]
     :expIsSocial?[{name:'',facebook:81.16,twitter:17.39,instagram:1.45}]
     :[{name:'',online:55.24,blogs:16.43,broadsheet:8.62,provincial:1.64,tabloid:1.44,tv:13.35,radio:3.29}];
@@ -6944,7 +6946,10 @@ function initDashboard(){
 
   // ── Timeline "Explore Data" → full-page "Total Articles Count" drill-down ──
   const EXPLORE_MEDIUM_COLOR={'Online News':'#dc4a8f','TV':'#16a34a','Broadsheet':'#2563eb'};
-  const explorePubs=[
+  const explorePubs=(window.WS==='adwatch')?[
+    {name:'Philippine Daily Inquirer',medium:'Broadsheet',articles:1,score:'6.77',ave:'1.8M',svalue:'0.00',exposure:'0.00'},
+    {name:'The Philippine Star',medium:'Broadsheet',articles:1,score:'6.74',ave:'914.4K',svalue:'0.00',exposure:'0.00'}
+  ]:[
     {name:'Philstar Online',medium:'Online News',articles:23,score:'2.19',ave:'10.6M',svalue:'0.00',exposure:'0.00'},
     {name:'Inquirer Online',medium:'Online News',articles:21,score:'3.16',ave:'8.2M',svalue:'0.00',exposure:'0.00'},
     {name:'Manila Standard Online',medium:'Online News',articles:20,score:'1.23',ave:'4.2M',svalue:'0.00',exposure:'0.00'},
@@ -6960,10 +6965,12 @@ function initDashboard(){
   ];
   function ExplorePubBar(){
     const data=explorePubs.map(p=>({name:p.name+' ('+p.medium+')',pub:p.name,articles:p.articles,fill:EXPLORE_MEDIUM_COLOR[p.medium]||'#9ca3af'}));
+    // AdWatch has a sparse ad dataset (1 ad/publisher) → scale the axis to the data instead of the article-scale 0–25.
+    const _adw=window.WS==='adwatch',_xmax=_adw?1:25,_xticks=_adw?[0,0.25,0.5,0.75,1]:[0,5,10,15,20,25];
     return RC(ResponsiveContainer,{width:'99%',height:'100%'},
       RC(BarChart,{data,layout:'vertical',margin:{top:8,right:40,bottom:24,left:8}},
         RC(CartesianGrid,{horizontal:false,stroke:'#eef0f2'}),
-        RC(XAxis,{type:'number',domain:[0,25],ticks:[0,5,10,15,20,25],tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'ARTICLES COUNT',position:'insideBottom',offset:-10,fontSize:10,fill:'#9ca3af'}}),
+        RC(XAxis,{type:'number',domain:[0,_xmax],ticks:_xticks,tick:{fontSize:11,fill:'#9ca3af'},axisLine:{stroke:'#e4e6ea'},tickLine:false,label:{value:'ARTICLES COUNT',position:'insideBottom',offset:-10,fontSize:10,fill:'#9ca3af'}}),
         RC(YAxis,{type:'category',dataKey:'name',tick:{fontSize:11,fill:'#4b5563'},width:240,axisLine:false,tickLine:false}),
         RC(Tooltip,{content:DarkTip,cursor:{fill:'rgba(0,0,0,0.03)'}}),
         RC(Bar,{dataKey:'articles',radius:[0,4,4,0],maxBarSize:15,isAnimationActive:false,cursor:'pointer',onClick:(d)=>{if(d&&d.pub){const c=document.querySelector('.db-explore-wrap.on .db-explore-toppub-chart');window.openInsPubArticles(d.pub,c&&c.closest('.db-card'));}}},
