@@ -7178,6 +7178,7 @@ function initDashboard(){
   ];
   function renderMediaCards(gridId,data){
     const grid=document.getElementById(gridId);if(!grid)return;
+    grid.style.gridTemplateColumns='repeat('+Math.min(data.length,4)+',1fr)';   // fit columns to card count (fills width for <4)
     grid.innerHTML=data.map(m=>{
       const max=Math.max(...m.pubs.map(p=>p[1])),bc=PS_BAR[m.name]||'#9ca3af';
       const pubs=m.pubs.map(([n,c])=>`<div class="ps-media-pub">
