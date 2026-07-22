@@ -3247,6 +3247,13 @@ body.ws-shared .sb-progress-fill{background:var(--ws-accent,#2563eb)!important}
 .db-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:16px;flex-shrink:0}
 .db-kpi-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:20px;display:flex;flex-direction:column;gap:4px;transition:box-shadow 0.2s,transform 0.2s}
 .db-kpi-card.db-kpi-clickable{cursor:pointer}
+/* AdWatch KPI "Previous period" hover popover */
+.db-kpi-pop{position:fixed;z-index:10000;background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(16,24,40,0.14),0 2px 6px rgba(16,24,40,0.08);border:1px solid #eef0f3;padding:15px 17px;min-width:220px;max-width:300px;pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .14s ease,transform .14s ease;font-family:Inter,sans-serif}
+.db-kpi-pop.show{opacity:1;transform:translateY(0)}
+.db-kpi-pop-hd{font-size:12px;color:#8a919e;margin-bottom:7px;font-weight:500}
+.db-kpi-pop-val{font-size:19px;font-weight:700;color:#1f2a44;line-height:1.25;margin-bottom:11px}
+.db-kpi-pop-detail{font-size:12.5px;color:#aeb4bd;margin-bottom:3px}
+.db-kpi-pop-range{font-size:12.5px;color:#aeb4bd}
 .db-kpi-card.db-kpi-clickable:hover{box-shadow:0 8px 24px rgba(24,29,38,0.1);transform:translateY(-2px);border-color:#d4d7dd}
 .db-kpi-card:hover{box-shadow:0 8px 24px rgba(24,29,38,0.1);transform:translateY(-2px)}
 .db-kpi-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;display:flex;align-items:center;gap:6px}

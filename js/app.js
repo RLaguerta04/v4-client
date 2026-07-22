@@ -10713,3 +10713,33 @@ if(document.getElementById('page-dashboard')) initDashboard();
 if(document.getElementById('page-publishers')) renderPublishers();
 if(document.getElementById('page-authors')) renderAuthors();
 if(document.getElementById('page-categories')) renderCategories();
+
+// AdWatch dashboard: "Previous period" hover popover on KPI cards that carry data-prev-* attrs.
+(function initKpiPrevPops(){
+  function wire(){
+    const cards=document.querySelectorAll('.db-kpi-card[data-prev-val]');
+    if(!cards.length)return;
+    let pop=null;
+    const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    function kill(){if(pop){pop.remove();pop=null;}}
+    function build(card){
+      const lbl=(card.querySelector('.db-kpi-label')||{}).textContent||'';
+      pop=document.createElement('div');pop.className='db-kpi-pop';
+      pop.innerHTML=`<div class="db-kpi-pop-hd">Previous ${esc(lbl)}</div>`+
+        `<div class="db-kpi-pop-val">${esc(card.dataset.prevVal)}</div>`+
+        `<div class="db-kpi-pop-detail">${esc(card.dataset.prevDetail||'')}</div>`+
+        `<div class="db-kpi-pop-range">${esc(card.dataset.prevRange||'')}</div>`;
+      document.body.appendChild(pop);
+      const r=card.getBoundingClientRect(),pw=pop.offsetWidth,ph=pop.offsetHeight;
+      let top=r.top-ph-10; if(top<8)top=r.bottom+10;
+      let left=r.left+4; if(left+pw>window.innerWidth-8)left=Math.max(8,window.innerWidth-8-pw);
+      pop.style.top=top+'px';pop.style.left=left+'px';
+      requestAnimationFrame(()=>{if(pop)pop.classList.add('show');});
+    }
+    cards.forEach(card=>{
+      card.addEventListener('mouseenter',()=>{kill();build(card);});
+      card.addEventListener('mouseleave',kill);
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
+})();
