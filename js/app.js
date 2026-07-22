@@ -3645,8 +3645,29 @@ function renderTLEvent(a,e,i){
         <div class="tl-card-aside">${e.ave?`<span class="tl-ave">${e.ave}</span>`:''}${hasX?`<i data-lucide="chevron-down" class="tl-chev" id="tlc-${eid}"></i>`:''}</div>
       </div>
     </div>
-    ${hasX?`<div class="tl-x" id="tlx-${eid}">${e.arts.map(m=>`<div class="tl-art"><span class="media-badge media-ico ${ATmc[m.media]||'media-online'}" title="${m.media}" data-media="${m.media}"><i data-lucide="${ATmi[m.media]||'file-text'}"></i></span><div class="tl-art-b"><div class="tl-art-hl">${m.title}</div><div class="tl-art-m"><span class="tl-art-src">${m.source}</span><span class="tl-art-dt">${m.date}</span><span class="tl-art-ave">${fv(m.value)} AVE</span></div></div></div>`).join('')}</div>`:''}
+    ${hasX?`<div class="tl-x" id="tlx-${eid}">${e.arts.slice(0,TL_PREVIEW).map(m=>`<div class="tl-art"><span class="media-badge media-ico ${ATmc[m.media]||'media-online'}" title="${m.media}" data-media="${m.media}"><i data-lucide="${ATmi[m.media]||'file-text'}"></i></span><div class="tl-art-b"><div class="tl-art-hl">${m.title}</div><div class="tl-art-m"><span class="tl-art-src">${m.source}</span><span class="tl-art-dt">${m.date}</span><span class="tl-art-ave">${fv(m.value)} AVE</span></div></div></div>`).join('')}${e.arts.length>TL_PREVIEW?`<button class="tl-viewall" onclick="event.stopPropagation();tlOpenDrawer(${a.id},${i})"><span>View all ${e.arts.length} ${_wPosts()}</span><i data-lucide="arrow-right"></i></button>`:''}</div>`:''}
   </div>`;
+}
+const TL_PREVIEW=5;   // an expanded stage shows only a short peek inline; the full list opens in the paginated drawer
+// Open a timeline stage's full coverage in the shared paginated drawer (reuses the Keyword Cloud drawer shell).
+function tlOpenDrawer(aid,i){
+  const a=acts.find(x=>x.id===aid);if(!a)return;
+  const e=buildTimeline(a)[i];if(!e||!(e.arts&&e.arts.length))return;
+  const dr=kwDrawerEl();
+  if(kwDrawerId==null){const sb=document.getElementById('sidebar');kwSidebarWasCollapsed=!!(sb&&sb.classList.contains('collapsed'));if(sb)sb.classList.add('collapsed');}
+  kwDrawerId=a.id;
+  const arts=e.arts.map(m=>kwMapArt(m));
+  const med=e.arts[0].media,ic=ATicn[med]||{cls:'type-online',icon:'newspaper'};
+  const ave=e.ave||fv(e.arts.reduce((s,m)=>s+m.value,0));
+  dr.innerHTML=`<div class="kw-drawer-hd">
+      <span class="ti-head-badge"><i data-lucide="${ic.icon}"></i></span>
+      <div class="kw-drawer-titles"><div class="ti-head-title">${e.title}</div><div class="ti-head-sub">${e.arts.length} ${_wPosts()} · ${ave} AVE</div></div>
+      <button class="btn-export ti-head-export" onclick="showSimpleToast('${_wPosts(true)} exported','download')">Export</button>
+      <button class="kw-drawer-x" onclick="kwCloseDrawer()" aria-label="Close"><i data-lucide="x"></i></button></div>
+    <div class="kw-drawer-body">${(window.renderArtTable||renderArtTable)(arts,{mode:'open'})}</div>`;
+  dr.style.display='flex';
+  requestAnimationFrame(()=>{dr.classList.add('open');document.body.classList.add('kw-drawer-open');});
+  initIcons();
 }
 // Anchor the vertical connector to the actual first/last node centers (card heights vary), so no line
 // overshoots above the first icon or below the last.
