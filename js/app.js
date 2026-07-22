@@ -8327,7 +8327,10 @@ function initDashboard(){
     initIcons();
   };
   // ── Compare detail drill-down (opened from an Overview metric row): reuses explore-data layout, per category ──
-  const CMP_PUBLISHERS=[
+  const CMP_PUBLISHERS=(window.WS==='adwatch')?[
+    [['Daily Tribune',3],['The Philippine Star',2],['Peoples Balita',1],['Watchmen Daily Journal',1],['The Daily Guardian',1]],
+    [['Philippine Daily Inquirer',1],['The Philippine Star',1]]
+  ]:[
     [['Manila Times Online',6],['Business Mirror Online',5],['Inquirer Online',4],['Head Topics Online',4],['Manila Standard Online',3],['INQUIRER PLUS',3],['Philippine Daily Inquirer',2],['Manila Bulletin Online',2],['Manila Standard',2],['BILYONARYO Online',2]],
     [['Bllyonaryo News Channel',20],['Inquirer Online',19],['Philstar Online',18],['Manila Standard Online',16],['Business World Online',15],['News Stringer TV',14],['Malaya Business Insight Online',13],['Trade Like Gorillas',12],['Business Mirror Online',12],['BusinessWorld',11]]
   ];
@@ -8349,12 +8352,18 @@ function initDashboard(){
     {name:'Darwin G. Amor',articles:1,score:'0.00',ave:'253.6K',svalue:'1.75',exposure:'1.75'},
     {name:'Arthur Fuentes',articles:1,score:'0.00',ave:'69.9K',svalue:'1.95',exposure:'1.95'}
   ];
-  const CMP_SECTIONS=[[['news',34]],[['business',311]]];
-  const CMP_PROGRAMS=[
+  const CMP_SECTIONS=(window.WS==='adwatch')?[[['News',3],['Top News',3],['Ads',2]],[['Wheels',1],['Motoring',1]]]:[[['news',34]],[['business',311]]];
+  const CMP_PROGRAMS=(window.WS==='adwatch')?[[],[]]:[
     [['Karambola',1],['Balitang A2Z',1],['Business 360',1],['News Night',1]],
     [['24 Oras',4],['Money Talks',4],['The Score Card',3],['13 News',3],['Mata ng Agila',2],['Ulat Bayan Weekend',2],['Tutok 13',2],['PTV News Tonight',2],['Agenda',1],['Business 360',1]]
   ];
-  const CMP_PUBCARDS=[
+  const CMP_PUBCARDS=(window.WS==='adwatch')?[
+    {name:'Daily Tribune',articles:3,score:'10.00',ave:'1.1M',svalue:'0.00',exposure:'0.00'},
+    {name:'The Philippine Star',articles:2,score:'6.74',ave:'3.8M',svalue:'0.00',exposure:'0.00'},
+    {name:'Peoples Balita',articles:1,score:'0.16',ave:'476.8K',svalue:'0.00',exposure:'0.00'},
+    {name:'Watchmen Daily Journal',articles:1,score:'2.97',ave:'566.5K',svalue:'0.00',exposure:'0.00'},
+    {name:'The Daily Guardian',articles:1,score:'0.06',ave:'393.4K',svalue:'0.00',exposure:'0.00'}
+  ]:[
     {name:'Manila Times Online',articles:6,score:'1.57',ave:'1.8M',svalue:'9.79',exposure:'9.79'},
     {name:'Business Mirror Online',articles:5,score:'3.62',ave:'887.2K',svalue:'14.79',exposure:'14.79'},
     {name:'Inquirer Online',articles:4,score:'3.16',ave:'1.5M',svalue:'11.82',exposure:'11.82'},
@@ -8370,6 +8379,7 @@ function initDashboard(){
   ];
   function renderCmpBarList(hostId,items,color,sub,unit){
     const host=document.getElementById(hostId);if(!host)return;
+    if(!items||!items.length){host.innerHTML='<div class="cmp-nodata"><i data-lucide="inbox"></i><span>No Data Available</span></div>';initIcons();return;}
     const _u=unit||(_SOC()?'Post/s':'Article/s');
     const max=Math.max(...items.map(i=>i[1]),1);
     host.innerHTML=items.map(([n,c])=>`<div class="ps-media-pub" style="cursor:pointer" onclick="cmpOpenList('${String(n).replace(/'/g,"\\'")}','${sub||''}',this)">
