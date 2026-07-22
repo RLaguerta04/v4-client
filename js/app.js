@@ -1911,7 +1911,13 @@ const TYPE_ACCENT={'Press Release':'#4f46e5','Event':'#2563eb','Crisis':'#dc2626
 let mdActCtx=null,mdActMatch=null;
 function matchToMention(m){
   const idx=mentionData.findIndex(d=>d.title===m.title);
-  if(idx>=0)return mentionData[idx];
+  if(idx>=0){
+    const rec=mentionData[idx];
+    // AdWatch: reconcile the preview medium to the ad's declared media source. If the found record's
+    // medium already matches, keep it (rich real content); otherwise fall through to a same-medium clone
+    // so an ADS-Print item renders the print layout/label, not the online article it happens to share a title with.
+    if(window.WS!=='adwatch'||(rec.type||'online')===(_mentTemplate(m.media).ty))return rec;
+  }
   const {tmpl,ty}=_mentTemplate(m.media);
   const sv=Math.max(1,(m.score?m.score*5:2));
   return Object.assign(tmpl,{
