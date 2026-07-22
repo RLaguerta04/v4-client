@@ -7295,11 +7295,15 @@ function initDashboard(){
     {name:'TV',icon:'tv',cls:'type-tv',articles:63,words:'1.6K',pubs:[['Bllyonaryo News Channel',15],['ANC',11],['IBC 13',8],['PTV4',8],['GMA 7',5]]},
     {name:'Radio',icon:'radio',cls:'type-radio',articles:16,words:'2.5K',pubs:[['DZBB',5],['DZMM',4],['DZRB',4],['Radyo5',2],['DZRH AM',1]]}
   ];
+  // AdWatch: only the ad media — Broadsheet, Video (TV) and Radio.
+  const pubMediaAd=pubMediaFull.filter(m=>m.name==='Broadsheet'||m.name==='TV'||m.name==='Radio')
+    .map(m=>m.name==='TV'?Object.assign({},m,{name:'Video',icon:'video'}):m);
+  const _pubMedia=()=>window.WS==='adwatch'?pubMediaAd:pubMediaFull;
   window.openTopPubMedExplore=function(){
     const wrap=_showExplore('db-toppubmed-explore');if(!wrap)return;
     dbMount('db-toppubmed-exp',RC(ExposureBar));
     dbMount('db-toppubmed-toppub',RC(ExplorePubBar));
-    renderMediaCards('db-toppubmed-media',pubMediaFull);
+    renderMediaCards('db-toppubmed-media',_pubMedia());
     window.renderMentionsTable('db-toppubmed-table',0,'Top Publisher','All articles');
     _bindExploreScroll(wrap);
     initIcons();
@@ -7343,7 +7347,7 @@ function initDashboard(){
     const wrap=_showExplore('db-author-explore');if(!wrap)return;
     dbMount('db-author-exp',RC(ExposureBar));
     dbMount('db-author-toppub',RC(TopAuthorsBar));
-    renderMediaCards('db-author-media',pubMediaFull);
+    renderMediaCards('db-author-media',_pubMedia());
     renderEntityCards('db-author-cards',authorCards,'Author Score','author');
     window.renderMentionsTable('db-author-table',0,'Top Author','All articles');
     _bindExploreScroll(wrap);
